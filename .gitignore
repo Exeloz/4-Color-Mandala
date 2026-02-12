@@ -1,3 +1,9 @@
 *.exe
 *.dsym
 main
+android.game/
+game.apk
+android.game/bin/
+android.game/lib/
+android.game/obj/
+android.game/src/

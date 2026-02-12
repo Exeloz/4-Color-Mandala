@@ -1,29 +1,58 @@
-# Raylib-CPP-Starter-Template-for-VSCODE-V2
-Raylib C++ Starter Template for Visual Studio Code on Windows.
-This demo project contains a bouncing ball raylib example program.
-It works with raylib version 5.0. Tested on both Windows 10 and Windows 11.
+# 4-Color Mandala
 
-# How to use this template
-1. Double click on the main.code-workspace file. This will open the template in VS Code.
-2. From the Explorer Window of VS Code navigate to the src folder and double click on the main.cpp file.
-3. Press F5 on the keyboard to compile and run the program.
+Application de coloriage de mandalas en C++ avec raylib.
 
-# What's changed
-The template now uses folders for better organizion of the files. So, all the source code now lives in the src folder.
+## Compilation sur ordinateur (Linux/WSL)
 
-# Video Tutorial
+```bash
+# Raylib desktop (shared)
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/raylib/src
+make clean
+make RAYLIB_LIBTYPE=SHARED
 
-<p align="center">
-  <img src="preview.jpg" alt="" width="800">
-</p>
+# Application
+cd /mnt/c/Users/Admin/OneDrive\ -\ Cégep\ Garneau/Documents/Dev/Mobile/Raylib/4-Color_Mandala
+make clean PROJECT_NAME=main
+make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG
+```
 
-<p align="center">
-🎥 <a href="https://www.youtube.com/watch?v=PaAcVk5jUd8">Video Tutorial on YouTube</a>
-</p>
+Execution:
 
-<br>
-<br>
-<p align="center">
-| 📺 <a href="https://www.youtube.com/channel/UC3ivOTE5EgpmF2DHLBmWIWg">My YouTube Channel</a>
-| 🌍 <a href="http://www.programmingwithnick.com">My Website</a> | <br>
-</p>
+```bash
+export LD_LIBRARY_PATH=$HOME/cegep/Documents/Dev/Mobile/Raylib/raylib/src:$LD_LIBRARY_PATH
+./main
+```
+
+## Debug (VS Code)
+
+- Ouvrir `main.code-workspace`
+- Appuyer sur `F5`
+
+Le task `build debug` compile automatiquement avant le lancement.
+
+## Compilation Android (APK)
+
+Prerequis:
+- NDK: `$HOME/android-ndk-r26d`
+- SDK: `$HOME/Android/Sdk`
+- Java: `/usr/lib/jvm/java-17-openjdk-amd64`
+
+Commandes:
+
+```bash
+# Raylib Android (static)
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/raylib/src
+make clean
+make PLATFORM=PLATFORM_ANDROID ANDROID_ARCH=arm64 ANDROID_NDK=$HOME/android-ndk-r26d RAYLIB_LIBTYPE=STATIC
+
+# Application Android
+cd /mnt/c/Users/Admin/OneDrive\ -\ Cégep\ Garneau/Documents/Dev/Mobile/Raylib/4-Color_Mandala
+make PLATFORM=PLATFORM_ANDROID ANDROID_ARCH=arm64 ANDROID_NDK=$HOME/android-ndk-r26d \
+  JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+```
+
+APK genere:
+
+```
+game.apk
+```

@@ -1,5 +1,6 @@
 #include "button.h"
 #include "colors.h"
+#include "input.h"
 
 Button::Button(float x, float y, float width, float height, const std::string& label)
     : label(label), hovered(false), clicked(false) {
@@ -7,9 +8,9 @@ Button::Button(float x, float y, float width, float height, const std::string& l
 }
 
 void Button::update() {
-    Vector2 mousePos = GetMousePosition();
-    hovered = CheckCollisionPointRec(mousePos, bounds);
-    clicked = hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    Vector2 pointerPos = Input::GetPointerPosition();
+    hovered = CheckCollisionPointRec(pointerPos, bounds);
+    clicked = hovered && Input::IsPointerPressed();
 }
 
 void Button::draw() {

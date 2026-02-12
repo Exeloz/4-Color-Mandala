@@ -62,6 +62,32 @@ USE_EXTERNAL_GLFW     ?= FALSE
 # by default it uses X11 windowing system
 USE_WAYLAND_DISPLAY   ?= FALSE
 
+# Determine PLATFORM_OS for all platforms
+ifeq ($(OS),Windows_NT)
+    PLATFORM_OS=WINDOWS
+    export PATH := $(COMPILER_PATH):$(PATH)
+else
+    UNAMEOS=$(shell uname)
+    ifeq ($(UNAMEOS),Linux)
+        PLATFORM_OS=LINUX
+    endif
+    ifeq ($(UNAMEOS),FreeBSD)
+        PLATFORM_OS=BSD
+    endif
+    ifeq ($(UNAMEOS),OpenBSD)
+        PLATFORM_OS=BSD
+    endif
+    ifeq ($(UNAMEOS),NetBSD)
+        PLATFORM_OS=BSD
+    endif
+    ifeq ($(UNAMEOS),DragonFly)
+        PLATFORM_OS=BSD
+    endif
+    ifeq ($(UNAMEOS),Darwin)
+        PLATFORM_OS=OSX
+    endif
+endif
+
 # Determine PLATFORM_OS in case PLATFORM_DESKTOP selected
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     # No uname.exe on MinGW!, but OS=Windows_NT on Windows!
@@ -373,17 +399,23 @@ OBJS = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 
 # For Android platform we call a custom Makefile.Android
 ifeq ($(PLATFORM),PLATFORM_ANDROID)
-    MAKEFILE_PARAMS = -f Makefile.Android 
+    MAKEFILE_PARAMS = -f Makefile.Android
+    ifeq ($(PLATFORM_OS),LINUX)
+        MAKE_COMMAND = make
+    else
+        MAKE_COMMAND = $(MAKE)
+    endif
     export PROJECT_NAME
     export SRC_DIR
 else
     MAKEFILE_PARAMS = $(PROJECT_NAME)
+    MAKE_COMMAND = $(MAKE)
 endif
 
 # Default target entry
 # NOTE: We call this Makefile target or Makefile.Android target
 all:
-	$(MAKE) $(MAKEFILE_PARAMS)
+	$(MAKE_COMMAND) $(MAKEFILE_PARAMS)
 
 # Project target defined by PROJECT_NAME
 $(PROJECT_NAME): $(SRC)

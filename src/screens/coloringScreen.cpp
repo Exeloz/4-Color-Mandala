@@ -1,5 +1,6 @@
 #include "coloringScreen.h"
 #include "../ui/colors.h"
+#include "../ui/input.h"
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
     : mandala(mandala), colorPalette(), colorButtons(), backButton(20, 20, 100, 50, "BACK"),
@@ -34,9 +35,9 @@ void ColoringScreen::update(float deltaTime) {
 }
 
 void ColoringScreen::handleColorSelection() {
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        Vector2 mousePos = GetMousePosition();
-        Region* region = mandala->getRegionAtPoint(mousePos);
+    if (Input::IsPointerPressed()) {
+        Vector2 pointerPos = Input::GetPointerPosition();
+        Region* region = mandala->getRegionAtPoint(pointerPos);
         if (region != nullptr) {
             region->setColor(colorPalette.getSelectedColorIndex());
         }
