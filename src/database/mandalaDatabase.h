@@ -15,4 +15,6 @@ private:
     std::vector<std::shared_ptr<Mandala>> mandalaList;
 
     void createSampleMandala();
+    void createHexagonMandala();
+    void createSquaresMandala();
 };

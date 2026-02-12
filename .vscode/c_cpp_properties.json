@@ -43,7 +43,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "/home/linuxbrew/.linuxbrew/include",
+                "${userHome}/cegep/Documents/Dev/Mobile/Raylib/raylib/src",
                 "${workspaceFolder}/**"
             ],
             "defines": [
