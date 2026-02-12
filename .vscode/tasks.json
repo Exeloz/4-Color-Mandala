@@ -2,6 +2,24 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "clean",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "windows": {
+                "command": "C:/raylib/w64devkit/bin/mingw32-make.exe"
+            },
+            "linux": {
+                "args": [
+                    "clean",
+                    "PROJECT_NAME=main"
+                ]
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "build debug",
             "type": "process",
             "command": "make",
@@ -27,18 +45,27 @@
             },
             "linux": {
                 "args": [
-                    "PROJECT_NAME=${fileBasenameNoExtension}",
+                    "PROJECT_NAME=main",
                     "RAYLIB_LIBTYPE=SHARED",
                     "BUILD_MODE=DEBUG"
                 ]
             },
+            "dependsOn": ["clean"],
             "group": {
                 "kind": "build",
-                "isDefault": false
+                "isDefault": true
             },
             "problemMatcher": [
                 "$gcc"
-            ]
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            }
         },
         {
             "label": "build release",

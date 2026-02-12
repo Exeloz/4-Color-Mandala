@@ -43,7 +43,7 @@ void ColoringScreen::handleColorSelection() {
 }
 
 void ColoringScreen::draw() {
-    ClearBackground({255, 255, 255, 255});
+    ClearBackground({240, 240, 240, 255});
     
     DrawText(mandala->getName().c_str(), 150, 20, 30, {0, 0, 0, 255});
     

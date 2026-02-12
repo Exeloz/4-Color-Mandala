@@ -77,30 +77,30 @@ void MandalaDatabase::createSquaresMandala() {
 
     regions.emplace_back(0, std::vector<Vector2>{
         {center.x - SQUARE_SIZE, center.y - SQUARE_SIZE},
-        {center.x, center.y - SQUARE_SIZE},
+        {center.x - SQUARE_SIZE, center.y},
         {center.x, center.y},
-        {center.x - SQUARE_SIZE, center.y}
+        {center.x, center.y - SQUARE_SIZE}
     });
 
     regions.emplace_back(1, std::vector<Vector2>{
         {center.x, center.y - SQUARE_SIZE},
-        {center.x + SQUARE_SIZE, center.y - SQUARE_SIZE},
+        {center.x, center.y},
         {center.x + SQUARE_SIZE, center.y},
-        {center.x, center.y}
+        {center.x + SQUARE_SIZE, center.y - SQUARE_SIZE}
     });
 
     regions.emplace_back(2, std::vector<Vector2>{
         {center.x, center.y},
-        {center.x + SQUARE_SIZE, center.y},
+        {center.x, center.y + SQUARE_SIZE},
         {center.x + SQUARE_SIZE, center.y + SQUARE_SIZE},
-        {center.x, center.y + SQUARE_SIZE}
+        {center.x + SQUARE_SIZE, center.y}
     });
 
     regions.emplace_back(3, std::vector<Vector2>{
         {center.x - SQUARE_SIZE, center.y},
-        {center.x, center.y},
+        {center.x - SQUARE_SIZE, center.y + SQUARE_SIZE},
         {center.x, center.y + SQUARE_SIZE},
-        {center.x - SQUARE_SIZE, center.y + SQUARE_SIZE}
+        {center.x, center.y}
     });
 
     adjacencyGraph.addAdjacency(0, 1);
