@@ -7,6 +7,7 @@ public:
     ColorPalette();
 
     Color getColor(int index) const;
+    const std::vector<Color>& getColors() const;
     int getColorCount() const;
     bool isValidColorIndex(int index) const;
     int getSelectedColorIndex() const;

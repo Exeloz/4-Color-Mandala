@@ -1,4 +1,5 @@
 #include "startScreen.h"
+#include "../ui/colors.h"
 
 StartScreen::StartScreen()
     : startButton(300, 250, 200, 100, "START"), transitionRequested(false) {}
@@ -11,8 +12,8 @@ void StartScreen::update(float deltaTime) {
 }
 
 void StartScreen::draw() {
-    ClearBackground({240, 240, 240, 255});
-    DrawText("Color Mandala", 150, 50, 60, {0, 0, 0, 255});
+    ClearBackground(Colors::Gainsboro);
+    DrawText("Color Mandala", 150, 50, 60, Colors::Black);
     startButton.draw();
 }
 

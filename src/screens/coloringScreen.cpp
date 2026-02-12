@@ -1,4 +1,5 @@
 #include "coloringScreen.h"
+#include "../ui/colors.h"
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
     : mandala(mandala), colorPalette(), colorButtons(), backButton(20, 20, 100, 50, "BACK"),
@@ -43,24 +44,18 @@ void ColoringScreen::handleColorSelection() {
 }
 
 void ColoringScreen::draw() {
-    ClearBackground({240, 240, 240, 255});
+    ClearBackground(Colors::Gainsboro);
     
-    DrawText(mandala->getName().c_str(), 150, 20, 30, {0, 0, 0, 255});
+    DrawText(mandala->getName().c_str(), 150, 20, 30, Colors::Black);
     
-    mandala->draw(std::vector<Color>{
-        {255, 0, 0, 255},
-        {0, 0, 255, 255},
-        {255, 255, 0, 255},
-        {0, 255, 0, 255},
-        {255, 255, 255, 255}
-    });
+    mandala->draw(colorPalette.getColors());
 
     drawColorPalette();
     backButton.draw();
 }
 
 void ColoringScreen::drawColorPalette() {
-    DrawText("Colors:", 50, 530, 15, {0, 0, 0, 255});
+    DrawText("Colors:", 50, 530, 15, Colors::Black);
     
     for (int i = 0; i < colorPalette.getColorCount(); i++) {
         float x = 50 + i * 130;
@@ -70,9 +65,9 @@ void ColoringScreen::drawColorPalette() {
         DrawRectangle(x, y, 100, 40, color);
         
         if (i == colorPalette.getSelectedColorIndex()) {
-            DrawRectangleLinesEx({x, y, 100, 40}, 4, {0, 0, 0, 255});
+            DrawRectangleLinesEx({x, y, 100, 40}, 4, Colors::Black);
         } else {
-            DrawRectangleLinesEx({x, y, 100, 40}, 1, {100, 100, 100, 255});
+            DrawRectangleLinesEx({x, y, 100, 40}, 1, Colors::Gray);
         }
     }
 }

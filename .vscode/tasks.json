@@ -21,12 +21,8 @@
         },
         {
             "label": "build debug",
-            "type": "process",
-            "command": "make",
-            "args": [
-                "PLATFORM=PLATFORM_DESKTOP",
-                "BUILD_MODE=DEBUG"
-            ],
+            "type": "shell",
+            "command": "make clean PROJECT_NAME=main && make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG",
             "windows": {
                 "command": "C:/raylib/w64devkit/bin/mingw32-make.exe",
                 "args": [
@@ -37,20 +33,12 @@
                 ]
             },
             "osx": {
-                "args": [
-                    "PROJECT_NAME=${fileBasenameNoExtension}",
-                    "OBJS=src/*.cpp",
-                    "BUILD_MODE=DEBUG"
-                ]
+                "type": "shell",
+                "command": "make clean PROJECT_NAME=main && make PROJECT_NAME=main OBJS=src/*.cpp BUILD_MODE=DEBUG"
             },
             "linux": {
-                "args": [
-                    "PROJECT_NAME=main",
-                    "RAYLIB_LIBTYPE=SHARED",
-                    "BUILD_MODE=DEBUG"
-                ]
+                "command": "make clean PROJECT_NAME=main && make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG"
             },
-            "dependsOn": ["clean"],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -60,7 +48,7 @@
             ],
             "presentation": {
                 "echo": true,
-                "reveal": "always",
+                "reveal": "silent",
                 "focus": false,
                 "panel": "shared",
                 "showReuseMessage": false,

@@ -1,4 +1,5 @@
 #include "winScreen.h"
+#include "../ui/colors.h"
 
 WinScreen::WinScreen()
     : nextButton(250, 250, 150, 80, "NEXT"),
@@ -18,9 +19,9 @@ void WinScreen::update(float deltaTime) {
 }
 
 void WinScreen::draw() {
-    ClearBackground({240, 240, 240, 255});
-    DrawText("YOU WIN!", 250, 80, 80, {0, 200, 0, 255});
-    DrawText("Mandala completed with valid coloring!", 100, 180, 30, {0, 0, 0, 255});
+    ClearBackground(Colors::Gainsboro);
+    DrawText("YOU WIN!", 250, 80, 80, Colors::Green);
+    DrawText("Mandala completed with valid coloring!", 100, 180, 30, Colors::Black);
     
     nextButton.draw();
     backToStartButton.draw();

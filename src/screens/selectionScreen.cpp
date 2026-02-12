@@ -1,4 +1,5 @@
 #include "selectionScreen.h"
+#include "../ui/colors.h"
 
 SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database)
     : database(database), selectedMandala(nullptr), transitionRequested(false),
@@ -30,8 +31,8 @@ void SelectionScreen::update(float deltaTime) {
 }
 
 void SelectionScreen::draw() {
-    ClearBackground({240, 240, 240, 255});
-    DrawText("Select a Mandala", 200, 20, 40, {0, 0, 0, 255});
+    ClearBackground(Colors::Gainsboro);
+    DrawText("Select a Mandala", 200, 20, 40, Colors::Black);
     
     backButton.draw();
 

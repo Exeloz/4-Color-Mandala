@@ -1,11 +1,12 @@
 #include "colorPalette.h"
+#include "colors.h"
 
 ColorPalette::ColorPalette() : selectedColorIndex(0) {
-    colors.push_back({255, 0, 0, 255});
-    colors.push_back({0, 0, 255, 255});
-    colors.push_back({255, 255, 0, 255});
-    colors.push_back({0, 255, 0, 255});
-    colors.push_back({255, 255, 255, 255});
+    colors.push_back(Colors::None);
+    colors.push_back(Colors::Red);
+    colors.push_back(Colors::Blue);
+    colors.push_back(Colors::Yellow);
+    colors.push_back(Colors::Green);
 }
 
 Color ColorPalette::getColor(int index) const {
@@ -13,6 +14,10 @@ Color ColorPalette::getColor(int index) const {
         return colors[index];
     }
     return {0, 0, 0, 255};
+}
+
+const std::vector<Color>& ColorPalette::getColors() const {
+    return colors;
 }
 
 int ColorPalette::getColorCount() const {

@@ -1,4 +1,5 @@
 #include "region.h"
+#include "../ui/colors.h"
 #include <cmath>
 #include <algorithm>
 
@@ -11,7 +12,7 @@ int Region::getId() const {
 
 void Region::setColor(int colorIndex) {
     this->colorIndex = colorIndex;
-    colored = true;
+    colored = (colorIndex != 0);
 }
 
 int Region::getColor() const {
@@ -48,7 +49,7 @@ bool Region::isPointInRegion(Vector2 point) const {
 void Region::draw(const std::vector<Color>& colorPalette) const {
     if (vertices.size() < 3) return;
 
-    Color fillColor = {200, 200, 200, 255};
+    Color fillColor = Colors::None;
     if (colored && colorIndex >= 0 && colorIndex < static_cast<int>(colorPalette.size())) {
         fillColor = colorPalette[colorIndex];
     }
@@ -60,7 +61,7 @@ void Region::draw(const std::vector<Color>& colorPalette) const {
     for (int i = 0; i < static_cast<int>(vertices.size()); i++) {
         Vector2 p1 = vertices[i];
         Vector2 p2 = vertices[(i + 1) % vertices.size()];
-        DrawLineEx(p1, p2, 2, {0, 0, 0, 255});
+        DrawLineEx(p1, p2, 2, Colors::Black);
     }
 
     Vector2 centroid = {0, 0};
@@ -71,6 +72,6 @@ void Region::draw(const std::vector<Color>& colorPalette) const {
     centroid.x /= vertices.size();
     centroid.y /= vertices.size();
 
-    DrawCircleV(centroid, 3, {0, 0, 0, 255});
+    DrawCircleV(centroid, 3, Colors::Black);
 }
 
