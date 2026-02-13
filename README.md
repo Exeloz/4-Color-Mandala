@@ -58,7 +58,7 @@ Commandes:
 $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager "cmake;3.30.3"
 
 # Build debug (RayMob)
-cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/raymob_template
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/raymob
 ./gradlew assembleDebug
 
 # Build release (APK non signe par defaut)
@@ -68,7 +68,7 @@ cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/raymob_template
 Execution (debug) sur appareil:
 
 ```bash
-adb install -r raymob_template/app/build/outputs/apk/debug/app-debug.apk
+adb install -r ../raymob/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Note: si `adb` n'est pas trouve, utiliser `$HOME/Android/Sdk/platform-tools/adb`.
@@ -80,7 +80,7 @@ Installation via ADB (USB ou Wi-Fi):
 $HOME/Android/Sdk/platform-tools/adb devices
 
 # Installer l'APK (debug)
-$HOME/Android/Sdk/platform-tools/adb install -r raymob_template/app/build/outputs/apk/debug/app-debug.apk
+$HOME/Android/Sdk/platform-tools/adb install -r ../raymob/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ADB Wi-Fi (Android 11+):
@@ -97,8 +97,8 @@ $HOME/Android/Sdk/platform-tools/adb devices
 APK genere:
 
 ```
-raymob_template/app/build/outputs/apk/debug/app-debug.apk
-raymob_template/app/build/outputs/apk/release/app-release-unsigned.apk
+../raymob/app/build/outputs/apk/debug/app-debug.apk
+../raymob/app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
 ## Compilation Android (Makefile.Android - legacy)

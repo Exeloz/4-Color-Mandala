@@ -1,10 +1,26 @@
+# Executables
 *.exe
+*.out
 *.dsym
 main
+coloringScreen
+launch
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.apk
+*.idsig
+
+# Legacy Android build directories (Makefile.Android)
+android.color_mandala/
 android.game/
-game.apk
-android.game/bin/
-android.game/lib/
-android.game/obj/
-android.game/src/
-/game.apk.idsig
+
+# Temporary directories
+lib/
+mkdir/
+
+# RayMob is now external at ../raymob
+raymob_template/
+raymob_template_backup/
