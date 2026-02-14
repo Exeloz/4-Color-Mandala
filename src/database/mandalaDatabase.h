@@ -17,4 +17,5 @@ private:
     void createSampleMandala();
     void createHexagonMandala();
     void createSquaresMandala();
+    void createRealMandala();
 };

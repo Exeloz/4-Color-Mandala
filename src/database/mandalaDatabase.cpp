@@ -22,6 +22,7 @@ MandalaDatabase::MandalaDatabase() {
 void MandalaDatabase::createSampleMandala() {
     createHexagonMandala();
     createSquaresMandala();
+    createRealMandala();
 }
 
 void MandalaDatabase::loadMandala(int id) {

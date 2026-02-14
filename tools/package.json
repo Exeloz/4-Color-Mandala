@@ -1,0 +1,14 @@
+{
+  "name": "mandala-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tools for converting SVG paths to polygon JSON",
+  "main": "svg_to_polygons.js",
+  "scripts": {
+    "svg-to-polygons": "node svg_to_polygons.js"
+  },
+  "dependencies": {
+    "svg-parser": "^2.0.4",
+    "svg-path-to-polygons": "^0.1.0"
+  }
+}

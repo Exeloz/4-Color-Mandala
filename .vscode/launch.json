@@ -58,6 +58,35 @@
             "miDebuggerPath": "/usr/bin/gdb"
           },
           "preLaunchTask": "build release"
+        },
+        {
+          "name": "Debug svg_to_polygons.js",
+          "type": "pwa-node",
+          "request": "launch",
+          "cwd": "${workspaceFolder}/tools",
+          "program": "${workspaceFolder}/tools/svg_to_polygons.js",
+          "args": [
+            "${input:svgInput}",
+            "${input:outputPrefix}"
+          ],
+          "console": "integratedTerminal",
+          "skipFiles": [
+            "<node_internals>/**"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "id": "svgInput",
+          "type": "promptString",
+          "description": "Path to SVG file",
+          "default": "../resources/assets/1/1.svg"
+        },
+        {
+          "id": "outputPrefix",
+          "type": "promptString",
+          "description": "Output prefix (optional)",
+          "default": "mandala_"
         }
       ]
     }

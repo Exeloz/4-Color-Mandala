@@ -122,4 +122,20 @@ APK genere:
 ```
 game.apk
 ```
+
+## Outils de création de mandalas
+
+Les outils dans le dossier `tools/` permettent de convertir des SVG en code C++:
+
+```bash
+# 1. SVG paths → JSON polygones
+npm run svg-to-polygons -- ../resources/assets/3/3.svg ../resources/assets/3/mandala_
+# 2. JSON → C++ code
+python json_to_mandala_code.py ../resources/assets/3/mandala_1.json --name "Real" --id 3 -o ../src/database/3/3_regions.cpp --no-summary
+```
+
+Ensuite, ajouter la declaration dans `mandalaDatabase.h` et l'appel dans `createSampleMandala()`.
+
+Voir `tools/README.md` pour plus de détails.
+
 ```

@@ -1,9 +1,23 @@
 const { pathDataToPolys } = require('svg-path-to-polygons');
 const { parse } = require('svg-parser');
 const fs = require('fs');
+const path = require('path');
 
-let filePath = "test.svg" 
-let svg = fs.readFileSync(filePath, 'utf8')
+// Parse command line arguments
+const args = process.argv.slice(2);
+let inputFile = args[0] || "test.svg";
+let outputPrefix = args[1] || null;
+
+// Resolve input file path
+const inputPath = path.resolve(inputFile);
+
+if (!fs.existsSync(inputPath)) {
+    console.error(`Error: Input file not found: ${inputPath}`);
+    process.exit(1);
+}
+
+console.log(`Reading SVG from: ${inputPath}`);
+let svg = fs.readFileSync(inputPath, 'utf8')
 
 const parsed_svg = parse(svg);
 
@@ -92,5 +106,13 @@ pathsData.forEach(pathData => {
 
     index += 1;
 
-    fs.writeFileSync('test' + index + '.json', JSON.stringify(jsonOutput, null, 2), 'utf8');
+    // Generate output filename
+    const outFile = outputPrefix 
+        ? `${outputPrefix}${index}.json`
+        : `test${index}.json`;
+
+    fs.writeFileSync(outFile, JSON.stringify(jsonOutput, null, 2), 'utf8');
+    console.log(`Wrote: ${outFile}`);
 });
+
+console.log(`\nConversion complete! Generated ${index} JSON file(s).`);

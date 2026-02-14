@@ -24,3 +24,6 @@ mkdir/
 # RayMob is now external at ../raymob
 raymob_template/
 raymob_template_backup/
+
+**/node_modules/**
+**/package-lock.json
