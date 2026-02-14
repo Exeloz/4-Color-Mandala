@@ -3,6 +3,7 @@
 #include "../mandala/mandala.h"
 #include "../ui/colorPalette.h"
 #include "../ui/button.h"
+#include "raylib.h"
 #include <memory>
 
 class ColoringScreen : public GameState {
@@ -21,7 +22,10 @@ private:
     Button backButton;
     bool gameWon;
     bool returnRequested;
+    Camera2D camera;
+    float zoom;
 
     void drawColorPalette();
     void handleColorSelection();
+    void updateZoom();
 };
