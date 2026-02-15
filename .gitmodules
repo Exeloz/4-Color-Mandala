@@ -1,0 +1,3 @@
+[submodule "external/libtess2"]
+	path = external/libtess2
+	url = https://github.com/memononen/libtess2.git
