@@ -8,7 +8,7 @@ namespace {
     constexpr float SCREEN_CENTER_Y = 300.0f;
     constexpr float MIN_ZOOM = 0.02f;
     constexpr float MAX_ZOOM = 4.0f;
-    constexpr float ZOOM_STEP = 0.1f;
+    constexpr float ZOOM_STEP = 0.01f;
 }
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
