@@ -3,8 +3,9 @@
 Game::Game() 
     : database(std::make_shared<MandalaDatabase>()), 
       currentState(GameScreenState::START),
-    nextState(GameScreenState::START),
-    appPaletteColors(ColorPalette().getColors()) {}
+            nextState(GameScreenState::START),
+            appPaletteColors(ColorPalette().getColors()),
+            suppressWinTransition(false) {}
 
 Game::~Game() = default;
 
@@ -30,6 +31,7 @@ void Game::update(float deltaTime) {
             if (selectionScreen->shouldTransitionToColoring()) {
                 selectedMandala = selectionScreen->getSelectedMandala();
                 coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, appPaletteColors);
+                suppressWinTransition = false;
                 transitionToState(GameScreenState::COLORING);
             }
             if (selectionScreen->shouldTransitionToPalette()) {
@@ -54,7 +56,7 @@ void Game::update(float deltaTime) {
             break;
 
         case GameScreenState::COLORING:
-            if (coloringScreen->isGameWon()) {
+            if (coloringScreen->isGameWon() && !suppressWinTransition) {
                 coloringScreen->saveWinImage();
                 winScreen = std::make_shared<WinScreen>();
                 transitionToState(GameScreenState::WIN);
@@ -67,9 +69,11 @@ void Game::update(float deltaTime) {
 
         case GameScreenState::WIN:
             if (winScreen->shouldReturnToColoring()) {
+                suppressWinTransition = true;
                 transitionToState(GameScreenState::COLORING);
             }
             if (winScreen->shouldReturnToSelection()) {
+                suppressWinTransition = false;
                 selectionScreen = std::make_shared<SelectionScreen>(database);
                 transitionToState(GameScreenState::SELECTION);
             }

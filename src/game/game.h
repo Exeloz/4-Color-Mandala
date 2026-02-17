@@ -40,6 +40,7 @@ private:
 
     std::shared_ptr<Mandala> selectedMandala;
     std::vector<Color> appPaletteColors;
+    bool suppressWinTransition;
 
     void transitionToState(GameScreenState newState);
     void updateCurrentState(float deltaTime);
