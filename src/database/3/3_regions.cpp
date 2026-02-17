@@ -36112,9 +36112,7 @@ void MandalaDatabase::createRealMandala() {
         {offsetX + 6574.00f, offsetY + 1063.00f}
     });
 
-    // TODO: Add adjacency relationships manually
-    // You can keep these in a separate .cpp if you prefer.
-    // adjacencyGraph.addAdjacency(i, j);
+    addRealMandalaAdjacency(adjacencyGraph);
 
     auto mandala = std::make_shared<Mandala>(3, "Real", regions, adjacencyGraph);
     mandalaList.push_back(mandala);

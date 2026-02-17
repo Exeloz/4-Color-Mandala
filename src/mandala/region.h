@@ -17,6 +17,7 @@ public:
     const std::vector<Vector2>& getVertices() const;
     bool isPointInRegion(Vector2 point) const;
     void draw(const std::vector<Color>& colorPalette) const;
+    void drawWithColor(Color fillColor, Color borderColor, float borderWidth) const;
 
 private:
     int id;

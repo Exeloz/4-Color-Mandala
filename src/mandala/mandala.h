@@ -13,7 +13,9 @@ public:
     const std::string& getName() const;
     int getRegionCount() const;
     Region* getRegionAtPoint(Vector2 point);
+    Region* getRegionById(int regionId);
     const std::vector<Region>& getRegions() const;
+    const AdjacencyGraph& getAdjacencyGraph() const;
     bool isFullyColored() const;
     bool isValidColoring() const;
     void draw(const std::vector<Color>& colorPalette) const;

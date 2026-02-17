@@ -135,6 +135,10 @@ npm run svg-to-polygons -- ../resources/assets/3/3.svg ../resources/assets/3/man
 python json_to_mandala_code.py ../resources/assets/3/mandala_1.json \
   --name "Real" --id 3 \
   -o ../src/database/3/3_regions.cpp
+
+# 3. JSON/C++ regions → C++ adjacency graph (tolérant aux petits écarts)
+python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+  -o ../src/database/3/3_adjacency.cpp
 ```
 
 Le script normalise automatiquement l'ordre des vertices (counter-clockwise par défaut) pour assurer une tessellation correcte. Options disponibles:
@@ -142,8 +146,60 @@ Le script normalise automatiquement l'ordre des vertices (counter-clockwise par 
 - `--no-normalize`: préserver l'ordre original (non recommandé)
 - `--no-summary`: masquer le résumé des polygones
 
-Ensuite, ajouter la declaration dans `mandalaDatabase.h` et l'appel dans `createSampleMandala()`.
+Le script d'adjacence accepte aussi une source C++ existante:
 
-Voir `tools/README.md` pour plus de détails.
+```bash
+python generate_adjacency.py --regions-cpp ../src/database/3/3_regions.cpp \
+  -o ../src/database/3/3_adjacency.cpp
+```
+
+### Exemples rapides (adjacency)
+
+```bash
+# 1) Generation standard (recommandee pour commencer)
+python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+  -o ../src/database/3/3_adjacency.cpp
+
+# 2) Voir le resultat sans ecrire de fichier
+python generate_adjacency.py --json ../resources/assets/3/mandala_1.json --stdout
+
+# 3) Tolerance plus grande pour des bordures plus espacees
+python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+  --eps-edge 95 \
+  --min-overlap 5 \
+  --min-shared-len 28 \
+  -o ../src/database/3/3_adjacency.cpp
+
+# 4) Exclure certaines regions (ex: ignorer la region 0)
+python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+  --exclude-regions 0 \
+  -o ../src/database/3/3_adjacency.cpp
+```
+
+### Comment augmenter la tolerance (distance entre bordures)
+
+Le parametre principal est `--eps-edge`:
+- plus grand `--eps-edge` => plus de regions considerees adjacentes meme avec un petit espace
+- trop grand `--eps-edge` => risque de faux positifs (regions proches mais pas vraiment voisines)
+
+Parametres utiles a ajuster ensemble:
+- `--eps-edge`: distance max entre segments pour etre candidats (principal)
+- `--min-overlap`: longueur minimale de recouvrement projete
+- `--min-shared-len`: longueur cumulee minimale pour accepter une adjacency
+
+Regle pratique:
+- si des voisins manquent: augmenter `--eps-edge` (ex: 70 -> 85 -> 100)
+- si trop de voisins apparaissent: augmenter `--min-overlap` et/ou `--min-shared-len`
+
+Exemple "tolerance large" pour debug initial:
+
+```bash
+python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+  --eps-edge 120 \
+  --min-overlap 2 \
+  --min-shared-len 5 \
+  --exclude-regions 0 \
+  -o ../src/database/3/3_adjacency.cpp
+```
 
 ```

@@ -4,6 +4,46 @@
 #include <cmath>
 #include <algorithm>
 
+namespace {
+void drawRegionFill(const std::vector<Vector2>& vertices, Color fillColor) {
+    TESStesselator* tess = tessNewTess(nullptr);
+    if (!tess) {
+        for (size_t i = 0; i < vertices.size() - 2; i++) {
+            DrawTriangle(vertices[0], vertices[i + 1], vertices[i + 2], fillColor);
+        }
+        return;
+    }
+
+    std::vector<float> coords;
+    coords.reserve(vertices.size() * 2);
+    for (const auto& v : vertices) {
+        coords.push_back(v.x);
+        coords.push_back(v.y);
+    }
+
+    tessAddContour(tess, 2, coords.data(), sizeof(float) * 2, vertices.size());
+
+    if (tessTesselate(tess, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, nullptr)) {
+        const float* verts = tessGetVertices(tess);
+        const TESSindex* elems = tessGetElements(tess);
+        const int nelems = tessGetElementCount(tess);
+        const int nvp = 3;
+
+        for (int i = 0; i < nelems; i++) {
+            const TESSindex* p = &elems[i * nvp];
+            if (p[0] != TESS_UNDEF && p[1] != TESS_UNDEF && p[2] != TESS_UNDEF) {
+                Vector2 v0 = {verts[p[0] * 2], verts[p[0] * 2 + 1]};
+                Vector2 v1 = {verts[p[1] * 2], verts[p[1] * 2 + 1]};
+                Vector2 v2 = {verts[p[2] * 2], verts[p[2] * 2 + 1]};
+                DrawTriangle(v0, v1, v2, fillColor);
+            }
+        }
+    }
+
+    tessDeleteTess(tess);
+}
+}
+
 Region::Region(int id, const std::vector<Vector2>& vertices)
         : id(id),
             vertices(vertices),
@@ -79,45 +119,18 @@ void Region::draw(const std::vector<Color>& colorPalette) const {
         fillColor = colorPalette[colorIndex];
     }
 
-    TESStesselator* tess = tessNewTess(nullptr);
-    if (!tess) {
-        for (size_t i = 0; i < vertices.size() - 2; i++) {
-            DrawTriangle(vertices[0], vertices[i + 1], vertices[i + 2], fillColor);
-        }
-    } else {
-        std::vector<float> coords;
-        coords.reserve(vertices.size() * 2);
-        for (const auto& v : vertices) {
-            coords.push_back(v.x);
-            coords.push_back(v.y);
-        }
+    drawWithColor(fillColor, Colors::Black, 5.0f);
+}
 
-        tessAddContour(tess, 2, coords.data(), sizeof(float) * 2, vertices.size());
+void Region::drawWithColor(Color fillColor, Color borderColor, float borderWidth) const {
+    if (vertices.size() < 3) return;
 
-        if (tessTesselate(tess, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, nullptr)) {
-            const float* verts = tessGetVertices(tess);
-            const TESSindex* elems = tessGetElements(tess);
-            const int nelems = tessGetElementCount(tess);
-            const int nvp = 3; // vertices per polygon (triangles)
-
-            for (int i = 0; i < nelems; i++) {
-                const TESSindex* p = &elems[i * nvp];
-                if (p[0] != TESS_UNDEF && p[1] != TESS_UNDEF && p[2] != TESS_UNDEF) {
-                    Vector2 v0 = {verts[p[0] * 2], verts[p[0] * 2 + 1]};
-                    Vector2 v1 = {verts[p[1] * 2], verts[p[1] * 2 + 1]};
-                    Vector2 v2 = {verts[p[2] * 2], verts[p[2] * 2 + 1]};
-                    DrawTriangle(v0, v1, v2, fillColor);
-                }
-            }
-        }
-
-        tessDeleteTess(tess);
-    }
+    drawRegionFill(vertices, fillColor);
 
     for (int i = 0; i < static_cast<int>(vertices.size()); i++) {
         Vector2 p1 = vertices[i];
         Vector2 p2 = vertices[(i + 1) % vertices.size()];
-        DrawLineEx(p1, p2, 5, Colors::Black);
+        DrawLineEx(p1, p2, borderWidth, borderColor);
     }
 }
 

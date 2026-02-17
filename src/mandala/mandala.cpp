@@ -26,8 +26,21 @@ Region* Mandala::getRegionAtPoint(Vector2 point) {
     return nullptr;
 }
 
+Region* Mandala::getRegionById(int regionId) {
+    for (auto& region : regions) {
+        if (region.getId() == regionId) {
+            return &region;
+        }
+    }
+    return nullptr;
+}
+
 const std::vector<Region>& Mandala::getRegions() const {
     return regions;
+}
+
+const AdjacencyGraph& Mandala::getAdjacencyGraph() const {
+    return adjacencyGraph;
 }
 
 bool Mandala::isFullyColored() const {

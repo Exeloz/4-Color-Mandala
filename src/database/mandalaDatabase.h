@@ -18,4 +18,5 @@ private:
     void createHexagonMandala();
     void createSquaresMandala();
     void createRealMandala();
+    void addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph);
 };

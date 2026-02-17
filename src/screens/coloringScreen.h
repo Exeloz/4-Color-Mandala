@@ -24,8 +24,14 @@ private:
     bool returnRequested;
     Camera2D camera;
     float zoom;
+    bool debugAdjacencyMode;
+    int debugInspectRegionId;
+    int debugHoverRegionId;
 
     void drawColorPalette();
     void handleColorSelection();
     void updateZoom();
+    void updateDebugOverlay();
+    void drawDebugOverlay() const;
+    int getRegionIdAtWorldPosition(Vector2 worldPos) const;
 };
