@@ -2,8 +2,9 @@
 #include "../ui/colors.h"
 
 SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database)
-    : database(database), selectedMandala(nullptr), transitionRequested(false),
-      returnToStartRequested(false), backButton(20, 20, 100, 50, "BACK") {
+        : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), transitionRequested(false),
+            paletteRequested(false), returnToStartRequested(false),
+            backButton(20, 20, 100, 50, "BACK"), paletteButton(620, 20, 160, 50, "PALETTE") {
     
     const auto& mandalaList = database->getAllMandala();
     for (size_t i = 0; i < mandalaList.size(); i++) {
@@ -15,8 +16,15 @@ SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database)
 
 void SelectionScreen::update(float deltaTime) {
     backButton.update();
+    paletteButton.update();
+
     if (backButton.isClicked()) {
         returnToStartRequested = true;
+        return;
+    }
+
+    if (paletteButton.isClicked()) {
+        paletteRequested = true;
         return;
     }
 
@@ -25,7 +33,9 @@ void SelectionScreen::update(float deltaTime) {
         mandalaButtons[i].update();
         if (mandalaButtons[i].isClicked()) {
             selectedMandala = mandalaList[i];
+            selectedMandalaButtonIndex = static_cast<int>(i);
             transitionRequested = true;
+            return;
         }
     }
 }
@@ -35,9 +45,14 @@ void SelectionScreen::draw() {
     DrawText("Select a Mandala", 200, 20, 40, Colors::Black);
     
     backButton.draw();
+    paletteButton.draw();
 
-    for (auto& button : mandalaButtons) {
-        button.draw();
+    for (size_t i = 0; i < mandalaButtons.size(); i++) {
+        mandalaButtons[i].draw();
+
+        if (static_cast<int>(i) == selectedMandalaButtonIndex) {
+            DrawRectangleLinesEx(mandalaButtons[i].getBounds(), 5.0f, Colors::DarkBlue);
+        }
     }
 }
 
@@ -47,6 +62,10 @@ std::shared_ptr<Mandala> SelectionScreen::getSelectedMandala() const {
 
 bool SelectionScreen::shouldTransitionToColoring() const {
     return transitionRequested;
+}
+
+bool SelectionScreen::shouldTransitionToPalette() const {
+    return paletteRequested;
 }
 
 bool SelectionScreen::shouldReturnToStart() const {

@@ -55,7 +55,7 @@ namespace {
     }
 }
 
-ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
+ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vector<Color>& customPaletteColors)
         : mandala(mandala), colorPalette(), colorButtons(), backButton(20, 20, 100, 50, "BACK"),
             analysisButton(590, 20, 190, 50, "ANALYSIS"),
             analysisCloseButton(590, 20, 190, 50, "EXIT ANALYSIS"),
@@ -70,6 +70,10 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
         camera.rotation = 0.0f;
         camera.zoom = zoom;
+
+    if (!customPaletteColors.empty()) {
+        colorPalette.setColors(customPaletteColors);
+    }
     
     for (int i = 0; i < colorPalette.getColorCount(); i++) {
         float x = 50 + i * 130;

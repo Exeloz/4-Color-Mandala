@@ -3,7 +3,8 @@
 Game::Game() 
     : database(std::make_shared<MandalaDatabase>()), 
       currentState(GameScreenState::START),
-      nextState(GameScreenState::START) {}
+    nextState(GameScreenState::START),
+    appPaletteColors(ColorPalette().getColors()) {}
 
 Game::~Game() = default;
 
@@ -11,6 +12,7 @@ void Game::initialize() {
     database = std::make_shared<MandalaDatabase>();
     startScreen = std::make_shared<StartScreen>();
     selectionScreen = std::make_shared<SelectionScreen>(database);
+    appPaletteColors = ColorPalette().getColors();
 }
 
 void Game::update(float deltaTime) {
@@ -27,11 +29,27 @@ void Game::update(float deltaTime) {
         case GameScreenState::SELECTION:
             if (selectionScreen->shouldTransitionToColoring()) {
                 selectedMandala = selectionScreen->getSelectedMandala();
-                coloringScreen = std::make_shared<ColoringScreen>(selectedMandala);
+                coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, appPaletteColors);
                 transitionToState(GameScreenState::COLORING);
+            }
+            if (selectionScreen->shouldTransitionToPalette()) {
+                paletteScreen = std::make_shared<PaletteScreen>(appPaletteColors);
+                transitionToState(GameScreenState::PALETTE);
             }
             if (selectionScreen->shouldReturnToStart()) {
                 transitionToState(GameScreenState::START);
+            }
+            break;
+
+        case GameScreenState::PALETTE:
+            if (paletteScreen->shouldTransitionToColoring()) {
+                appPaletteColors = paletteScreen->getCustomizedColors();
+                selectionScreen = std::make_shared<SelectionScreen>(database);
+                transitionToState(GameScreenState::SELECTION);
+            }
+            if (paletteScreen->shouldReturnToSelection()) {
+                selectionScreen = std::make_shared<SelectionScreen>(database);
+                transitionToState(GameScreenState::SELECTION);
             }
             break;
 
@@ -75,6 +93,9 @@ void Game::updateCurrentState(float deltaTime) {
         case GameScreenState::SELECTION:
             if (selectionScreen) selectionScreen->update(deltaTime);
             break;
+        case GameScreenState::PALETTE:
+            if (paletteScreen) paletteScreen->update(deltaTime);
+            break;
         case GameScreenState::COLORING:
             if (coloringScreen) coloringScreen->update(deltaTime);
             break;
@@ -91,6 +112,9 @@ void Game::drawCurrentState() {
             break;
         case GameScreenState::SELECTION:
             if (selectionScreen) selectionScreen->draw();
+            break;
+        case GameScreenState::PALETTE:
+            if (paletteScreen) paletteScreen->draw();
             break;
         case GameScreenState::COLORING:
             if (coloringScreen) coloringScreen->draw();

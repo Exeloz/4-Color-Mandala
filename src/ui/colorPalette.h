@@ -12,6 +12,7 @@ public:
     bool isValidColorIndex(int index) const;
     int getSelectedColorIndex() const;
     void setSelectedColorIndex(int index);
+    void setColors(const std::vector<Color>& newColors);
 
 private:
     std::vector<Color> colors;

@@ -10,7 +10,7 @@
 
 class ColoringScreen : public GameState {
 public:
-    ColoringScreen(std::shared_ptr<Mandala> mandala);
+    ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vector<Color>& customPaletteColors = {});
 
     void update(float deltaTime) override;
     void draw() override;

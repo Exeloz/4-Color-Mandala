@@ -3,13 +3,16 @@
 #include "../database/mandalaDatabase.h"
 #include "../screens/startScreen.h"
 #include "../screens/selectionScreen.h"
+#include "../screens/paletteScreen.h"
 #include "../screens/coloringScreen.h"
 #include "../screens/winScreen.h"
+#include "../ui/colorPalette.h"
 #include <memory>
 
 enum class GameScreenState {
     START,
     SELECTION,
+    PALETTE,
     COLORING,
     WIN
 };
@@ -31,10 +34,12 @@ private:
     
     std::shared_ptr<StartScreen> startScreen;
     std::shared_ptr<SelectionScreen> selectionScreen;
+    std::shared_ptr<PaletteScreen> paletteScreen;
     std::shared_ptr<ColoringScreen> coloringScreen;
     std::shared_ptr<WinScreen> winScreen;
 
     std::shared_ptr<Mandala> selectedMandala;
+    std::vector<Color> appPaletteColors;
 
     void transitionToState(GameScreenState newState);
     void updateCurrentState(float deltaTime);

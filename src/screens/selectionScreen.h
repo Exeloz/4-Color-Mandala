@@ -13,13 +13,17 @@ public:
     void draw() override;
     std::shared_ptr<Mandala> getSelectedMandala() const;
     bool shouldTransitionToColoring() const;
+    bool shouldTransitionToPalette() const;
     bool shouldReturnToStart() const;
 
 private:
     std::shared_ptr<MandalaDatabase> database;
     std::vector<Button> mandalaButtons;
     std::shared_ptr<Mandala> selectedMandala;
+    int selectedMandalaButtonIndex;
     bool transitionRequested;
+    bool paletteRequested;
     bool returnToStartRequested;
     Button backButton;
+    Button paletteButton;
 };

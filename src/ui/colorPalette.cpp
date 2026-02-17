@@ -37,3 +37,14 @@ void ColorPalette::setSelectedColorIndex(int index) {
         selectedColorIndex = index;
     }
 }
+
+void ColorPalette::setColors(const std::vector<Color>& newColors) {
+    if (newColors.empty()) {
+        return;
+    }
+
+    colors = newColors;
+    if (!isValidColorIndex(selectedColorIndex)) {
+        selectedColorIndex = 0;
+    }
+}
