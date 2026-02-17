@@ -22,8 +22,14 @@ private:
     ColorPalette colorPalette;
     std::vector<Button> colorButtons;
     Button backButton;
+    Button analysisButton;
+    Button analysisCloseButton;
+    Button analysisClearButton;
     bool gameWon;
     bool returnRequested;
+    bool analysisMode;
+    int analysisInspectRegionId;
+    int analysisHoverRegionId;
     Camera2D camera;
     float zoom;
     bool isPanning;
@@ -38,9 +44,13 @@ private:
     void handleColorSelection();
     void updatePan();
     void updateZoom();
+    void updateAnalysisOverlay();
     void updateDebugOverlay();
+    void drawAnalysisOverlay() const;
     void centerCameraOnRegion(int regionId);
     void drawDebugOverlay() const;
     int getRegionIdAtWorldPosition(Vector2 worldPos) const;
+    bool isPointerOverUi(Vector2 screenPos) const;
+    void layoutTopButtons();
     void logAdjacencySuggestion(bool shouldExist, int regionA, int regionB);
 };

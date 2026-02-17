@@ -57,7 +57,11 @@ namespace {
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
         : mandala(mandala), colorPalette(), colorButtons(), backButton(20, 20, 100, 50, "BACK"),
-            gameWon(false), returnRequested(false), camera{}, zoom(1.0f), isPanning(false),
+            analysisButton(590, 20, 190, 50, "ANALYSIS"),
+            analysisCloseButton(590, 20, 190, 50, "EXIT ANALYSIS"),
+            analysisClearButton(710, 80, 70, 44, "CLEAR"),
+            gameWon(false), returnRequested(false), analysisMode(false), analysisInspectRegionId(-1),
+            analysisHoverRegionId(-1), camera{}, zoom(1.0f), isPanning(false),
             lastPanPointer{},
             debugAdjacencyMode(false), debugInspectRegionId(-1), debugHoverRegionId(-1),
             debugSuggestedAdds(), debugSuggestedRemoves() {
@@ -75,6 +79,7 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
 }
 
 void ColoringScreen::update(float deltaTime) {
+    layoutTopButtons();
     updateZoom();
     updatePan();
 
@@ -91,8 +96,11 @@ void ColoringScreen::update(float deltaTime) {
         }
     }
 
+    updateAnalysisOverlay();
     updateDebugOverlay();
-    handleColorSelection();
+    if (!analysisMode) {
+        handleColorSelection();
+    }
 
     if (mandala->isValidColoring()) {
         gameWon = true;
@@ -102,6 +110,10 @@ void ColoringScreen::update(float deltaTime) {
 void ColoringScreen::handleColorSelection() {
     if (!isPanning && Input::IsPointerPressed()) {
         Vector2 pointerPos = Input::GetPointerPosition();
+        if (isPointerOverUi(pointerPos)) {
+            return;
+        }
+
         Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
         Region* region = mandala->getRegionAtPoint(worldPos);
         if (region != nullptr) {
@@ -176,8 +188,36 @@ void ColoringScreen::draw() {
 
     BeginMode2D(camera);
     mandala->draw(colorPalette.getColors());
+    drawAnalysisOverlay();
     drawDebugOverlay();
     EndMode2D();
+
+    if (analysisMode) {
+        DrawRectangle(15, 70, 560, 58, Fade(Colors::White, 0.85f));
+        DrawRectangleLines(15, 70, 560, 58, Colors::DarkGray);
+
+        std::ostringstream info;
+        info << "ANALYSIS MODE  |  Tap region to inspect  |  Hover: " << analysisHoverRegionId
+             << "  |  Inspect: " << analysisInspectRegionId;
+        DrawText(info.str().c_str(), 24, 82, 20, Colors::Black);
+
+        if (analysisInspectRegionId >= 0) {
+            const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(analysisInspectRegionId);
+            std::ostringstream neighborText;
+            neighborText << "Neighbors(" << neighbors.size() << "): ";
+
+            bool first = true;
+            for (int id : neighbors) {
+                if (!first) {
+                    neighborText << ", ";
+                }
+                neighborText << id;
+                first = false;
+            }
+
+            DrawText(neighborText.str().c_str(), 24, 103, 18, Colors::DarkBlue);
+        }
+    }
 
     if (debugAdjacencyMode) {
         DrawRectangle(15, 70, 760, 58, Fade(Colors::White, 0.85f));
@@ -209,6 +249,12 @@ void ColoringScreen::draw() {
 
     drawColorPalette();
     backButton.draw();
+    if (analysisMode) {
+        analysisCloseButton.draw();
+        analysisClearButton.draw();
+    } else {
+        analysisButton.draw();
+    }
 }
 
 void ColoringScreen::drawColorPalette() {
@@ -235,6 +281,47 @@ bool ColoringScreen::isGameWon() const {
 
 bool ColoringScreen::shouldReturnToSelection() const {
     return returnRequested;
+}
+
+void ColoringScreen::updateAnalysisOverlay() {
+    if (!analysisMode) {
+        analysisButton.update();
+        if (analysisButton.isClicked()) {
+            analysisMode = true;
+            analysisInspectRegionId = -1;
+            analysisHoverRegionId = -1;
+        }
+        return;
+    }
+
+    analysisCloseButton.update();
+    analysisClearButton.update();
+
+    if (analysisCloseButton.isClicked()) {
+        analysisMode = false;
+        analysisInspectRegionId = -1;
+        analysisHoverRegionId = -1;
+        return;
+    }
+
+    if (analysisClearButton.isClicked()) {
+        analysisInspectRegionId = -1;
+        analysisHoverRegionId = -1;
+        return;
+    }
+
+    Vector2 pointerPos = Input::GetPointerPosition();
+    if (isPointerOverUi(pointerPos)) {
+        analysisHoverRegionId = -1;
+        return;
+    }
+
+    Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
+    analysisHoverRegionId = getRegionIdAtWorldPosition(worldPos);
+
+    if (!isPanning && Input::IsPointerPressed() && analysisHoverRegionId >= 0) {
+        analysisInspectRegionId = analysisHoverRegionId;
+    }
 }
 
 void ColoringScreen::updateDebugOverlay() {
@@ -299,6 +386,34 @@ void ColoringScreen::centerCameraOnRegion(int regionId) {
     camera.target = region->getCentroid();
 }
 
+void ColoringScreen::drawAnalysisOverlay() const {
+    if (!analysisMode) {
+        return;
+    }
+
+    if (analysisInspectRegionId >= 0) {
+        const Region* selectedRegion = mandala->getRegionById(analysisInspectRegionId);
+        if (selectedRegion != nullptr) {
+            selectedRegion->drawWithColor(Fade(Colors::Cyan, 0.45f), Colors::DarkCyan, 6.0f);
+
+            const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(analysisInspectRegionId);
+            for (int neighborId : neighbors) {
+                const Region* neighborRegion = mandala->getRegionById(neighborId);
+                if (neighborRegion != nullptr) {
+                    neighborRegion->drawWithColor(Fade(Colors::Blue, 0.30f), Colors::Blue, 3.0f);
+                }
+            }
+        }
+    }
+
+    if (analysisHoverRegionId >= 0 && analysisHoverRegionId != analysisInspectRegionId) {
+        const Region* hoverRegion = mandala->getRegionById(analysisHoverRegionId);
+        if (hoverRegion != nullptr) {
+            hoverRegion->drawWithColor(Fade(Colors::LightSkyBlue, 0.35f), Colors::DodgerBlue, 2.0f);
+        }
+    }
+}
+
 void ColoringScreen::drawDebugOverlay() const {
     if (!debugAdjacencyMode) {
         return;
@@ -313,7 +428,7 @@ void ColoringScreen::drawDebugOverlay() const {
         return;
     }
 
-    selectedRegion->drawWithColor(Fade(Colors::Orange, 0.55f), Colors::Orange, 6.0f);
+    selectedRegion->drawWithColor(Fade(Colors::Cyan, 0.45f), Colors::DarkCyan, 6.0f);
 
     const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(debugInspectRegionId);
     for (int neighborId : neighbors) {
@@ -322,7 +437,14 @@ void ColoringScreen::drawDebugOverlay() const {
             continue;
         }
 
-        neighborRegion->drawWithColor(Fade(Colors::Purple, 0.45f), Colors::Purple, 4.0f);
+        neighborRegion->drawWithColor(Fade(Colors::Blue, 0.30f), Colors::Blue, 4.0f);
+    }
+
+    if (debugHoverRegionId >= 0 && debugHoverRegionId != debugInspectRegionId) {
+        const Region* hoverRegion = mandala->getRegionById(debugHoverRegionId);
+        if (hoverRegion != nullptr) {
+            hoverRegion->drawWithColor(Fade(Colors::LightSkyBlue, 0.35f), Colors::DodgerBlue, 2.0f);
+        }
     }
 }
 
@@ -335,6 +457,28 @@ int ColoringScreen::getRegionIdAtWorldPosition(Vector2 worldPos) const {
     }
 
     return -1;
+}
+
+bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
+    if (CheckCollisionPointRec(screenPos, backButton.getBounds())) {
+        return true;
+    }
+
+    if (CheckCollisionPointRec(screenPos, analysisMode ? analysisCloseButton.getBounds() : analysisButton.getBounds())) {
+        return true;
+    }
+
+    if (analysisMode && CheckCollisionPointRec(screenPos, analysisClearButton.getBounds())) {
+        return true;
+    }
+
+    for (const auto& button : colorButtons) {
+        if (CheckCollisionPointRec(screenPos, button.getBounds())) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void ColoringScreen::logAdjacencySuggestion(bool shouldExist, int regionA, int regionB) {
@@ -364,4 +508,16 @@ void ColoringScreen::logAdjacencySuggestion(bool shouldExist, int regionA, int r
         TraceLog(LOG_INFO, "[ADJ DEBUG] Pair not currently adjacent in graph.");
     }
     TraceLog(LOG_INFO, "[ADJ DEBUG] Line to remove from 3_adjacency.cpp: adjacencyGraph.addAdjacency(%d, %d);", a, b);
+}
+
+void ColoringScreen::layoutTopButtons() {
+    float rightMargin = 20.0f;
+    float mainButtonWidth = 190.0f;
+
+    float mainButtonX = GetScreenWidth() - mainButtonWidth - rightMargin;
+    analysisButton.setPosition(mainButtonX, 20.0f);
+    analysisCloseButton.setPosition(mainButtonX, 20.0f);
+
+    float controlsY = 80.0f;
+    analysisClearButton.setPosition(GetScreenWidth() - 70.0f - rightMargin, controlsY);
 }
