@@ -238,6 +238,8 @@ bool ColoringScreen::shouldReturnToSelection() const {
 }
 
 void ColoringScreen::updateDebugOverlay() {
+    int previousInspectRegionId = debugInspectRegionId;
+
     if (IsKeyPressed(KEY_F3)) {
         debugAdjacencyMode = !debugAdjacencyMode;
         if (!debugAdjacencyMode) {
@@ -282,6 +284,19 @@ void ColoringScreen::updateDebugOverlay() {
             logAdjacencySuggestion(false, debugInspectRegionId, debugHoverRegionId);
         }
     }
+
+    if (debugInspectRegionId >= 0 && debugInspectRegionId != previousInspectRegionId) {
+        centerCameraOnRegion(debugInspectRegionId);
+    }
+}
+
+void ColoringScreen::centerCameraOnRegion(int regionId) {
+    const Region* region = mandala->getRegionById(regionId);
+    if (region == nullptr) {
+        return;
+    }
+
+    camera.target = region->getCentroid();
 }
 
 void ColoringScreen::drawDebugOverlay() const {

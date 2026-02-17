@@ -92,6 +92,43 @@ const std::vector<Vector2>& Region::getVertices() const {
     return vertices;
 }
 
+Vector2 Region::getCentroid() const {
+    if (vertices.empty()) {
+        return {0.0f, 0.0f};
+    }
+
+    if (vertices.size() == 1) {
+        return vertices[0];
+    }
+
+    float twiceArea = 0.0f;
+    float centroidX = 0.0f;
+    float centroidY = 0.0f;
+
+    for (int i = 0; i < static_cast<int>(vertices.size()); i++) {
+        const Vector2& current = vertices[i];
+        const Vector2& next = vertices[(i + 1) % vertices.size()];
+        float cross = (current.x * next.y) - (next.x * current.y);
+        twiceArea += cross;
+        centroidX += (current.x + next.x) * cross;
+        centroidY += (current.y + next.y) * cross;
+    }
+
+    if (std::fabs(twiceArea) < 1e-6f) {
+        Vector2 average = {0.0f, 0.0f};
+        for (const auto& vertex : vertices) {
+            average.x += vertex.x;
+            average.y += vertex.y;
+        }
+
+        float inverseCount = 1.0f / static_cast<float>(vertices.size());
+        return {average.x * inverseCount, average.y * inverseCount};
+    }
+
+    float scale = 1.0f / (3.0f * twiceArea);
+    return {centroidX * scale, centroidY * scale};
+}
+
 bool Region::isPointInRegion(Vector2 point) const {
     int n = vertices.size();
     if (n < 3) return false;

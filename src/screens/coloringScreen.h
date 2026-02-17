@@ -39,6 +39,7 @@ private:
     void updatePan();
     void updateZoom();
     void updateDebugOverlay();
+    void centerCameraOnRegion(int regionId);
     void drawDebugOverlay() const;
     int getRegionIdAtWorldPosition(Vector2 worldPos) const;
     void logAdjacencySuggestion(bool shouldExist, int regionA, int regionB);
