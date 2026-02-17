@@ -2,6 +2,7 @@
 #include "../ui/colors.h"
 #include "../ui/input.h"
 #include "raymath.h"
+#include <algorithm>
 #include <sstream>
 
 namespace {
@@ -10,6 +11,47 @@ namespace {
     constexpr float MIN_ZOOM = 0.02f;
     constexpr float MAX_ZOOM = 4.0f;
     constexpr float ZOOM_STEP = 0.01f;
+
+    std::vector<int> collectSortedRegionIds(const std::vector<Region>& regions) {
+        std::vector<int> ids;
+        ids.reserve(regions.size());
+        for (const auto& region : regions) {
+            ids.push_back(region.getId());
+        }
+
+        std::sort(ids.begin(), ids.end());
+        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+        return ids;
+    }
+
+    int cycleRegionId(const std::vector<int>& sortedIds, int currentId, int direction) {
+        if (sortedIds.empty()) {
+            return -1;
+        }
+
+        if (currentId < 0) {
+            return sortedIds.front();
+        }
+
+        auto it = std::lower_bound(sortedIds.begin(), sortedIds.end(), currentId);
+        if (it == sortedIds.end() || *it != currentId) {
+            if (direction > 0) {
+                return (it == sortedIds.end()) ? sortedIds.front() : *it;
+            }
+
+            if (it == sortedIds.begin()) {
+                return sortedIds.back();
+            }
+
+            --it;
+            return *it;
+        }
+
+        int index = static_cast<int>(it - sortedIds.begin());
+        int size = static_cast<int>(sortedIds.size());
+        int nextIndex = (index + direction + size) % size;
+        return sortedIds[nextIndex];
+    }
 }
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
@@ -175,6 +217,19 @@ void ColoringScreen::updateDebugOverlay() {
 
     if (!debugAdjacencyMode) {
         return;
+    }
+
+    int arrowDirection = 0;
+    if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_UP)) {
+        arrowDirection = 1;
+    } else if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_DOWN)) {
+        arrowDirection = -1;
+    }
+
+    if (arrowDirection != 0) {
+        const auto& regions = mandala->getRegions();
+        std::vector<int> sortedIds = collectSortedRegionIds(regions);
+        debugInspectRegionId = cycleRegionId(sortedIds, debugInspectRegionId, arrowDirection);
     }
 
     Vector2 worldPos = GetScreenToWorld2D(Input::GetPointerPosition(), camera);
