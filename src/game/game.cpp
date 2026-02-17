@@ -66,6 +66,9 @@ void Game::update(float deltaTime) {
             break;
 
         case GameScreenState::WIN:
+            if (winScreen->shouldReturnToColoring()) {
+                transitionToState(GameScreenState::COLORING);
+            }
             if (winScreen->shouldReturnToSelection()) {
                 selectionScreen = std::make_shared<SelectionScreen>(database);
                 transitionToState(GameScreenState::SELECTION);

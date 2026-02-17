@@ -2,19 +2,19 @@
 #include "../ui/colors.h"
 
 WinScreen::WinScreen()
-    : nextButton(250, 250, 150, 80, "NEXT"),
-      backToStartButton(450, 250, 150, 80, "MENU"),
-      returnToSelectionRequested(false), returnToStartRequested(false) {}
+    : viewMandalaButton(180, 250, 240, 80, "VIEW MANDALA"),
+      menuButton(440, 250, 180, 80, "MENU"),
+      returnToColoringRequested(false), returnToSelectionRequested(false) {}
 
 void WinScreen::update(float deltaTime) {
-    nextButton.update();
-    backToStartButton.update();
+    viewMandalaButton.update();
+    menuButton.update();
 
-    if (nextButton.isClicked()) {
-        returnToSelectionRequested = true;
+    if (viewMandalaButton.isClicked()) {
+        returnToColoringRequested = true;
     }
-    if (backToStartButton.isClicked()) {
-        returnToStartRequested = true;
+    if (menuButton.isClicked()) {
+        returnToSelectionRequested = true;
     }
 }
 
@@ -23,8 +23,12 @@ void WinScreen::draw() {
     DrawText("YOU WIN!", 250, 80, 80, Colors::Green);
     DrawText("Mandala completed with valid coloring!", 100, 180, 30, Colors::Black);
     
-    nextButton.draw();
-    backToStartButton.draw();
+    viewMandalaButton.draw();
+    menuButton.draw();
+}
+
+bool WinScreen::shouldReturnToColoring() const {
+    return returnToColoringRequested;
 }
 
 bool WinScreen::shouldReturnToSelection() const {

@@ -8,11 +8,12 @@ public:
 
     void update(float deltaTime) override;
     void draw() override;
+    bool shouldReturnToColoring() const;
     bool shouldReturnToSelection() const;
 
 private:
-    Button nextButton;
-    Button backToStartButton;
+    Button viewMandalaButton;
+    Button menuButton;
+    bool returnToColoringRequested;
     bool returnToSelectionRequested;
-    bool returnToStartRequested;
 };
