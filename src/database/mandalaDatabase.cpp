@@ -10,9 +10,6 @@ namespace {
     constexpr float HEXAGON_INNER_RATIO = 0.5f;
     constexpr int HEXAGON_SEGMENTS = 6;
     constexpr float HEXAGON_DEGREES_PER_SEGMENT = 360.0f / HEXAGON_SEGMENTS;
-    
-    constexpr float SQUARE_SIZE = 80.0f;
-    constexpr int SQUARE_GRID_DIMENSION = 2;
 }
 
 MandalaDatabase::MandalaDatabase() {
@@ -21,7 +18,6 @@ MandalaDatabase::MandalaDatabase() {
 
 void MandalaDatabase::createSampleMandala() {
     createHexagonMandala();
-    createSquaresMandala();
     createRealMandala();
 }
 
@@ -66,49 +62,6 @@ void MandalaDatabase::createHexagonMandala() {
         adjacencyGraph.addAdjacency(i, (i + 1) % HEXAGON_SEGMENTS);
     }
 
-    auto mandala = std::make_shared<Mandala>(1, "Basic Hexagon", regions, adjacencyGraph);
-    mandalaList.push_back(mandala);
-}
-
-void MandalaDatabase::createSquaresMandala() {
-    std::vector<Region> regions;
-    AdjacencyGraph adjacencyGraph(SQUARE_GRID_DIMENSION * SQUARE_GRID_DIMENSION);
-    
-    Vector2 center = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
-
-    regions.emplace_back(0, std::vector<Vector2>{
-        {center.x - SQUARE_SIZE, center.y - SQUARE_SIZE},
-        {center.x - SQUARE_SIZE, center.y},
-        {center.x, center.y},
-        {center.x, center.y - SQUARE_SIZE}
-    });
-
-    regions.emplace_back(1, std::vector<Vector2>{
-        {center.x, center.y - SQUARE_SIZE},
-        {center.x, center.y},
-        {center.x + SQUARE_SIZE, center.y},
-        {center.x + SQUARE_SIZE, center.y - SQUARE_SIZE}
-    });
-
-    regions.emplace_back(2, std::vector<Vector2>{
-        {center.x, center.y},
-        {center.x, center.y + SQUARE_SIZE},
-        {center.x + SQUARE_SIZE, center.y + SQUARE_SIZE},
-        {center.x + SQUARE_SIZE, center.y}
-    });
-
-    regions.emplace_back(3, std::vector<Vector2>{
-        {center.x - SQUARE_SIZE, center.y},
-        {center.x - SQUARE_SIZE, center.y + SQUARE_SIZE},
-        {center.x, center.y + SQUARE_SIZE},
-        {center.x, center.y}
-    });
-
-    adjacencyGraph.addAdjacency(0, 1);
-    adjacencyGraph.addAdjacency(1, 2);
-    adjacencyGraph.addAdjacency(2, 3);
-    adjacencyGraph.addAdjacency(3, 0);
-
-    auto mandala = std::make_shared<Mandala>(2, "Four Squares", regions, adjacencyGraph);
+    auto mandala = std::make_shared<Mandala>(1, "Tutorial", regions, adjacencyGraph);
     mandalaList.push_back(mandala);
 }

@@ -36114,6 +36114,6 @@ void MandalaDatabase::createRealMandala() {
 
     addRealMandalaAdjacency(adjacencyGraph);
 
-    auto mandala = std::make_shared<Mandala>(3, "Real", regions, adjacencyGraph);
+    auto mandala = std::make_shared<Mandala>(3, "My first mandala", regions, adjacencyGraph);
     mandalaList.push_back(mandala);
 }

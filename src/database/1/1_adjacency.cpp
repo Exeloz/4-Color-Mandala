@@ -96,6 +96,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(30, 52);
     adjacencyGraph.addAdjacency(30, 57);
     adjacencyGraph.addAdjacency(30, 66);
+    adjacencyGraph.addAdjacency(30, 72);
     adjacencyGraph.addAdjacency(30, 84);
     adjacencyGraph.addAdjacency(30, 88);
     adjacencyGraph.addAdjacency(30, 98);
@@ -127,6 +128,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(42, 43);
     adjacencyGraph.addAdjacency(42, 50);
     adjacencyGraph.addAdjacency(42, 52);
+    adjacencyGraph.addAdjacency(42, 72);
     adjacencyGraph.addAdjacency(42, 86);
     adjacencyGraph.addAdjacency(43, 51);
     adjacencyGraph.addAdjacency(43, 53);
@@ -203,7 +205,6 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(64, 69);
     adjacencyGraph.addAdjacency(65, 79);
     adjacencyGraph.addAdjacency(65, 83);
-    adjacencyGraph.addAdjacency(66, 84);
     adjacencyGraph.addAdjacency(70, 86);
     adjacencyGraph.addAdjacency(70, 100);
     adjacencyGraph.addAdjacency(71, 87);
@@ -211,6 +212,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(74, 76);
     adjacencyGraph.addAdjacency(74, 78);
     adjacencyGraph.addAdjacency(75, 77);
+    adjacencyGraph.addAdjacency(75, 79);
     adjacencyGraph.addAdjacency(76, 81);
     adjacencyGraph.addAdjacency(76, 91);
     adjacencyGraph.addAdjacency(76, 92);
@@ -300,6 +302,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(114, 117);
     adjacencyGraph.addAdjacency(115, 118);
     adjacencyGraph.addAdjacency(116, 117);
+    adjacencyGraph.addAdjacency(117, 120);
     adjacencyGraph.addAdjacency(117, 122);
     adjacencyGraph.addAdjacency(117, 124);
     adjacencyGraph.addAdjacency(117, 127);
@@ -353,7 +356,6 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(129, 133);
     adjacencyGraph.addAdjacency(129, 153);
     adjacencyGraph.addAdjacency(129, 160);
-    adjacencyGraph.addAdjacency(129, 169);
     adjacencyGraph.addAdjacency(129, 175);
     adjacencyGraph.addAdjacency(130, 136);
     adjacencyGraph.addAdjacency(131, 137);
@@ -389,6 +391,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(141, 149);
     adjacencyGraph.addAdjacency(141, 162);
     adjacencyGraph.addAdjacency(142, 143);
+    adjacencyGraph.addAdjacency(142, 148);
     adjacencyGraph.addAdjacency(143, 157);
     adjacencyGraph.addAdjacency(143, 158);
     adjacencyGraph.addAdjacency(143, 176);
@@ -420,8 +423,6 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(161, 172);
     adjacencyGraph.addAdjacency(162, 167);
     adjacencyGraph.addAdjacency(162, 173);
-    adjacencyGraph.addAdjacency(163, 179);
-    adjacencyGraph.addAdjacency(164, 180);
     adjacencyGraph.addAdjacency(165, 178);
     adjacencyGraph.addAdjacency(165, 188);
     adjacencyGraph.addAdjacency(165, 189);
@@ -517,6 +518,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(201, 219);
     adjacencyGraph.addAdjacency(202, 219);
     adjacencyGraph.addAdjacency(203, 204);
+    adjacencyGraph.addAdjacency(203, 220);
     adjacencyGraph.addAdjacency(204, 206);
     adjacencyGraph.addAdjacency(204, 220);
     adjacencyGraph.addAdjacency(205, 211);
@@ -525,6 +527,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(206, 220);
     adjacencyGraph.addAdjacency(207, 211);
     adjacencyGraph.addAdjacency(207, 218);
+    adjacencyGraph.addAdjacency(207, 222);
     adjacencyGraph.addAdjacency(208, 212);
     adjacencyGraph.addAdjacency(208, 221);
     adjacencyGraph.addAdjacency(208, 223);
@@ -564,6 +567,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(221, 223);
     adjacencyGraph.addAdjacency(221, 243);
     adjacencyGraph.addAdjacency(222, 234);
+    adjacencyGraph.addAdjacency(223, 242);
     adjacencyGraph.addAdjacency(224, 238);
     adjacencyGraph.addAdjacency(224, 250);
     adjacencyGraph.addAdjacency(225, 239);
@@ -614,6 +618,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(241, 259);
     adjacencyGraph.addAdjacency(241, 261);
     adjacencyGraph.addAdjacency(242, 243);
+    adjacencyGraph.addAdjacency(242, 257);
     adjacencyGraph.addAdjacency(243, 257);
     adjacencyGraph.addAdjacency(244, 258);
     adjacencyGraph.addAdjacency(244, 271);
@@ -673,6 +678,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(259, 327);
     adjacencyGraph.addAdjacency(259, 330);
     adjacencyGraph.addAdjacency(259, 340);
+    adjacencyGraph.addAdjacency(260, 282);
     adjacencyGraph.addAdjacency(261, 283);
     adjacencyGraph.addAdjacency(262, 266);
     adjacencyGraph.addAdjacency(262, 269);
@@ -754,7 +760,6 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(287, 306);
     adjacencyGraph.addAdjacency(288, 296);
     adjacencyGraph.addAdjacency(289, 297);
-    adjacencyGraph.addAdjacency(290, 303);
     adjacencyGraph.addAdjacency(292, 304);
     adjacencyGraph.addAdjacency(292, 306);
     adjacencyGraph.addAdjacency(293, 305);
@@ -766,6 +771,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(296, 300);
     adjacencyGraph.addAdjacency(298, 307);
     adjacencyGraph.addAdjacency(298, 311);
+    adjacencyGraph.addAdjacency(299, 308);
     adjacencyGraph.addAdjacency(299, 312);
     adjacencyGraph.addAdjacency(300, 309);
     adjacencyGraph.addAdjacency(300, 315);
@@ -802,7 +808,6 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(318, 349);
     adjacencyGraph.addAdjacency(319, 321);
     adjacencyGraph.addAdjacency(320, 322);
-    adjacencyGraph.addAdjacency(322, 327);
     adjacencyGraph.addAdjacency(323, 338);
     adjacencyGraph.addAdjacency(324, 342);
     adjacencyGraph.addAdjacency(325, 331);
@@ -921,6 +926,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(367, 389);
     adjacencyGraph.addAdjacency(368, 376);
     adjacencyGraph.addAdjacency(368, 378);
+    adjacencyGraph.addAdjacency(368, 390);
     adjacencyGraph.addAdjacency(369, 371);
     adjacencyGraph.addAdjacency(369, 379);
     adjacencyGraph.addAdjacency(369, 381);
@@ -929,6 +935,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(370, 382);
     adjacencyGraph.addAdjacency(371, 381);
     adjacencyGraph.addAdjacency(371, 383);
+    adjacencyGraph.addAdjacency(372, 382);
     adjacencyGraph.addAdjacency(372, 384);
     adjacencyGraph.addAdjacency(373, 374);
     adjacencyGraph.addAdjacency(373, 394);
@@ -948,6 +955,7 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(377, 386);
     adjacencyGraph.addAdjacency(377, 389);
     adjacencyGraph.addAdjacency(377, 392);
+    adjacencyGraph.addAdjacency(377, 394);
     adjacencyGraph.addAdjacency(377, 401);
     adjacencyGraph.addAdjacency(377, 405);
     adjacencyGraph.addAdjacency(377, 407);
@@ -974,7 +982,6 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(384, 404);
     adjacencyGraph.addAdjacency(385, 399);
     adjacencyGraph.addAdjacency(385, 403);
-    adjacencyGraph.addAdjacency(386, 392);
     adjacencyGraph.addAdjacency(388, 400);
     adjacencyGraph.addAdjacency(388, 404);
     adjacencyGraph.addAdjacency(389, 397);
@@ -1017,8 +1024,6 @@ void MandalaDatabase::addRealMandalaAdjacency(AdjacencyGraph& adjacencyGraph) {
     adjacencyGraph.addAdjacency(402, 418);
     adjacencyGraph.addAdjacency(405, 415);
     adjacencyGraph.addAdjacency(406, 416);
-    adjacencyGraph.addAdjacency(407, 412);
-    adjacencyGraph.addAdjacency(408, 411);
     adjacencyGraph.addAdjacency(409, 413);
     adjacencyGraph.addAdjacency(410, 414);
     adjacencyGraph.addAdjacency(411, 416);
