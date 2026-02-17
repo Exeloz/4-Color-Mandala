@@ -16,6 +16,7 @@ public:
     void draw() override;
     bool isGameWon() const;
     bool shouldReturnToSelection() const;
+    void saveWinImage();
 
 private:
     std::shared_ptr<Mandala> mandala;
@@ -25,6 +26,7 @@ private:
     Button analysisButton;
     Button analysisCloseButton;
     Button analysisClearButton;
+    bool winImageSaved;
     bool gameWon;
     bool returnRequested;
     bool analysisMode;

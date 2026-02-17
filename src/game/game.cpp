@@ -55,6 +55,7 @@ void Game::update(float deltaTime) {
 
         case GameScreenState::COLORING:
             if (coloringScreen->isGameWon()) {
+                coloringScreen->saveWinImage();
                 winScreen = std::make_shared<WinScreen>();
                 transitionToState(GameScreenState::WIN);
             }

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <utility>
 #include <sstream>
+#include <ctime>
 
 namespace {
     constexpr float SCREEN_CENTER_X = 400.0f;
@@ -60,7 +61,7 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
             analysisButton(590, 20, 190, 50, "ANALYSIS"),
             analysisCloseButton(590, 20, 190, 50, "EXIT ANALYSIS"),
             analysisClearButton(710, 80, 70, 44, "CLEAR"),
-            gameWon(false), returnRequested(false), analysisMode(false), analysisInspectRegionId(-1),
+            winImageSaved(false), gameWon(false), returnRequested(false), analysisMode(false), analysisInspectRegionId(-1),
             analysisHoverRegionId(-1), camera{}, zoom(1.0f), isPanning(false),
             lastPanPointer{},
             debugAdjacencyMode(false), debugInspectRegionId(-1), debugHoverRegionId(-1),
@@ -285,6 +286,44 @@ bool ColoringScreen::isGameWon() const {
 
 bool ColoringScreen::shouldReturnToSelection() const {
     return returnRequested;
+}
+
+void ColoringScreen::saveWinImage() {
+    if (winImageSaved) {
+        return;
+    }
+
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
+    RenderTexture2D renderTexture = LoadRenderTexture(screenWidth, screenHeight);
+
+    BeginTextureMode(renderTexture);
+    ClearBackground(Colors::White);
+    BeginMode2D(camera);
+    mandala->draw(colorPalette.getColors());
+    EndMode2D();
+    EndTextureMode();
+
+    Image image = LoadImageFromTexture(renderTexture.texture);
+    ImageFlipVertical(&image);
+
+    std::time_t now = std::time(nullptr);
+    std::tm* localTime = std::localtime(&now);
+    char timestamp[32] = {0};
+    std::strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", localTime);
+
+    std::string fileName = "mandala_win_" + std::string(timestamp) + ".png";
+    bool exportOk = ExportImage(image, fileName.c_str());
+    if (exportOk) {
+        TraceLog(LOG_INFO, "[WIN] Mandala image exported: %s", fileName.c_str());
+    } else {
+        TraceLog(LOG_WARNING, "[WIN] Failed to export mandala image.");
+    }
+
+    UnloadImage(image);
+    UnloadRenderTexture(renderTexture);
+    winImageSaved = true;
 }
 
 void ColoringScreen::updateAnalysisOverlay() {
