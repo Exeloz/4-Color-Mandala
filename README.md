@@ -195,7 +195,7 @@ Exemple "tolerance large" pour debug initial:
 
 ```bash
 python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
-  --eps-edge 60 \
+  --eps-edge 40 \
   --min-overlap 0 \
   --min-shared-len 0 \
   --exclude-regions 0 \

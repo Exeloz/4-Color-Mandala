@@ -57,7 +57,8 @@ namespace {
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
         : mandala(mandala), colorPalette(), colorButtons(), backButton(20, 20, 100, 50, "BACK"),
-            gameWon(false), returnRequested(false), camera{}, zoom(1.0f),
+            gameWon(false), returnRequested(false), camera{}, zoom(1.0f), isPanning(false),
+            lastPanPointer{},
             debugAdjacencyMode(false), debugInspectRegionId(-1), debugHoverRegionId(-1),
             debugSuggestedAdds(), debugSuggestedRemoves() {
 
@@ -75,6 +76,7 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
 
 void ColoringScreen::update(float deltaTime) {
     updateZoom();
+    updatePan();
 
     backButton.update();
     if (backButton.isClicked()) {
@@ -98,13 +100,34 @@ void ColoringScreen::update(float deltaTime) {
 }
 
 void ColoringScreen::handleColorSelection() {
-    if (Input::IsPointerPressed()) {
+    if (!isPanning && Input::IsPointerPressed()) {
         Vector2 pointerPos = Input::GetPointerPosition();
         Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
         Region* region = mandala->getRegionAtPoint(worldPos);
         if (region != nullptr) {
             region->setColor(colorPalette.getSelectedColorIndex());
         }
+    }
+}
+
+void ColoringScreen::updatePan() {
+    bool shouldPan = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) ||
+                     (IsKeyDown(KEY_SPACE) && IsMouseButtonDown(MOUSE_BUTTON_LEFT));
+
+    Vector2 pointerPos = Input::GetPointerPosition();
+
+    if (shouldPan) {
+        if (!isPanning) {
+            isPanning = true;
+            lastPanPointer = pointerPos;
+            return;
+        }
+
+        Vector2 delta = Vector2Subtract(pointerPos, lastPanPointer);
+        camera.target = Vector2Subtract(camera.target, Vector2Scale(delta, 1.0f / camera.zoom));
+        lastPanPointer = pointerPos;
+    } else {
+        isPanning = false;
     }
 }
 
@@ -135,8 +158,14 @@ void ColoringScreen::updateZoom() {
     }
 
     if (zoomDelta != 0.0f) {
+        Vector2 pointerPos = Input::GetPointerPosition();
+        Vector2 worldBeforeZoom = GetScreenToWorld2D(pointerPos, camera);
+
         zoom = Clamp(zoom + zoomDelta, MIN_ZOOM, MAX_ZOOM);
         camera.zoom = zoom;
+
+        Vector2 worldAfterZoom = GetScreenToWorld2D(pointerPos, camera);
+        camera.target = Vector2Add(camera.target, Vector2Subtract(worldBeforeZoom, worldAfterZoom));
     }
 }
 

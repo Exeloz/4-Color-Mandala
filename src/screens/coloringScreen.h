@@ -26,6 +26,8 @@ private:
     bool returnRequested;
     Camera2D camera;
     float zoom;
+    bool isPanning;
+    Vector2 lastPanPointer;
     bool debugAdjacencyMode;
     int debugInspectRegionId;
     int debugHoverRegionId;
@@ -34,6 +36,7 @@ private:
 
     void drawColorPalette();
     void handleColorSelection();
+    void updatePan();
     void updateZoom();
     void updateDebugOverlay();
     void drawDebugOverlay() const;
