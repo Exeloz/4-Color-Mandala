@@ -3,6 +3,7 @@
 #include "../ui/input.h"
 #include "raymath.h"
 #include <algorithm>
+#include <utility>
 #include <sstream>
 
 namespace {
@@ -57,7 +58,8 @@ namespace {
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala)
         : mandala(mandala), colorPalette(), colorButtons(), backButton(20, 20, 100, 50, "BACK"),
             gameWon(false), returnRequested(false), camera{}, zoom(1.0f),
-            debugAdjacencyMode(false), debugInspectRegionId(-1), debugHoverRegionId(-1) {
+            debugAdjacencyMode(false), debugInspectRegionId(-1), debugHoverRegionId(-1),
+            debugSuggestedAdds(), debugSuggestedRemoves() {
 
         camera.target = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
@@ -155,7 +157,7 @@ void ColoringScreen::draw() {
         std::ostringstream info;
         info << "DEBUG ADJ: ON  |  Hover: " << debugHoverRegionId
              << "  |  Inspect (Right Click): " << debugInspectRegionId
-             << "  |  Clear Inspect: C";
+               << "  |  Clear Inspect: C  |  A=Add  R=Remove";
         DrawText(info.str().c_str(), 24, 82, 20, Colors::Black);
 
         if (debugInspectRegionId >= 0) {
@@ -242,6 +244,15 @@ void ColoringScreen::updateDebugOverlay() {
     if (IsKeyPressed(KEY_C)) {
         debugInspectRegionId = -1;
     }
+
+    if (debugInspectRegionId >= 0 && debugHoverRegionId >= 0 && debugInspectRegionId != debugHoverRegionId) {
+        if (IsKeyPressed(KEY_A)) {
+            logAdjacencySuggestion(true, debugInspectRegionId, debugHoverRegionId);
+        }
+        if (IsKeyPressed(KEY_R)) {
+            logAdjacencySuggestion(false, debugInspectRegionId, debugHoverRegionId);
+        }
+    }
 }
 
 void ColoringScreen::drawDebugOverlay() const {
@@ -280,4 +291,33 @@ int ColoringScreen::getRegionIdAtWorldPosition(Vector2 worldPos) const {
     }
 
     return -1;
+}
+
+void ColoringScreen::logAdjacencySuggestion(bool shouldExist, int regionA, int regionB) {
+    int a = std::min(regionA, regionB);
+    int b = std::max(regionA, regionB);
+    std::pair<int, int> pair = {a, b};
+
+    bool currentlyAdjacent = mandala->getAdjacencyGraph().areAdjacent(a, b);
+
+    if (shouldExist) {
+        debugSuggestedAdds.insert(pair);
+        debugSuggestedRemoves.erase(pair);
+
+        TraceLog(LOG_INFO, "[ADJ DEBUG] Suggest ADD (%d, %d)", a, b);
+        if (currentlyAdjacent) {
+            TraceLog(LOG_INFO, "[ADJ DEBUG] Already adjacent in current graph.");
+        }
+        TraceLog(LOG_INFO, "[ADJ DEBUG] Line to add: adjacencyGraph.addAdjacency(%d, %d);", a, b);
+        return;
+    }
+
+    debugSuggestedRemoves.insert(pair);
+    debugSuggestedAdds.erase(pair);
+
+    TraceLog(LOG_INFO, "[ADJ DEBUG] Suggest REMOVE (%d, %d)", a, b);
+    if (!currentlyAdjacent) {
+        TraceLog(LOG_INFO, "[ADJ DEBUG] Pair not currently adjacent in graph.");
+    }
+    TraceLog(LOG_INFO, "[ADJ DEBUG] Line to remove from 3_adjacency.cpp: adjacencyGraph.addAdjacency(%d, %d);", a, b);
 }
