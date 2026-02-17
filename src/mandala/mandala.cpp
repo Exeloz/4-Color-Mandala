@@ -19,7 +19,7 @@ int Mandala::getRegionCount() const {
 
 Region* Mandala::getRegionAtPoint(Vector2 point) {
     for (auto& region : regions) {
-        if (region.isPointInRegion(point)) {
+        if (region.isPointInRegion(point) && region.isColorable()) {
             return &region;
         }
     }

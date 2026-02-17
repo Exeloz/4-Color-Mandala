@@ -119,13 +119,5 @@ void Region::draw(const std::vector<Color>& colorPalette) const {
         Vector2 p2 = vertices[(i + 1) % vertices.size()];
         DrawLineEx(p1, p2, 5, Colors::Black);
     }
-
-    Vector2 centroid = {0, 0};
-    for (const auto& v : vertices) {
-        centroid.x += v.x;
-        centroid.y += v.y;
-    }
-    centroid.x /= vertices.size();
-    centroid.y /= vertices.size();
 }
 

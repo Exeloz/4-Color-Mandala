@@ -130,9 +130,17 @@ Les outils dans le dossier `tools/` permettent de convertir des SVG en code C++:
 ```bash
 # 1. SVG paths → JSON polygones
 npm run svg-to-polygons -- ../resources/assets/3/3.svg ../resources/assets/3/mandala_
-# 2. JSON → C++ code
-python json_to_mandala_code.py ../resources/assets/3/mandala_1.json --name "Real" --id 3 -o ../src/database/3/3_regions.cpp --no-summary
+
+# 2. JSON → C++ code avec normalisation automatique du winding
+python json_to_mandala_code.py ../resources/assets/3/mandala_1.json \
+  --name "Real" --id 3 \
+  -o ../src/database/3/3_regions.cpp
 ```
+
+Le script normalise automatiquement l'ordre des vertices (counter-clockwise par défaut) pour assurer une tessellation correcte. Options disponibles:
+- `--clockwise`: normaliser en sens horaire
+- `--no-normalize`: préserver l'ordre original (non recommandé)
+- `--no-summary`: masquer le résumé des polygones
 
 Ensuite, ajouter la declaration dans `mandalaDatabase.h` et l'appel dans `createSampleMandala()`.
 

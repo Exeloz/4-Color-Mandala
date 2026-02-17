@@ -94,7 +94,7 @@ void ColoringScreen::updateZoom() {
 }
 
 void ColoringScreen::draw() {
-    ClearBackground(Colors::Gainsboro);
+    ClearBackground(Colors::LightBlue);
     
     DrawText(mandala->getName().c_str(), 150, 20, 30, Colors::Black);
 
