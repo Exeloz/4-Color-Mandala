@@ -50,7 +50,7 @@ bool Mandala::isFullyColored() const {
 
 bool Mandala::isValidColoring() const {
     for (size_t i = 0; i < regions.size(); i++) {
-        if (!regions[i].hasColor()) {
+        if (!regions[i].hasColor() && regions[i].isColorable()) {
             return false;
         }
         const auto& adjacentRegions = adjacencyGraph.getAdjacentRegions(i);
