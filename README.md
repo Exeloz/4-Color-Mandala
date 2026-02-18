@@ -42,7 +42,15 @@ Execution (release):
 
 Le task `build debug` compile automatiquement avant le lancement.
 
-## Compilation Android (APK)
+## Compilation Android (APK) - recommande (`gradlew`)
+
+Installation rapide (apres pairing/connexion ADB):
+
+```bash
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
+./gradlew assembleDebug
+$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
 
 Prerequis:
 - NDK: `$HOME/android-ndk-r26d`
@@ -50,78 +58,85 @@ Prerequis:
 - Java: `/usr/lib/jvm/java-17-openjdk-amd64`
 - CMake: `cmake;3.30.3` (via `sdkmanager`)
 
+Configurer `local.properties` (a la racine du projet, adaptez le chemin utilisateur):
+
+```properties
+sdk.dir=/home/ccoulombe/Android/Sdk
+ndk.dir=/home/ccoulombe/android-ndk-r26d
+```
+
 Commandes:
 
 ```bash
-# RayMob (Gradle) - recommande
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
+
 # Installer CMake si absent
 $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager "cmake;3.30.3"
 
-# Build debug (RayMob)
-cd $HOME/cegep/Documents/Dev/Mobile/Raylib/raymob
+# Build debug / release
 ./gradlew assembleDebug
-
-# Build release (APK non signe par defaut)
 ./gradlew assembleRelease
 ```
 
-Execution (debug) sur appareil:
+APK generes:
 
-```bash
-adb install -r ../raymob/app/build/outputs/apk/debug/app-debug.apk
+```
+app/build/outputs/apk/debug/app-debug.apk
+app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-Note: si `adb` n'est pas trouve, utiliser `$HOME/Android/Sdk/platform-tools/adb`.
-
-Installation via ADB (USB ou Wi-Fi):
+Signer l'APK release avant installation (obligatoire):
 
 ```bash
-# Verifier la connexion
+APKSIGNER=$(ls -1 $HOME/Android/Sdk/build-tools/*/apksigner | sort -V | tail -n 1)
+
+# Keystore debug local (si absent)
+[ -f "$HOME/.android/debug.keystore" ] || keytool -genkeypair -v -storetype PKCS12 \
+  -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android \
+  -alias androiddebugkey -dname "CN=Android Debug,O=Android,C=US" \
+  -keyalg RSA -keysize 2048 -validity 10000
+
+cp app/build/outputs/apk/release/app-release-unsigned.apk \
+   app/build/outputs/apk/release/app-release-signed.apk
+
+$APKSIGNER sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android \
+  --key-pass pass:android --ks-key-alias androiddebugkey \
+  app/build/outputs/apk/release/app-release-signed.apk
+```
+
+Installation debug sur appareil:
+
+```bash
+# Generer d'abord l'APK debug si le dossier n'existe pas:
+# ./gradlew assembleDebug
+$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+# Installation release (APK non signe):
+# ./gradlew assembleRelease
+$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/release/app-release-signed.apk
+```
+
+### Installer sur le telephone (deja pairé/connecté)
+
+```bash
+# 1) Verifier que le telephone est visible
 $HOME/Android/Sdk/platform-tools/adb devices
 
-# Installer l'APK (debug)
-$HOME/Android/Sdk/platform-tools/adb install -r ../raymob/app/build/outputs/apk/debug/app-debug.apk
+# 2) Installer (ou mettre a jour) l'APK debug
+$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+#    Installer (ou mettre a jour) l'APK release (signe)
+$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/release/app-release-signed.apk
+
+# 3) (Optionnel) Lancer l'app depuis le PC
+$HOME/Android/Sdk/platform-tools/adb shell monkey -p com.CegepGarneau.colormandala -c android.intent.category.LAUNCHER 1
 ```
 
-ADB Wi-Fi (Android 11+):
-
-```bash
-# 1) Activer "Wireless debugging" et lancer "Pair device with pairing code"
-$HOME/Android/Sdk/platform-tools/adb pair <IP:PAIR_PORT>
-
-# 2) Se connecter a l'IP:PORT affiche sous "Wireless debugging"
-$HOME/Android/Sdk/platform-tools/adb connect <IP:CONNECT_PORT>
-$HOME/Android/Sdk/platform-tools/adb devices
-```
-
-APK genere:
-
-```
-../raymob/app/build/outputs/apk/debug/app-debug.apk
-../raymob/app/build/outputs/apk/release/app-release-unsigned.apk
-```
-
-## Compilation Android (Makefile.Android - legacy)
-
-Commandes:
-
-```bash
-# Raylib Android (static)
-cd $HOME/cegep/Documents/Dev/Mobile/Raylib/raylib/src
-make clean
-make PLATFORM=PLATFORM_ANDROID ANDROID_ARCH=arm64 ANDROID_NDK=$HOME/android-ndk-r26d RAYLIB_LIBTYPE=STATIC
-
-# Application Android (debug)
-cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
-make PLATFORM=PLATFORM_ANDROID ANDROID_ARCH=arm64 ANDROID_NDK=$HOME/android-ndk-r26d \
-  JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-```
-
-APK genere:
-
-```
-game.apk
-```
+Notes utiles:
+- Si `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, desinstaller puis reinstaller:
+  - `$HOME/Android/Sdk/platform-tools/adb uninstall com.CegepGarneau.colormandala`
+  - relancer la commande `adb install -r ...`
+- Un APK release non signe (`app-release-unsigned.apk`) ne peut pas etre installe.
 
 ## Outils de création de mandalas
 

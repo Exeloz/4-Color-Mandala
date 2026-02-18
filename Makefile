@@ -275,7 +275,7 @@ endif
 
 # Define include paths for required headers
 # NOTE: Several external required libraries (stb and others)
-INCLUDE_PATHS = -I. -I"$(RAYLIB_PATH)/src" -I"$(RAYLIB_PATH)/src/external" -Iexternal/libtess2/Include
+INCLUDE_PATHS = -I. -Iapp/src -I"$(RAYLIB_PATH)/src" -I"$(RAYLIB_PATH)/src/external" -Iexternal/libtess2/Include
 ifneq ($(wildcard /opt/homebrew/include/.*),)
     INCLUDE_PATHS += -I/opt/homebrew/include
 endif
@@ -295,7 +295,7 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(PLATFORM_OS),LINUX)
         # Reset everything.
         # Precedence: immediately local, installed version, raysan5 provided libs -I$(RAYLIB_H_INSTALL_PATH) -I$(RAYLIB_PATH)/release/include
-        INCLUDE_PATHS = -I"$(RAYLIB_H_INSTALL_PATH)" -isystem. -isystem"$(RAYLIB_PATH)/src" -isystem"$(RAYLIB_PATH)/release/include" -isystem"$(RAYLIB_PATH)/src/external" -Iexternal/libtess2/Include
+        INCLUDE_PATHS = -I"$(RAYLIB_H_INSTALL_PATH)" -Iapp/src -isystem. -isystem"$(RAYLIB_PATH)/src" -isystem"$(RAYLIB_PATH)/release/include" -isystem"$(RAYLIB_PATH)/src/external" -Iexternal/libtess2/Include
     endif
 endif
 
@@ -389,7 +389,11 @@ endif
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
 # Define all source files required
-SRC_DIR = src
+ifneq ($(wildcard app/src),)
+SRC_DIR ?= app/src
+else
+SRC_DIR ?= src
+endif
 OBJ_DIR = obj
 LIBTESS2_DIR = external/libtess2/Source
 
@@ -399,6 +403,7 @@ LIBTESS2_SRC = $(wildcard $(LIBTESS2_DIR)/*.c)
 SRC = $(CPP_SRC)
 #OBJS = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 OBJS = $(call rwildcard, $(SRC_DIR)/, *.cpp)
+CFLAGS_C = $(filter-out -std=c++14 -fpermissive,$(CFLAGS))
 
 # For Android platform we call a custom Makefile.Android
 ifeq ($(PLATFORM),PLATFORM_ANDROID)
@@ -421,10 +426,7 @@ all:
 	$(MAKE_COMMAND) $(MAKEFILE_PARAMS)
 
 # Project target defined by PROJECT_NAME
-$(PROJECT_NAME): $(SRC) $(LIBTESS2_SRC)
-	gcc -c $(LIBTESS2_SRC) $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM)
-	$(CC) -o $(PROJECT_NAME)$(EXT) $(SRC) *.o $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM)
-	rm -f *.o
+$(PROJECT_NAME): $(SRC) $(LIBTESS2_SRC) ; gcc -c $(LIBTESS2_SRC) $(CFLAGS_C) $(INCLUDE_PATHS) -D$(PLATFORM) && $(CC) -o $(PROJECT_NAME)$(EXT) $(SRC) *.o $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM) && rm -f *.o
 
 # Compile source files
 # NOTE: This pattern will compile every module defined on $(OBJS)
@@ -439,6 +441,7 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
 		del *.o *.exe /s
     endif
     ifeq ($(PLATFORM_OS),LINUX)
+	rm -f *.o $(PROJECT_NAME)$(EXT)
 	find -type f -executable | xargs file -i | grep -E 'x-object|x-archive|x-sharedlib|x-executable' | rev | cut -d ':' -f 2- | rev | xargs rm -fv
     endif
     ifeq ($(PLATFORM_OS),OSX)
