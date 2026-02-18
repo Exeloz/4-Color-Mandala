@@ -1,3 +1,6 @@
 [submodule "external/libtess2"]
 	path = external/libtess2
 	url = https://github.com/memononen/libtess2.git
+[submodule "external/raylib"]
+	path = external/raylib
+	url = https://github.com/raysan5/raylib.git

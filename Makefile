@@ -26,7 +26,8 @@
 # Define required raylib variables
 PROJECT_NAME       ?= game
 RAYLIB_VERSION     ?= 5.0.0
-RAYLIB_PATH        ?= $(HOME)/cegep/Documents/Dev/Mobile/Raylib/raylib
+RAYLIB_ROOT        ?= $(abspath external/raylib)
+RAYLIB_PATH        ?= $(RAYLIB_ROOT)
 
 # Define compiler path on Windows
 COMPILER_PATH      ?= C:/raylib/w64devkit/bin
@@ -47,6 +48,10 @@ PLATFORM           ?= PLATFORM_DESKTOP
 DESTDIR ?= /usr/local
 RAYLIB_INSTALL_PATH ?= $(RAYLIB_PATH)/src
 RAYLIB_H_INSTALL_PATH ?= $(RAYLIB_PATH)/src
+
+ifeq ($(wildcard $(RAYLIB_PATH)/src/raylib.h),)
+$(error raylib.h not found at $(RAYLIB_PATH)/src/raylib.h. Set RAYLIB_ROOT to your raylib source root)
+endif
 
 # Library type used for raylib: STATIC (.a) or SHARED (.so/.dll)
 RAYLIB_LIBTYPE        ?= STATIC
@@ -129,7 +134,7 @@ endif
 # Required for ldconfig or other tools that do not perform path expansion.
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(PLATFORM_OS),LINUX)
-        RAYLIB_PREFIX ?= $(HOME)/cegep/Documents/Dev/Mobile/Raylib/raylib
+        RAYLIB_PREFIX ?= $(RAYLIB_ROOT)
         RAYLIB_PATH    = $(RAYLIB_PREFIX)
     endif
 endif
@@ -239,10 +244,6 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         ifeq ($(RAYLIB_LIBTYPE),STATIC)
             CFLAGS += -D_DEFAULT_SOURCE
         endif
-        ifeq ($(RAYLIB_LIBTYPE),SHARED)
-            # Explicitly enable runtime link to libraylib.so
-            CFLAGS += -Wl,-rpath,$(EXAMPLE_RUNTIME_PATH)
-        endif
     endif
 endif
 ifeq ($(PLATFORM),PLATFORM_RPI)
@@ -321,6 +322,10 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         # Reset everything.
         # Precedence: immediately local, installed version, raysan5 provided libs
         LDFLAGS = -L. -L"$(RAYLIB_INSTALL_PATH)" -L"$(RAYLIB_RELEASE_PATH)"
+        ifeq ($(RAYLIB_LIBTYPE),SHARED)
+            # Explicitly enable runtime link to libraylib.so
+            LDFLAGS += -Wl,-rpath,"$(EXAMPLE_RUNTIME_PATH)"
+        endif
     endif
 endif
 
@@ -400,6 +405,7 @@ LIBTESS2_DIR = external/libtess2/Source
 # Define all object files from source files
 CPP_SRC = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 LIBTESS2_SRC = $(wildcard $(LIBTESS2_DIR)/*.c)
+LIBTESS2_OBJS = $(LIBTESS2_SRC:.c=.o)
 SRC = $(CPP_SRC)
 #OBJS = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 OBJS = $(call rwildcard, $(SRC_DIR)/, *.cpp)
@@ -426,7 +432,11 @@ all:
 	$(MAKE_COMMAND) $(MAKEFILE_PARAMS)
 
 # Project target defined by PROJECT_NAME
-$(PROJECT_NAME): $(SRC) $(LIBTESS2_SRC) ; gcc -c $(LIBTESS2_SRC) $(CFLAGS_C) $(INCLUDE_PATHS) -D$(PLATFORM) && $(CC) -o $(PROJECT_NAME)$(EXT) $(SRC) *.o $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM) && rm -f *.o
+$(PROJECT_NAME): $(SRC) $(LIBTESS2_OBJS)
+	$(CC) -o $(PROJECT_NAME)$(EXT) $(SRC) $(LIBTESS2_OBJS) $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM)
+
+$(LIBTESS2_DIR)/%.o: $(LIBTESS2_DIR)/%.c
+	gcc -c $< -o $@ $(CFLAGS_C) $(INCLUDE_PATHS) -D$(PLATFORM)
 
 # Compile source files
 # NOTE: This pattern will compile every module defined on $(OBJS)
@@ -441,8 +451,7 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
 		del *.o *.exe /s
     endif
     ifeq ($(PLATFORM_OS),LINUX)
-	rm -f *.o $(PROJECT_NAME)$(EXT)
-	find -type f -executable | xargs file -i | grep -E 'x-object|x-archive|x-sharedlib|x-executable' | rev | cut -d ':' -f 2- | rev | xargs rm -fv
+	rm -f *.o $(LIBTESS2_OBJS) $(PROJECT_NAME)$(EXT)
     endif
     ifeq ($(PLATFORM_OS),OSX)
 		find . -type f -perm +ugo+x -delete

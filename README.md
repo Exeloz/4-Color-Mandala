@@ -7,8 +7,12 @@ Note: `$HOME/cegep` correspond a `/mnt/c/Users/Admin/OneDrive - Cégep Garneau`.
 ## Compilation sur ordinateur (Linux/WSL)
 
 ```bash
+# Init/update submodules (raylib + libtess2)
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
+git submodule update --init --recursive
+
 # Raylib desktop (shared)
-cd $HOME/cegep/Documents/Dev/Mobile/Raylib/raylib/src
+cd external/raylib/src
 make clean
 make RAYLIB_LIBTYPE=SHARED
 
@@ -25,7 +29,7 @@ make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED
 Execution:
 
 ```bash
-export LD_LIBRARY_PATH=$HOME/cegep/Documents/Dev/Mobile/Raylib/raylib/src:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/external/raylib/src:$LD_LIBRARY_PATH
 ./main
 ```
 

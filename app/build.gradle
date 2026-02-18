@@ -73,11 +73,14 @@ android {
             cmake {
                 def nativeLibName = project.findProperty('app.native_library_name') ?: 'raymob'
                 def glVersion = project.findProperty('gl.version') ?: 'ES20'
+                def raylibRootProp = project.findProperty('raylib.root') ?: 'external/raylib'
+                def raylibRoot = rootProject.file(raylibRootProp).absolutePath
 
                 arguments "-DPLATFORM=Android",
                           "-DBUILD_EXAMPLES=OFF",
                           "-DAPP_LIB_NAME=$nativeLibName",
-                          "-DGL_VERSION=$glVersion"
+                          "-DGL_VERSION=$glVersion",
+                          "-DRAYLIB_ROOT=$raylibRoot"
             }
         }
 
