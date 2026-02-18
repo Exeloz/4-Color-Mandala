@@ -19,21 +19,13 @@ namespace {
     constexpr float CAMERA_FIT_MARGIN = 24.0f;
 
     bool isMobileLayout() {
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
         return true;
-#else
-        return false;
-#endif
     }
 
     float getUiScale() {
-        if (!isMobileLayout()) {
-            return 1.0f;
-        }
-
-        float widthScale = static_cast<float>(GetScreenWidth()) / 800.0f;
-        float heightScale = static_cast<float>(GetScreenHeight()) / 600.0f;
-        return Clamp(std::min(widthScale, heightScale), 1.2f, 2.4f);
+        float widthScale = static_cast<float>(GetScreenWidth()) / 860.0f;
+        float heightScale = static_cast<float>(GetScreenHeight()) / 420.0f;
+        return Clamp(std::min(widthScale, heightScale), 0.75f, 2.4f);
     }
 
     std::string fitTextWithEllipsis(const std::string& text, int textSize, int maxWidth) {
@@ -291,39 +283,6 @@ void ColoringScreen::draw() {
     drawAnalysisOverlay();
     drawDebugOverlay();
     EndMode2D();
-
-    if (analysisMode) {
-           int infoX = static_cast<int>(15.0f * uiScale);
-           int infoY = static_cast<int>(70.0f * uiScale);
-           int infoW = static_cast<int>(560.0f * uiScale);
-           int infoH = static_cast<int>(58.0f * uiScale);
-           DrawRectangle(infoX, infoY, infoW, infoH, Fade(Colors::White, 0.85f));
-           DrawRectangleLines(infoX, infoY, infoW, infoH, Colors::DarkGray);
-
-        std::ostringstream info;
-        info << "ANALYSIS MODE  |  Tap region to inspect  |  Hover: " << analysisHoverRegionId
-             << "  |  Inspect: " << analysisInspectRegionId;
-           DrawText(info.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(82.0f * uiScale),
-                  static_cast<int>(20.0f * uiScale), Colors::Black);
-
-        if (analysisInspectRegionId >= 0) {
-            const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(analysisInspectRegionId);
-            std::ostringstream neighborText;
-            neighborText << "Neighbors(" << neighbors.size() << "): ";
-
-            bool first = true;
-            for (int id : neighbors) {
-                if (!first) {
-                    neighborText << ", ";
-                }
-                neighborText << id;
-                first = false;
-            }
-
-            DrawText(neighborText.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(103.0f * uiScale),
-                     static_cast<int>(18.0f * uiScale), Colors::DarkBlue);
-        }
-    }
 
     if (debugAdjacencyMode) {
         int infoX = static_cast<int>(15.0f * uiScale);
@@ -785,18 +744,34 @@ void ColoringScreen::layoutTopButtons() {
     float paletteX = leftMargin;
     float paletteTop = mobileLayout ? controlsY : (controlsY + clearButtonHeight + (18.0f * uiScale));
     float paletteBottomMargin = 20.0f * uiScale;
-    float availableHeight = static_cast<float>(GetScreenHeight()) - paletteTop - paletteBottomMargin;
+    float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - paletteTop - paletteBottomMargin);
     float verticalGap = mobileLayout ? (12.0f * uiScale) : 10.0f;
 
-    float maxButtonHeightBySpace = (availableHeight - ((colorCount - 1) * verticalGap)) / std::max(1, colorCount);
-    float minButtonHeight = mobileLayout ? (52.0f * uiScale) : 40.0f;
-    float preferredButtonHeight = mobileLayout ? (64.0f * uiScale) : 48.0f;
-    float buttonHeight = Clamp(maxButtonHeightBySpace, minButtonHeight, preferredButtonHeight);
-    float buttonWidth = mobileLayout ? (104.0f * uiScale) : 90.0f;
+    float columnWidth = std::max(backButtonWidth, mainButtonWidth);
+    int rowsSingleColumn = colorCount;
+    float singleColumnMinHeight = mobileLayout ? (52.0f * uiScale) : 40.0f;
+    float requiredSingleHeight = (rowsSingleColumn * singleColumnMinHeight) + ((rowsSingleColumn - 1) * verticalGap);
+
+    int columns = (mobileLayout && requiredSingleHeight > availableHeight) ? 2 : 1;
+    int rows = (colorCount + columns - 1) / columns;
+
+    float horizontalGap = 10.0f * uiScale;
+    float buttonWidth = (columns == 1)
+        ? (mobileLayout ? (104.0f * uiScale) : 90.0f)
+        : ((columnWidth - horizontalGap) / 2.0f);
+
+    float buttonHeightBySpace = (availableHeight - ((rows - 1) * verticalGap)) / std::max(1, rows);
+    float minButtonHeight = mobileLayout ? (44.0f * uiScale) : 36.0f;
+    float preferredButtonHeight = mobileLayout ? (62.0f * uiScale) : 48.0f;
+    float buttonHeight = Clamp(buttonHeightBySpace, minButtonHeight, preferredButtonHeight);
 
     for (int i = 0; i < colorCount; i++) {
-        float buttonY = paletteTop + i * (buttonHeight + verticalGap);
-        colorButtons[i].setPosition(paletteX, buttonY);
+        int col = (columns == 1) ? 0 : (i / rows);
+        int row = (columns == 1) ? i : (i % rows);
+
+        float buttonX = paletteX + col * (buttonWidth + horizontalGap);
+        float buttonY = paletteTop + row * (buttonHeight + verticalGap);
+        colorButtons[i].setPosition(buttonX, buttonY);
         colorButtons[i].setSize(buttonWidth, buttonHeight);
     }
 }

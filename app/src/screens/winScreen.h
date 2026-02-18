@@ -16,4 +16,6 @@ private:
     Button menuButton;
     bool returnToColoringRequested;
     bool returnToSelectionRequested;
+
+    void layoutControls();
 };

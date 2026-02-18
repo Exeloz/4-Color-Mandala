@@ -13,8 +13,6 @@ namespace {
     constexpr float SLOT_HEIGHT = 70.0f;
     constexpr float SLOT_GAP = 20.0f;
 
-    constexpr int SWATCH_COLUMNS = 6;
-    constexpr int SWATCH_ROWS = 4;
     constexpr float SWATCH_START_X = 90.0f;
     constexpr float SWATCH_START_Y = 260.0f;
     constexpr float SWATCH_WIDTH = 95.0f;
@@ -23,21 +21,39 @@ namespace {
     constexpr float SWATCH_GAP_Y = 15.0f;
 
     bool isMobileLayout() {
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
         return true;
-#else
-        return false;
-#endif
     }
 
     float getUiScale() {
-        if (!isMobileLayout()) {
-            return 1.0f;
-        }
+        float widthScale = static_cast<float>(GetScreenWidth()) / 860.0f;
+        float heightScale = static_cast<float>(GetScreenHeight()) / 420.0f;
+        return Clamp(std::min(widthScale, heightScale), 0.75f, 2.4f);
+    }
 
-        float widthScale = static_cast<float>(GetScreenWidth()) / 800.0f;
-        float heightScale = static_cast<float>(GetScreenHeight()) / 600.0f;
-        return Clamp(std::min(widthScale, heightScale), 1.15f, 2.2f);
+    int getSwatchColumns(float uiScale) {
+        float swatchWidth = SWATCH_WIDTH * uiScale;
+        float gapX = SWATCH_GAP_X * uiScale;
+        float startX = SWATCH_START_X * uiScale;
+        float rightMargin = 20.0f * uiScale;
+
+        float availableWidth = std::max(1.0f, static_cast<float>(GetScreenWidth()) - startX - rightMargin);
+        int columns = static_cast<int>((availableWidth + gapX) / (swatchWidth + gapX));
+        return std::max(1, columns);
+    }
+
+    int getSwatchRows(float uiScale) {
+        float swatchHeight = SWATCH_HEIGHT * uiScale;
+        float gapY = SWATCH_GAP_Y * uiScale;
+        float startY = SWATCH_START_Y * uiScale;
+        float bottomMargin = 20.0f * uiScale;
+
+        float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - startY - bottomMargin);
+        int rows = static_cast<int>((availableHeight + gapY) / (swatchHeight + gapY));
+        return std::max(1, rows);
+    }
+
+    int getSwatchesPerPage(float uiScale) {
+        return getSwatchColumns(uiScale) * getSwatchRows(uiScale);
     }
 }
 
@@ -74,6 +90,13 @@ PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
 void PaletteScreen::update(float deltaTime) {
     layoutControls();
 
+    float uiScale = getUiScale();
+    int swatchesPerPage = std::max(1, getSwatchesPerPage(uiScale));
+    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / swatchesPerPage);
+    if (swatchPage > maxPage) {
+        swatchPage = maxPage;
+    }
+
     backButton.update();
     continueButton.update();
     prevPageButton.update();
@@ -94,7 +117,6 @@ void PaletteScreen::update(float deltaTime) {
         return;
     }
 
-    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / (SWATCH_COLUMNS * SWATCH_ROWS));
     if (nextPageButton.isClicked() && swatchPage < maxPage) {
         swatchPage++;
         return;
@@ -147,7 +169,8 @@ void PaletteScreen::draw() {
     prevPageButton.draw();
     nextPageButton.draw();
 
-    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / (SWATCH_COLUMNS * SWATCH_ROWS));
+    int swatchesPerPage = std::max(1, getSwatchesPerPage(uiScale));
+    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / swatchesPerPage);
     std::string pageText = "Page " + std::to_string(swatchPage + 1) + " / " + std::to_string(maxPage + 1);
     DrawText(pageText.c_str(), static_cast<int>(90.0f * uiScale), static_cast<int>(208.0f * uiScale), pageSize, Colors::Black);
 
@@ -244,9 +267,10 @@ Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
 
 Rectangle PaletteScreen::getAvailableColorBounds(int colorIndex) const {
     float uiScale = getUiScale();
+    int swatchColumns = std::max(1, getSwatchColumns(uiScale));
     int pageLocalIndex = colorIndex - getSwatchStartIndex();
-    int col = pageLocalIndex % SWATCH_COLUMNS;
-    int row = pageLocalIndex / SWATCH_COLUMNS;
+    int col = pageLocalIndex % swatchColumns;
+    int row = pageLocalIndex / swatchColumns;
 
     float width = SWATCH_WIDTH * uiScale;
     float height = SWATCH_HEIGHT * uiScale;
@@ -261,12 +285,12 @@ Rectangle PaletteScreen::getAvailableColorBounds(int colorIndex) const {
 }
 
 int PaletteScreen::getSwatchStartIndex() const {
-    int swatchesPerPage = SWATCH_COLUMNS * SWATCH_ROWS;
+    int swatchesPerPage = std::max(1, getSwatchesPerPage(getUiScale()));
     return swatchPage * swatchesPerPage;
 }
 
 int PaletteScreen::getSwatchEndIndex() const {
-    int swatchesPerPage = SWATCH_COLUMNS * SWATCH_ROWS;
+    int swatchesPerPage = std::max(1, getSwatchesPerPage(getUiScale()));
     int endIndex = getSwatchStartIndex() + swatchesPerPage;
     return std::min(static_cast<int>(availableColors.size()), endIndex);
 }

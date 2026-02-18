@@ -14,4 +14,6 @@ public:
 private:
     Button startButton;
     bool transitionRequested;
+
+    void layoutControls();
 };

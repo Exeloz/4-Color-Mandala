@@ -4,21 +4,13 @@
 
 namespace {
 bool isMobileLayout() {
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
     return true;
-#else
-    return false;
-#endif
 }
 
 float getUiScale() {
-    if (!isMobileLayout()) {
-        return 1.0f;
-    }
-
-    float widthScale = static_cast<float>(GetScreenWidth()) / 800.0f;
-    float heightScale = static_cast<float>(GetScreenHeight()) / 600.0f;
-    return Clamp(std::min(widthScale, heightScale), 1.1f, 2.2f);
+    float widthScale = static_cast<float>(GetScreenWidth()) / 860.0f;
+    float heightScale = static_cast<float>(GetScreenHeight()) / 420.0f;
+    return Clamp(std::min(widthScale, heightScale), 0.75f, 2.4f);
 }
 }
 
@@ -111,6 +103,26 @@ void SelectionScreen::layoutControls() {
     float availableWidth = static_cast<float>(GetScreenWidth()) - (2.0f * sideMargin);
 
     if (mobileLayout) {
+        bool landscape = GetScreenWidth() >= GetScreenHeight();
+        if (landscape) {
+            float columnGap = 14.0f * uiScale;
+            float rowGap = 14.0f * uiScale;
+            float cardWidth = (availableWidth - columnGap) * 0.5f;
+            int rows = static_cast<int>((mandalaButtons.size() + 1) / 2);
+            float cardHeight = (availableHeight - rowGap * std::max(0, rows - 1)) / std::max(1, rows);
+            cardHeight = std::max(cardHeight, 72.0f * uiScale);
+
+            for (size_t i = 0; i < mandalaButtons.size(); i++) {
+                int col = static_cast<int>(i % 2);
+                int row = static_cast<int>(i / 2);
+                float x = sideMargin + col * (cardWidth + columnGap);
+                float y = contentTop + row * (cardHeight + rowGap);
+                mandalaButtons[i].setPosition(x, y);
+                mandalaButtons[i].setSize(cardWidth, cardHeight);
+            }
+            return;
+        }
+
         int count = static_cast<int>(mandalaButtons.size());
         float gap = 16.0f * uiScale;
         float cardHeight = (availableHeight - (gap * (count - 1))) / std::max(1, count);
