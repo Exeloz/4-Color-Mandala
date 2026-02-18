@@ -168,6 +168,23 @@ python generate_adjacency.py --regions-cpp ../src/database/3/3_regions.cpp \
   -o ../src/database/3/3_adjacency.cpp
 ```
 
+### Generer un modele MiniZinc (nombre minimal de couleurs)
+
+Le script `generate_minizinc.py` lit:
+- `app/src/database/<id>/<id>_regions.cpp`
+- `app/src/database/<id>/<id>_adjacency.cpp`
+
+et cree un fichier `.mzn` a cote des assets, par exemple:
+- `resources/assets/1/mandala_1.mzn`
+
+```bash
+# Depuis le dossier tools/
+python generate_minizinc.py --mandala-id 1
+
+# Generer pour tous les IDs detectes
+python generate_minizinc.py
+```
+
 ### Exemples rapides (adjacency)
 
 ```bash

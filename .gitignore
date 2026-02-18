@@ -1,5 +1,7 @@
 main
 **/node_modules/**
+/test.png
+**/__pycache__/**
 
 # Gradle files
 .gradle/
@@ -36,4 +38,3 @@ google-services.json
 # Android Profiling
 *.hprof
 
-/test.png
