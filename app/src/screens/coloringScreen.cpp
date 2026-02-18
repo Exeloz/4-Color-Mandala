@@ -353,12 +353,37 @@ void ColoringScreen::saveWinImage() {
     std::strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", localTime);
 
     std::string fileName = "mandala_win_" + std::string(timestamp) + ".png";
+
+#if defined(PLATFORM_ANDROID)
+    const std::string downloadPath1 = "/storage/emulated/0/Download/" + fileName;
+    const std::string downloadPath2 = "/sdcard/Download/" + fileName;
+
+    bool exportOk = ExportImage(image, downloadPath1.c_str());
+    std::string exportedPath = downloadPath1;
+
+    if (!exportOk) {
+        exportOk = ExportImage(image, downloadPath2.c_str());
+        exportedPath = downloadPath2;
+    }
+
+    if (!exportOk) {
+        exportOk = ExportImage(image, fileName.c_str());
+        exportedPath = fileName;
+    }
+
+    if (exportOk) {
+        TraceLog(LOG_INFO, "[WIN] Mandala image exported: %s", exportedPath.c_str());
+    } else {
+        TraceLog(LOG_WARNING, "[WIN] Failed to export mandala image.");
+    }
+#else
     bool exportOk = ExportImage(image, fileName.c_str());
     if (exportOk) {
         TraceLog(LOG_INFO, "[WIN] Mandala image exported: %s", fileName.c_str());
     } else {
         TraceLog(LOG_WARNING, "[WIN] Failed to export mandala image.");
     }
+#endif
 
     UnloadImage(image);
     UnloadRenderTexture(renderTexture);
