@@ -26,4 +26,6 @@ private:
     bool returnToStartRequested;
     Button backButton;
     Button paletteButton;
+
+    void layoutControls();
 };

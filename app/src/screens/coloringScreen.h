@@ -53,6 +53,7 @@ private:
     void updateDebugOverlay();
     void drawAnalysisOverlay() const;
     void centerCameraOnRegion(int regionId);
+    void fitCameraToMandala();
     void drawDebugOverlay() const;
     int getRegionIdAtWorldPosition(Vector2 worldPos) const;
     bool isPointerOverUi(Vector2 screenPos) const;

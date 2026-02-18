@@ -6,6 +6,7 @@
 #include <utility>
 #include <sstream>
 #include <ctime>
+#include <cfloat>
 
 namespace {
     constexpr float SCREEN_CENTER_X = 400.0f;
@@ -14,7 +15,44 @@ namespace {
     constexpr float MAX_ZOOM = 4.0f;
     constexpr float ZOOM_STEP = 0.01f;
     constexpr float TOUCH_PAN_START_THRESHOLD = 8.0f;
-    constexpr float TOUCH_PINCH_FACTOR = 0.004f;
+    constexpr float TOUCH_PINCH_SENSITIVITY = 1.2f;
+    constexpr float CAMERA_FIT_MARGIN = 24.0f;
+
+    bool isMobileLayout() {
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    float getUiScale() {
+        if (!isMobileLayout()) {
+            return 1.0f;
+        }
+
+        float widthScale = static_cast<float>(GetScreenWidth()) / 800.0f;
+        float heightScale = static_cast<float>(GetScreenHeight()) / 600.0f;
+        return Clamp(std::min(widthScale, heightScale), 1.2f, 2.4f);
+    }
+
+    std::string fitTextWithEllipsis(const std::string& text, int textSize, int maxWidth) {
+        const std::string ellipsis = "...";
+        if (MeasureText(text.c_str(), textSize) <= maxWidth) {
+            return text;
+        }
+
+        std::string trimmed = text;
+        while (!trimmed.empty()) {
+            trimmed.pop_back();
+            std::string candidate = trimmed + ellipsis;
+            if (MeasureText(candidate.c_str(), textSize) <= maxWidth) {
+                return candidate;
+            }
+        }
+
+        return ellipsis;
+    }
 
     std::vector<int> collectSortedRegionIds(const std::vector<Region>& regions) {
         std::vector<int> ids;
@@ -74,6 +112,7 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
         camera.rotation = 0.0f;
         camera.zoom = zoom;
+        fitCameraToMandala();
 
     if (!customPaletteColors.empty()) {
         colorPalette.setColors(customPaletteColors);
@@ -195,7 +234,10 @@ void ColoringScreen::updateZoom() {
         float currentPinchDistance = Vector2Distance(touchA, touchB);
 
         if (isPinching) {
-            zoomDelta += (currentPinchDistance - lastPinchDistance) * TOUCH_PINCH_FACTOR;
+            Vector2 screenSize = {static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight())};
+            float screenDiagonal = Vector2Length(screenSize);
+            float normalizedPinchDelta = (currentPinchDistance - lastPinchDistance) / std::max(1.0f, screenDiagonal);
+            zoomDelta += normalizedPinchDelta * TOUCH_PINCH_SENSITIVITY;
         }
 
         lastPinchDistance = currentPinchDistance;
@@ -227,8 +269,22 @@ void ColoringScreen::updateZoom() {
 
 void ColoringScreen::draw() {
     ClearBackground(Colors::LightBlue);
-    
-    DrawText(mandala->getName().c_str(), 150, 20, 30, Colors::Black);
+
+    float uiScale = getUiScale();
+    bool mobileLayout = isMobileLayout();
+    Rectangle backBounds = backButton.getBounds();
+    int titleFont = static_cast<int>(30.0f * uiScale);
+    int titleX = static_cast<int>(backBounds.x + backBounds.width + (16.0f * uiScale));
+    int titleY = static_cast<int>(20.0f * uiScale);
+
+    int titleMaxWidth = GetScreenWidth() - titleX - static_cast<int>(20.0f * uiScale);
+    if (!mobileLayout) {
+        Rectangle actionBounds = analysisMode ? analysisCloseButton.getBounds() : analysisButton.getBounds();
+        titleMaxWidth = static_cast<int>(actionBounds.x - titleX - (12.0f * uiScale));
+    }
+    titleMaxWidth = std::max(titleMaxWidth, static_cast<int>(140.0f * uiScale));
+    std::string titleText = fitTextWithEllipsis(mandala->getName(), titleFont, titleMaxWidth);
+    DrawText(titleText.c_str(), titleX, titleY, titleFont, Colors::Black);
 
     BeginMode2D(camera);
     mandala->draw(colorPalette.getColors());
@@ -237,13 +293,18 @@ void ColoringScreen::draw() {
     EndMode2D();
 
     if (analysisMode) {
-        DrawRectangle(15, 70, 560, 58, Fade(Colors::White, 0.85f));
-        DrawRectangleLines(15, 70, 560, 58, Colors::DarkGray);
+           int infoX = static_cast<int>(15.0f * uiScale);
+           int infoY = static_cast<int>(70.0f * uiScale);
+           int infoW = static_cast<int>(560.0f * uiScale);
+           int infoH = static_cast<int>(58.0f * uiScale);
+           DrawRectangle(infoX, infoY, infoW, infoH, Fade(Colors::White, 0.85f));
+           DrawRectangleLines(infoX, infoY, infoW, infoH, Colors::DarkGray);
 
         std::ostringstream info;
         info << "ANALYSIS MODE  |  Tap region to inspect  |  Hover: " << analysisHoverRegionId
              << "  |  Inspect: " << analysisInspectRegionId;
-        DrawText(info.str().c_str(), 24, 82, 20, Colors::Black);
+           DrawText(info.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(82.0f * uiScale),
+                  static_cast<int>(20.0f * uiScale), Colors::Black);
 
         if (analysisInspectRegionId >= 0) {
             const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(analysisInspectRegionId);
@@ -259,19 +320,25 @@ void ColoringScreen::draw() {
                 first = false;
             }
 
-            DrawText(neighborText.str().c_str(), 24, 103, 18, Colors::DarkBlue);
+            DrawText(neighborText.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(103.0f * uiScale),
+                     static_cast<int>(18.0f * uiScale), Colors::DarkBlue);
         }
     }
 
     if (debugAdjacencyMode) {
-        DrawRectangle(15, 70, 760, 58, Fade(Colors::White, 0.85f));
-        DrawRectangleLines(15, 70, 760, 58, Colors::DarkGray);
+        int infoX = static_cast<int>(15.0f * uiScale);
+        int infoY = static_cast<int>(70.0f * uiScale);
+        int infoW = static_cast<int>(760.0f * uiScale);
+        int infoH = static_cast<int>(58.0f * uiScale);
+        DrawRectangle(infoX, infoY, infoW, infoH, Fade(Colors::White, 0.85f));
+        DrawRectangleLines(infoX, infoY, infoW, infoH, Colors::DarkGray);
 
         std::ostringstream info;
         info << "DEBUG ADJ: ON  |  Hover: " << debugHoverRegionId
              << "  |  Inspect (Right Click): " << debugInspectRegionId
                << "  |  Clear Inspect: C  |  A=Add  R=Remove";
-        DrawText(info.str().c_str(), 24, 82, 20, Colors::Black);
+        DrawText(info.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(82.0f * uiScale),
+             static_cast<int>(20.0f * uiScale), Colors::Black);
 
         if (debugInspectRegionId >= 0) {
             const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(debugInspectRegionId);
@@ -287,7 +354,8 @@ void ColoringScreen::draw() {
                 first = false;
             }
 
-            DrawText(neighborText.str().c_str(), 24, 103, 18, Colors::DarkBlue);
+            DrawText(neighborText.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(103.0f * uiScale),
+                     static_cast<int>(18.0f * uiScale), Colors::DarkBlue);
         }
     }
 
@@ -302,19 +370,27 @@ void ColoringScreen::draw() {
 }
 
 void ColoringScreen::drawColorPalette() {
-    DrawText("Colors:", 50, 530, 15, Colors::Black);
+    if (colorButtons.empty()) {
+        return;
+    }
+
+    float uiScale = getUiScale();
+    Rectangle firstButton = colorButtons.front().getBounds();
+    int labelSize = static_cast<int>(16.0f * uiScale);
+    int labelX = static_cast<int>(firstButton.x);
+    int labelY = static_cast<int>(firstButton.y - labelSize - (10.0f * uiScale));
+    DrawText("Colors:", labelX, labelY, labelSize, Colors::Black);
     
     for (int i = 0; i < colorPalette.getColorCount(); i++) {
-        float x = 50 + i * 130;
-        float y = 550;
         Color color = colorPalette.getColor(i);
+        Rectangle bounds = colorButtons[i].getBounds();
         
-        DrawRectangle(x, y, 100, 40, color);
+        DrawRectangleRec(bounds, color);
         
         if (i == colorPalette.getSelectedColorIndex()) {
-            DrawRectangleLinesEx({x, y, 100, 40}, 4, Colors::Black);
+            DrawRectangleLinesEx(bounds, 5.0f, Colors::Black);
         } else {
-            DrawRectangleLinesEx({x, y, 100, 40}, 1, Colors::Gray);
+            DrawRectangleLinesEx(bounds, 2.0f, Colors::Gray);
         }
     }
 }
@@ -493,6 +569,47 @@ void ColoringScreen::centerCameraOnRegion(int regionId) {
     camera.target = region->getCentroid();
 }
 
+void ColoringScreen::fitCameraToMandala() {
+    const auto& regions = mandala->getRegions();
+    if (regions.empty()) {
+        return;
+    }
+
+    float minX = FLT_MAX;
+    float minY = FLT_MAX;
+    float maxX = -FLT_MAX;
+    float maxY = -FLT_MAX;
+
+    bool hasVertex = false;
+    for (const auto& region : regions) {
+        const auto& vertices = region.getVertices();
+        for (const auto& vertex : vertices) {
+            minX = std::min(minX, vertex.x);
+            minY = std::min(minY, vertex.y);
+            maxX = std::max(maxX, vertex.x);
+            maxY = std::max(maxY, vertex.y);
+            hasVertex = true;
+        }
+    }
+
+    if (!hasVertex) {
+        return;
+    }
+
+    float contentWidth = std::max(maxX - minX, 1.0f);
+    float contentHeight = std::max(maxY - minY, 1.0f);
+
+    float availableWidth = std::max(1.0f, static_cast<float>(GetScreenWidth()) - (2.0f * CAMERA_FIT_MARGIN));
+    float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - (2.0f * CAMERA_FIT_MARGIN));
+
+    float fitZoomX = availableWidth / contentWidth;
+    float fitZoomY = availableHeight / contentHeight;
+
+    zoom = Clamp(std::min(fitZoomX, fitZoomY), MIN_ZOOM, MAX_ZOOM);
+    camera.zoom = zoom;
+    camera.target = {(minX + maxX) * 0.5f, (minY + maxY) * 0.5f};
+}
+
 void ColoringScreen::drawAnalysisOverlay() const {
     if (!analysisMode) {
         return;
@@ -618,13 +735,68 @@ void ColoringScreen::logAdjacencySuggestion(bool shouldExist, int regionA, int r
 }
 
 void ColoringScreen::layoutTopButtons() {
-    float rightMargin = 20.0f;
-    float mainButtonWidth = 190.0f;
+    float uiScale = getUiScale();
+    bool mobileLayout = isMobileLayout();
 
-    float mainButtonX = GetScreenWidth() - mainButtonWidth - rightMargin;
-    analysisButton.setPosition(mainButtonX, 20.0f);
-    analysisCloseButton.setPosition(mainButtonX, 20.0f);
+    float leftMargin = 20.0f * uiScale;
+    float rightMargin = 20.0f * uiScale;
+    float topMargin = 20.0f * uiScale;
 
-    float controlsY = 80.0f;
-    analysisClearButton.setPosition(GetScreenWidth() - 70.0f - rightMargin, controlsY);
+    float topButtonHeight = mobileLayout ? 58.0f * uiScale : 50.0f;
+    float backButtonWidth = mobileLayout ? 136.0f * uiScale : 100.0f;
+    float mainButtonWidth = mobileLayout ? 220.0f * uiScale : 190.0f;
+    float clearButtonWidth = mobileLayout ? 100.0f * uiScale : 70.0f;
+    float clearButtonHeight = mobileLayout ? 52.0f * uiScale : 44.0f;
+
+    backButton.setPosition(leftMargin, topMargin);
+    backButton.setSize(backButtonWidth, topButtonHeight);
+
+    float controlsY = topMargin + topButtonHeight + (10.0f * uiScale);
+
+    if (mobileLayout) {
+        float mobileColumnWidth = std::max(backButtonWidth, mainButtonWidth);
+        analysisButton.setPosition(leftMargin, controlsY);
+        analysisButton.setSize(mobileColumnWidth, topButtonHeight);
+        analysisCloseButton.setPosition(leftMargin, controlsY);
+        analysisCloseButton.setSize(mobileColumnWidth, topButtonHeight);
+
+        float clearY = controlsY + topButtonHeight + (10.0f * uiScale);
+        analysisClearButton.setPosition(leftMargin, clearY);
+        analysisClearButton.setSize(mobileColumnWidth, clearButtonHeight);
+
+        controlsY = clearY + clearButtonHeight + (10.0f * uiScale);
+    } else {
+        float mainButtonX = GetScreenWidth() - mainButtonWidth - rightMargin;
+        analysisButton.setPosition(mainButtonX, topMargin);
+        analysisButton.setSize(mainButtonWidth, topButtonHeight);
+        analysisCloseButton.setPosition(mainButtonX, topMargin);
+        analysisCloseButton.setSize(mainButtonWidth, topButtonHeight);
+
+        analysisClearButton.setPosition(GetScreenWidth() - clearButtonWidth - rightMargin, controlsY);
+        analysisClearButton.setSize(clearButtonWidth, clearButtonHeight);
+    }
+
+    if (colorButtons.empty()) {
+        return;
+    }
+
+    int colorCount = static_cast<int>(colorButtons.size());
+
+    float paletteX = leftMargin;
+    float paletteTop = mobileLayout ? controlsY : (controlsY + clearButtonHeight + (18.0f * uiScale));
+    float paletteBottomMargin = 20.0f * uiScale;
+    float availableHeight = static_cast<float>(GetScreenHeight()) - paletteTop - paletteBottomMargin;
+    float verticalGap = mobileLayout ? (12.0f * uiScale) : 10.0f;
+
+    float maxButtonHeightBySpace = (availableHeight - ((colorCount - 1) * verticalGap)) / std::max(1, colorCount);
+    float minButtonHeight = mobileLayout ? (52.0f * uiScale) : 40.0f;
+    float preferredButtonHeight = mobileLayout ? (64.0f * uiScale) : 48.0f;
+    float buttonHeight = Clamp(maxButtonHeightBySpace, minButtonHeight, preferredButtonHeight);
+    float buttonWidth = mobileLayout ? (104.0f * uiScale) : 90.0f;
+
+    for (int i = 0; i < colorCount; i++) {
+        float buttonY = paletteTop + i * (buttonHeight + verticalGap);
+        colorButtons[i].setPosition(paletteX, buttonY);
+        colorButtons[i].setSize(buttonWidth, buttonHeight);
+    }
 }

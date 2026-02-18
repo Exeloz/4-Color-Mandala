@@ -2,6 +2,7 @@
 #include "../ui/colorPalette.h"
 #include "../ui/colors.h"
 #include "../ui/input.h"
+#include "raymath.h"
 #include <algorithm>
 #include <string>
 
@@ -20,6 +21,24 @@ namespace {
     constexpr float SWATCH_HEIGHT = 50.0f;
     constexpr float SWATCH_GAP_X = 20.0f;
     constexpr float SWATCH_GAP_Y = 15.0f;
+
+    bool isMobileLayout() {
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    float getUiScale() {
+        if (!isMobileLayout()) {
+            return 1.0f;
+        }
+
+        float widthScale = static_cast<float>(GetScreenWidth()) / 800.0f;
+        float heightScale = static_cast<float>(GetScreenHeight()) / 600.0f;
+        return Clamp(std::min(widthScale, heightScale), 1.15f, 2.2f);
+    }
 }
 
 PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
@@ -53,6 +72,8 @@ PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
 }
 
 void PaletteScreen::update(float deltaTime) {
+    layoutControls();
+
     backButton.update();
     continueButton.update();
     prevPageButton.update();
@@ -105,8 +126,21 @@ void PaletteScreen::update(float deltaTime) {
 void PaletteScreen::draw() {
     ClearBackground(Colors::Gainsboro);
 
-    DrawText("Customize Palette", 205, 25, 42, Colors::Black);
-    DrawText("Tap a palette slot, then choose a color", 195, 78, 24, Colors::DarkSlateGray);
+    float uiScale = getUiScale();
+    int titleSize = static_cast<int>(42.0f * uiScale);
+    int subtitleSize = static_cast<int>(24.0f * uiScale);
+    int pageSize = static_cast<int>(24.0f * uiScale);
+
+    int titleY = static_cast<int>(25.0f * uiScale);
+    const char* title = "Customize Palette";
+    int titleWidth = MeasureText(title, titleSize);
+    int titleX = (GetScreenWidth() - titleWidth) / 2;
+    DrawText(title, titleX, titleY, titleSize, Colors::Black);
+
+    const char* subtitle = "Tap a palette slot, then choose a color";
+    int subtitleWidth = MeasureText(subtitle, subtitleSize);
+    int subtitleX = (GetScreenWidth() - subtitleWidth) / 2;
+    DrawText(subtitle, subtitleX, static_cast<int>(78.0f * uiScale), subtitleSize, Colors::DarkSlateGray);
 
     backButton.draw();
     continueButton.draw();
@@ -115,7 +149,7 @@ void PaletteScreen::draw() {
 
     int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / (SWATCH_COLUMNS * SWATCH_ROWS));
     std::string pageText = "Page " + std::to_string(swatchPage + 1) + " / " + std::to_string(maxPage + 1);
-    DrawText(pageText.c_str(), 90, 208, 24, Colors::Black);
+    DrawText(pageText.c_str(), static_cast<int>(90.0f * uiScale), static_cast<int>(208.0f * uiScale), pageSize, Colors::Black);
 
     for (int i = 0; i < static_cast<int>(paletteColors.size()); i++) {
         Rectangle slot = getPaletteSlotBounds(i);
@@ -126,7 +160,11 @@ void PaletteScreen::draw() {
         DrawRectangleLinesEx(slot, borderWidth, borderColor);
 
         if (i == 0) {
-            DrawText("LOCK", static_cast<int>(slot.x + 35), static_cast<int>(slot.y + 24), 20, Colors::Black);
+            int lockSize = static_cast<int>(20.0f * uiScale);
+            int lockWidth = MeasureText("LOCK", lockSize);
+            int lockX = static_cast<int>(slot.x + (slot.width - lockWidth) * 0.5f);
+            int lockY = static_cast<int>(slot.y + (slot.height - lockSize) * 0.5f);
+            DrawText("LOCK", lockX, lockY, lockSize, Colors::Black);
         }
     }
 
@@ -148,6 +186,30 @@ void PaletteScreen::draw() {
     }
 }
 
+void PaletteScreen::layoutControls() {
+    float uiScale = getUiScale();
+    bool mobileLayout = isMobileLayout();
+
+    float sideMargin = 20.0f * uiScale;
+    float topMargin = 20.0f * uiScale;
+    float topButtonHeight = mobileLayout ? (58.0f * uiScale) : 50.0f;
+
+    backButton.setPosition(sideMargin, topMargin);
+    backButton.setSize(mobileLayout ? (136.0f * uiScale) : 100.0f, topButtonHeight);
+
+    float continueWidth = mobileLayout ? (170.0f * uiScale) : 140.0f;
+    continueButton.setPosition(GetScreenWidth() - sideMargin - continueWidth, topMargin);
+    continueButton.setSize(continueWidth, topButtonHeight);
+
+    float navWidth = mobileLayout ? (120.0f * uiScale) : 100.0f;
+    float navHeight = mobileLayout ? (52.0f * uiScale) : 40.0f;
+    float navY = 200.0f * uiScale;
+    nextPageButton.setPosition(GetScreenWidth() - sideMargin - navWidth, navY);
+    nextPageButton.setSize(navWidth, navHeight);
+    prevPageButton.setPosition(nextPageButton.getBounds().x - navWidth - (12.0f * uiScale), navY);
+    prevPageButton.setSize(navWidth, navHeight);
+}
+
 bool PaletteScreen::shouldTransitionToColoring() const {
     return transitionRequested;
 }
@@ -161,18 +223,41 @@ const std::vector<Color>& PaletteScreen::getCustomizedColors() const {
 }
 
 Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
-    float x = SLOT_START_X + slotIndex * (SLOT_WIDTH + SLOT_GAP);
-    return {x, SLOT_Y, SLOT_WIDTH, SLOT_HEIGHT};
+    float uiScale = getUiScale();
+    float width = SLOT_WIDTH * uiScale;
+    float height = SLOT_HEIGHT * uiScale;
+    float gap = SLOT_GAP * uiScale;
+    float startX = SLOT_START_X * uiScale;
+    float y = SLOT_Y * uiScale;
+
+    float totalWidth = (static_cast<float>(paletteColors.size()) * width) +
+                       (static_cast<float>(paletteColors.size() - 1) * gap);
+    if (totalWidth > GetScreenWidth() - (2.0f * startX)) {
+        width = ((GetScreenWidth() - (2.0f * startX)) - (static_cast<float>(paletteColors.size() - 1) * gap)) /
+                static_cast<float>(paletteColors.size());
+        width = std::max(width, 76.0f * uiScale);
+    }
+
+    float x = startX + slotIndex * (width + gap);
+    return {x, y, width, height};
 }
 
 Rectangle PaletteScreen::getAvailableColorBounds(int colorIndex) const {
+    float uiScale = getUiScale();
     int pageLocalIndex = colorIndex - getSwatchStartIndex();
     int col = pageLocalIndex % SWATCH_COLUMNS;
     int row = pageLocalIndex / SWATCH_COLUMNS;
 
-    float x = SWATCH_START_X + col * (SWATCH_WIDTH + SWATCH_GAP_X);
-    float y = SWATCH_START_Y + row * (SWATCH_HEIGHT + SWATCH_GAP_Y);
-    return {x, y, SWATCH_WIDTH, SWATCH_HEIGHT};
+    float width = SWATCH_WIDTH * uiScale;
+    float height = SWATCH_HEIGHT * uiScale;
+    float gapX = SWATCH_GAP_X * uiScale;
+    float gapY = SWATCH_GAP_Y * uiScale;
+    float startX = SWATCH_START_X * uiScale;
+    float startY = SWATCH_START_Y * uiScale;
+
+    float x = startX + col * (width + gapX);
+    float y = startY + row * (height + gapY);
+    return {x, y, width, height};
 }
 
 int PaletteScreen::getSwatchStartIndex() const {

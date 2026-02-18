@@ -113,20 +113,26 @@ $HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-
 
 # Installation release (APK non signe):
 # ./gradlew assembleRelease
-$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/release/app-release-signed.apk
+$ADB -r app/build/outputs/apk/release/app-release-signed.apk
 ```
 
-### Installer sur le telephone (deja pairé/connecté)
+### Installer sur le telephone
+
+# 0) Pair / connexion ADB (Wi-Fi)
+ADB=$HOME/Android/Sdk/platform-tools/adb
+$ADB pair <IP_TEL>:<PORT_PAIR>        # entrer le code affiché sur le téléphone
+$ADB connect <IP_TEL>:<PORT_CONNECT>
+$ADB devices
 
 ```bash
 # 1) Verifier que le telephone est visible
 $HOME/Android/Sdk/platform-tools/adb devices
 
 # 2) Installer (ou mettre a jour) l'APK debug
-$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
+$ADB -r app/build/outputs/apk/debug/app-debug.apk
 
 #    Installer (ou mettre a jour) l'APK release (signe)
-$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/release/app-release-signed.apk
+$ADB -r app/build/outputs/apk/release/app-release-signed.apk
 
 # 3) (Optionnel) Lancer l'app depuis le PC
 $HOME/Android/Sdk/platform-tools/adb shell monkey -p com.CegepGarneau.colormandala -c android.intent.category.LAUNCHER 1

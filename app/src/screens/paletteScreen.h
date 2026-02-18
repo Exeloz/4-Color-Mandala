@@ -29,6 +29,7 @@ private:
     bool returnRequested;
     int swatchPage;
 
+    void layoutControls();
     Rectangle getPaletteSlotBounds(int slotIndex) const;
     Rectangle getAvailableColorBounds(int colorIndex) const;
     int getSwatchStartIndex() const;

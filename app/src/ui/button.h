@@ -11,6 +11,7 @@ public:
     bool isClicked() const;
 
     void setPosition(float x, float y);
+    void setSize(float width, float height);
     Rectangle getBounds() const;
 
 private:
