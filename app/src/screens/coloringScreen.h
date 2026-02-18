@@ -35,6 +35,9 @@ private:
     Camera2D camera;
     float zoom;
     bool isPanning;
+    bool isDraggingCamera;
+    bool isPinching;
+    float lastPinchDistance;
     Vector2 lastPanPointer;
     bool debugAdjacencyMode;
     int debugInspectRegionId;

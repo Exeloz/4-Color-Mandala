@@ -13,6 +13,8 @@ namespace {
     constexpr float MIN_ZOOM = 0.02f;
     constexpr float MAX_ZOOM = 4.0f;
     constexpr float ZOOM_STEP = 0.01f;
+    constexpr float TOUCH_PAN_START_THRESHOLD = 8.0f;
+    constexpr float TOUCH_PINCH_FACTOR = 0.004f;
 
     std::vector<int> collectSortedRegionIds(const std::vector<Region>& regions) {
         std::vector<int> ids;
@@ -62,7 +64,8 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
             analysisCloseButton(590, 20, 190, 50, "EXIT ANALYSIS"),
             analysisClearButton(710, 80, 70, 44, "CLEAR"),
             winImageSaved(false), gameWon(false), returnRequested(false), analysisMode(false), analysisInspectRegionId(-1),
-            analysisHoverRegionId(-1), camera{}, zoom(1.0f), isPanning(false),
+            analysisHoverRegionId(-1), camera{}, zoom(1.0f), isPanning(false), isDraggingCamera(false),
+            isPinching(false), lastPinchDistance(0.0f),
             lastPanPointer{},
             debugAdjacencyMode(false), debugInspectRegionId(-1), debugHoverRegionId(-1),
             debugSuggestedAdds(), debugSuggestedRemoves() {
@@ -113,7 +116,7 @@ void ColoringScreen::update(float deltaTime) {
 }
 
 void ColoringScreen::handleColorSelection() {
-    if (!isPanning && Input::IsPointerPressed()) {
+    if (!isDraggingCamera && Input::IsPointerPressed()) {
         Vector2 pointerPos = Input::GetPointerPosition();
         if (isPointerOverUi(pointerPos)) {
             return;
@@ -130,21 +133,47 @@ void ColoringScreen::handleColorSelection() {
 void ColoringScreen::updatePan() {
     bool shouldPan = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) ||
                      (IsKeyDown(KEY_SPACE) && IsMouseButtonDown(MOUSE_BUTTON_LEFT));
-
     Vector2 pointerPos = Input::GetPointerPosition();
+
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
+    int touchCount = GetTouchPointCount();
+    if (touchCount >= 2) {
+        shouldPan = false;
+    } else if (touchCount == 1) {
+        pointerPos = GetTouchPosition(0);
+        shouldPan = !isPointerOverUi(pointerPos);
+    } else {
+        shouldPan = false;
+    }
+#endif
 
     if (shouldPan) {
         if (!isPanning) {
             isPanning = true;
+            isDraggingCamera = false;
             lastPanPointer = pointerPos;
             return;
         }
 
         Vector2 delta = Vector2Subtract(pointerPos, lastPanPointer);
-        camera.target = Vector2Subtract(camera.target, Vector2Scale(delta, 1.0f / camera.zoom));
+        float deltaLength = Vector2Length(delta);
+
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
+        if (isDraggingCamera || deltaLength >= TOUCH_PAN_START_THRESHOLD) {
+            camera.target = Vector2Subtract(camera.target, Vector2Scale(delta, 1.0f / camera.zoom));
+            isDraggingCamera = true;
+        }
+#else
+        if (deltaLength > 0.0f) {
+            camera.target = Vector2Subtract(camera.target, Vector2Scale(delta, 1.0f / camera.zoom));
+            isDraggingCamera = true;
+        }
+#endif
+
         lastPanPointer = pointerPos;
     } else {
         isPanning = false;
+        isDraggingCamera = false;
     }
 }
 
@@ -159,11 +188,21 @@ void ColoringScreen::updateZoom() {
     }
 
 #if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
-    if (IsGestureDetected(GESTURE_PINCH_IN)) {
-        zoomDelta -= ZOOM_STEP;
-    }
-    if (IsGestureDetected(GESTURE_PINCH_OUT)) {
-        zoomDelta += ZOOM_STEP;
+    int touchCount = GetTouchPointCount();
+    if (touchCount >= 2) {
+        Vector2 touchA = GetTouchPosition(0);
+        Vector2 touchB = GetTouchPosition(1);
+        float currentPinchDistance = Vector2Distance(touchA, touchB);
+
+        if (isPinching) {
+            zoomDelta += (currentPinchDistance - lastPinchDistance) * TOUCH_PINCH_FACTOR;
+        }
+
+        lastPinchDistance = currentPinchDistance;
+        isPinching = true;
+    } else {
+        isPinching = false;
+        lastPinchDistance = 0.0f;
     }
 #endif
 
@@ -362,7 +401,7 @@ void ColoringScreen::updateAnalysisOverlay() {
     Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
     analysisHoverRegionId = getRegionIdAtWorldPosition(worldPos);
 
-    if (!isPanning && Input::IsPointerPressed() && analysisHoverRegionId >= 0) {
+    if (!isDraggingCamera && Input::IsPointerPressed() && analysisHoverRegionId >= 0) {
         analysisInspectRegionId = analysisHoverRegionId;
     }
 }
