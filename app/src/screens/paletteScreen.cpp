@@ -1,5 +1,6 @@
 #include "paletteScreen.h"
 #include "../ui/colorPalette.h"
+#include "../ui/colorTileRenderer.h"
 #include "../ui/colors.h"
 #include "../ui/input.h"
 #include "raymath.h"
@@ -13,12 +14,12 @@ namespace {
     constexpr float SLOT_HEIGHT = 38.0f;
     constexpr float SLOT_GAP = 8.0f;
 
-    constexpr float SWATCH_START_X = 90.0f;
-    constexpr float SWATCH_START_Y = 198.0f;
-    constexpr float SWATCH_WIDTH = 78.0f;
-    constexpr float SWATCH_HEIGHT = 36.0f;
-    constexpr float SWATCH_GAP_X = 12.0f;
-    constexpr float SWATCH_GAP_Y = 10.0f;
+    constexpr float TILE_START_X = 90.0f;
+    constexpr float TILE_START_Y = 198.0f;
+    constexpr float TILE_WIDTH = 78.0f;
+    constexpr float TILE_HEIGHT = 36.0f;
+    constexpr float TILE_GAP_X = 12.0f;
+    constexpr float TILE_GAP_Y = 10.0f;
     constexpr float NAV_BOTTOM_MARGIN = 20.0f;
     constexpr float NAV_RESERVED_HEIGHT = 96.0f;
 
@@ -32,38 +33,39 @@ namespace {
         return Clamp(std::min(widthScale, heightScale), 0.75f, 2.4f);
     }
 
-    int getSwatchColumns(float uiScale) {
-        float swatchWidth = SWATCH_WIDTH * uiScale;
-        float gapX = SWATCH_GAP_X * uiScale;
-        float startX = SWATCH_START_X * uiScale;
+    int getTileColumns(float uiScale) {
+        float tileWidth = TILE_WIDTH * uiScale;
+        float gapX = TILE_GAP_X * uiScale;
+        float startX = TILE_START_X * uiScale;
         float rightMargin = 20.0f * uiScale;
 
         float availableWidth = std::max(1.0f, static_cast<float>(GetScreenWidth()) - startX - rightMargin);
-        int columns = static_cast<int>((availableWidth + gapX) / (swatchWidth + gapX));
+        int columns = static_cast<int>((availableWidth + gapX) / (tileWidth + gapX));
         return std::max(1, columns);
     }
 
-    int getSwatchRows(float uiScale) {
-        float swatchHeight = SWATCH_HEIGHT * uiScale;
-        float gapY = SWATCH_GAP_Y * uiScale;
-        float startY = SWATCH_START_Y * uiScale;
+    int getTileRows(float uiScale) {
+        float tileHeight = TILE_HEIGHT * uiScale;
+        float gapY = TILE_GAP_Y * uiScale;
+        float startY = TILE_START_Y * uiScale;
         float bottomMargin = NAV_RESERVED_HEIGHT * uiScale;
 
         float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - startY - bottomMargin);
-        int rows = static_cast<int>((availableHeight + gapY) / (swatchHeight + gapY));
+        int rows = static_cast<int>((availableHeight + gapY) / (tileHeight + gapY));
         return std::max(1, rows);
     }
 
-    int getSwatchesPerPage(float uiScale) {
-        return getSwatchColumns(uiScale) * getSwatchRows(uiScale);
+    int getTilesPerPage(float uiScale) {
+        return getTileColumns(uiScale) * getTileRows(uiScale);
     }
+
 }
 
 PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
     : paletteColors(), availableColors(), activeSlotIndex(1),
       backButton(20, 20, 100, 50, "BACK"), continueButton(640, 20, 140, 50, "COLOR"),
       prevPageButton(560, 200, 100, 40, "PREV"), nextPageButton(680, 200, 100, 40, "NEXT"),
-      transitionRequested(false), returnRequested(false), swatchPage(0) {
+    transitionRequested(false), returnRequested(false), tilePage(0) {
 
     ColorPalette defaultPalette;
     paletteColors = initialPaletteColors.empty() ? defaultPalette.getColors() : initialPaletteColors;
@@ -93,10 +95,10 @@ void PaletteScreen::update(float deltaTime) {
     layoutControls();
 
     float uiScale = getUiScale();
-    int swatchesPerPage = std::max(1, getSwatchesPerPage(uiScale));
-    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / swatchesPerPage);
-    if (swatchPage > maxPage) {
-        swatchPage = maxPage;
+    int tilesPerPage = std::max(1, getTilesPerPage(uiScale));
+    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / tilesPerPage);
+    if (tilePage > maxPage) {
+        tilePage = maxPage;
     }
 
     backButton.update();
@@ -114,13 +116,13 @@ void PaletteScreen::update(float deltaTime) {
         return;
     }
 
-    if (prevPageButton.isClicked() && swatchPage > 0) {
-        swatchPage--;
+    if (prevPageButton.isClicked() && tilePage > 0) {
+        tilePage--;
         return;
     }
 
-    if (nextPageButton.isClicked() && swatchPage < maxPage) {
-        swatchPage++;
+    if (nextPageButton.isClicked() && tilePage < maxPage) {
+        tilePage++;
         return;
     }
 
@@ -137,7 +139,7 @@ void PaletteScreen::update(float deltaTime) {
         }
     }
 
-    for (int colorIndex = getSwatchStartIndex(); colorIndex < getSwatchEndIndex(); colorIndex++) {
+    for (int colorIndex = getTileStartIndex(); colorIndex < getTileEndIndex(); colorIndex++) {
         if (CheckCollisionPointRec(pointer, getAvailableColorBounds(colorIndex))) {
             if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
                 paletteColors[activeSlotIndex] = availableColors[colorIndex];
@@ -171,9 +173,9 @@ void PaletteScreen::draw() {
     prevPageButton.draw();
     nextPageButton.draw();
 
-    int swatchesPerPage = std::max(1, getSwatchesPerPage(uiScale));
-    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / swatchesPerPage);
-    std::string pageText = "Page " + std::to_string(swatchPage + 1) + " / " + std::to_string(maxPage + 1);
+    int tilesPerPage = std::max(1, getTilesPerPage(uiScale));
+    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / tilesPerPage);
+    std::string pageText = "Page " + std::to_string(tilePage + 1) + " / " + std::to_string(maxPage + 1);
     Rectangle prevBounds = prevPageButton.getBounds();
     Rectangle nextBounds = nextPageButton.getBounds();
     int pageTextWidth = MeasureText(pageText.c_str(), pageSize);
@@ -184,7 +186,7 @@ void PaletteScreen::draw() {
 
     for (int i = 0; i < static_cast<int>(paletteColors.size()); i++) {
         Rectangle slot = getPaletteSlotBounds(i);
-        DrawRectangleRec(slot, paletteColors[i]);
+        ColorTileRenderer::drawColorTile(paletteColors[i], slot, uiScale);
 
         Color borderColor = (i == activeSlotIndex) ? Colors::Black : Colors::DarkGray;
         float borderWidth = (i == activeSlotIndex) ? 4.0f : 2.0f;
@@ -199,10 +201,10 @@ void PaletteScreen::draw() {
         }
     }
 
-    for (int i = getSwatchStartIndex(); i < getSwatchEndIndex(); i++) {
-        Rectangle swatch = getAvailableColorBounds(i);
-        DrawRectangleRec(swatch, availableColors[i]);
-        DrawRectangleLinesEx(swatch, 2.0f, Colors::DarkGray);
+    for (int i = getTileStartIndex(); i < getTileEndIndex(); i++) {
+        Rectangle tile = getAvailableColorBounds(i);
+        ColorTileRenderer::drawColorTile(availableColors[i], tile, uiScale);
+        DrawRectangleLinesEx(tile, 2.0f, Colors::DarkGray);
 
         bool isSelectedColor = (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size()) &&
                                 paletteColors[activeSlotIndex].r == availableColors[i].r &&
@@ -211,8 +213,8 @@ void PaletteScreen::draw() {
                                 paletteColors[activeSlotIndex].a == availableColors[i].a);
 
         if (isSelectedColor) {
-            DrawRectangleLinesEx(swatch, 4.0f, Colors::White);
-            DrawRectangleLinesEx({swatch.x + 2, swatch.y + 2, swatch.width - 4, swatch.height - 4}, 2.0f, Colors::Black);
+            DrawRectangleLinesEx(tile, 4.0f, Colors::White);
+            DrawRectangleLinesEx({tile.x + 2, tile.y + 2, tile.width - 4, tile.height - 4}, 2.0f, Colors::Black);
         }
     }
 }
@@ -275,30 +277,30 @@ Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
 
 Rectangle PaletteScreen::getAvailableColorBounds(int colorIndex) const {
     float uiScale = getUiScale();
-    int swatchColumns = std::max(1, getSwatchColumns(uiScale));
-    int pageLocalIndex = colorIndex - getSwatchStartIndex();
-    int col = pageLocalIndex % swatchColumns;
-    int row = pageLocalIndex / swatchColumns;
+    int tileColumns = std::max(1, getTileColumns(uiScale));
+    int pageLocalIndex = colorIndex - getTileStartIndex();
+    int col = pageLocalIndex % tileColumns;
+    int row = pageLocalIndex / tileColumns;
 
-    float width = SWATCH_WIDTH * uiScale;
-    float height = SWATCH_HEIGHT * uiScale;
-    float gapX = SWATCH_GAP_X * uiScale;
-    float gapY = SWATCH_GAP_Y * uiScale;
-    float startX = SWATCH_START_X * uiScale;
-    float startY = SWATCH_START_Y * uiScale;
+    float width = TILE_WIDTH * uiScale;
+    float height = TILE_HEIGHT * uiScale;
+    float gapX = TILE_GAP_X * uiScale;
+    float gapY = TILE_GAP_Y * uiScale;
+    float startX = TILE_START_X * uiScale;
+    float startY = TILE_START_Y * uiScale;
 
     float x = startX + col * (width + gapX);
     float y = startY + row * (height + gapY);
     return {x, y, width, height};
 }
 
-int PaletteScreen::getSwatchStartIndex() const {
-    int swatchesPerPage = std::max(1, getSwatchesPerPage(getUiScale()));
-    return swatchPage * swatchesPerPage;
+int PaletteScreen::getTileStartIndex() const {
+    int tilesPerPage = std::max(1, getTilesPerPage(getUiScale()));
+    return tilePage * tilesPerPage;
 }
 
-int PaletteScreen::getSwatchEndIndex() const {
-    int swatchesPerPage = std::max(1, getSwatchesPerPage(getUiScale()));
-    int endIndex = getSwatchStartIndex() + swatchesPerPage;
+int PaletteScreen::getTileEndIndex() const {
+    int tilesPerPage = std::max(1, getTilesPerPage(getUiScale()));
+    int endIndex = getTileStartIndex() + tilesPerPage;
     return std::min(static_cast<int>(availableColors.size()), endIndex);
 }

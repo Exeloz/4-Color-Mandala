@@ -22,6 +22,7 @@ SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database)
     const auto& mandalaList = database->getAllMandala();
     for (size_t i = 0; i < mandalaList.size(); i++) {
         mandalaButtons.emplace_back(0.0f, 0.0f, 300.0f, 150.0f, mandalaList[i]->getName());
+        mandalaButtons.back().setTextScale(1.45f);
     }
 }
 

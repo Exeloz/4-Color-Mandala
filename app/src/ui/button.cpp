@@ -81,7 +81,7 @@ std::vector<std::string> buildWrappedLines(const std::string& text, int textSize
 }
 
 Button::Button(float x, float y, float width, float height, const std::string& label)
-    : label(label), hovered(false), clicked(false) {
+    : label(label), hovered(false), clicked(false), textScale(1.0f) {
     bounds = {x, y, width, height};
 }
 
@@ -96,9 +96,9 @@ void Button::draw() {
     DrawRectangleRec(bounds, buttonColor);
     DrawRectangleLinesEx(bounds, 2, Colors::LightGray);
 
-    float textSizeFloat = std::max(16.0f, std::min(30.0f, bounds.height * 0.24f));
+    float textSizeFloat = std::max(16.0f, std::min(42.0f, bounds.height * 0.24f * textScale));
     int textSize = static_cast<int>(textSizeFloat);
-    int maxLines = bounds.height >= 90.0f ? 2 : 1;
+    int maxLines = bounds.height >= 70.0f ? 2 : 1;
     float horizontalPadding = std::max(8.0f, bounds.width * 0.08f);
     float maxTextWidth = std::max(1.0f, bounds.width - (2.0f * horizontalPadding));
 
@@ -127,6 +127,10 @@ void Button::setPosition(float x, float y) {
 void Button::setSize(float width, float height) {
     bounds.width = width;
     bounds.height = height;
+}
+
+void Button::setTextScale(float scale) {
+    textScale = std::max(0.5f, scale);
 }
 
 Rectangle Button::getBounds() const {

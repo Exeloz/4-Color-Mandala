@@ -27,11 +27,11 @@ private:
 
     bool transitionRequested;
     bool returnRequested;
-    int swatchPage;
+    int tilePage;
 
     void layoutControls();
     Rectangle getPaletteSlotBounds(int slotIndex) const;
     Rectangle getAvailableColorBounds(int colorIndex) const;
-    int getSwatchStartIndex() const;
-    int getSwatchEndIndex() const;
+    int getTileStartIndex() const;
+    int getTileEndIndex() const;
 };

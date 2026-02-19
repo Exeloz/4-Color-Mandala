@@ -12,6 +12,7 @@ public:
 
     void setPosition(float x, float y);
     void setSize(float width, float height);
+    void setTextScale(float scale);
     Rectangle getBounds() const;
 
 private:
@@ -19,4 +20,5 @@ private:
     std::string label;
     bool hovered;
     bool clicked;
+    float textScale;
 };

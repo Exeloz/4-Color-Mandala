@@ -6,15 +6,15 @@ int main() {
     const int screenWidth = 0;
     const int screenHeight = 0;
 #else
-    const int screenWidth = 860;
-    const int screenHeight = 420;
+    const int screenWidth = 1600;
+    const int screenHeight = 720;
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 #endif
 
     InitWindow(screenWidth, screenHeight, "Color Mandala");
 #if !defined(PLATFORM_ANDROID) && !defined(PLATFORM_WEB)
     SetWindowState(FLAG_WINDOW_RESIZABLE);
-    SetWindowMinSize(560, 320);
+    SetWindowMinSize(screenWidth, screenHeight);
 #endif
     SetTargetFPS(60);
 

@@ -1,5 +1,6 @@
 #include "coloringScreen.h"
 #include "../ui/colors.h"
+#include "../ui/colorTileRenderer.h"
 #include "../ui/input.h"
 #include "raymath.h"
 #include <algorithm>
@@ -340,11 +341,10 @@ void ColoringScreen::drawColorPalette() {
     for (int i = 0; i < colorPalette.getColorCount(); i++) {
         Color color = colorPalette.getColor(i);
         Rectangle bounds = colorButtons[i].getBounds();
-        
-        DrawRectangleRec(bounds, color);
+        ColorTileRenderer::drawColorTile(color, bounds, uiScale);
         
         if (i == colorPalette.getSelectedColorIndex()) {
-            DrawRectangleLinesEx(bounds, 5.0f, Colors::Black);
+            DrawRectangleLinesEx(bounds, 7.0f, Colors::Black);
         } else {
             DrawRectangleLinesEx(bounds, 2.0f, Colors::Gray);
         }
