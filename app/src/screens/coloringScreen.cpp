@@ -53,8 +53,9 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
             analysisButton(590, 20, 190, 50, "ANALYSIS"),
             analysisCloseButton(590, 20, 190, 50, "EXIT ANALYSIS"),
             analysisClearButton(710, 80, 70, 44, "CLEAR"),
-            winImageSaved(false), gameWon(false), returnRequested(false), camera{}, zoom(1.0f),
-            isPanning(false), isDraggingCamera(false), isPinching(false), lastPinchDistance(0.0f), lastPanPointer{} {
+            winImageSaved(false), gameWon(false), returnRequested(false),
+            cameraInputManager(MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, TOUCH_PAN_START_THRESHOLD, TOUCH_PINCH_SENSITIVITY),
+            camera{}, zoom(1.0f) {
 
         camera.target = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
@@ -75,143 +76,29 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
 
 void ColoringScreen::update(float deltaTime) {
     layoutTopButtons();
-    updateZoom();
-    updatePan();
+    cameraInputManager.update(camera, zoom, [this](Vector2 pointerPos) {
+        return isPointerOverUi(pointerPos);
+    });
 
-    backButton.update();
-    if (backButton.isClicked()) {
+    if (interactionManager.updateBackNavigation(backButton)) {
         returnRequested = true;
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(colorButtons.size()); i++) {
-        colorButtons[i].update();
-        if (colorButtons[i].isClicked()) {
-            colorPalette.setSelectedColorIndex(i);
-        }
-    }
+    interactionManager.updateColorButtons(colorButtons, colorPalette);
 
-    updateAnalysisOverlay();
-    updateDebugOverlay();
-    if (!inspector.isAnalysisMode()) {
-        handleColorSelection();
-    }
+    updateAnalysisInteractions();
+    updateDebugInteractions();
+    interactionManager.handleRegionColorSelection(
+        *mandala,
+        camera,
+        colorPalette,
+        isPointerOverUi(Input::GetPointerPosition()),
+        cameraInputManager.isDraggingCamera(),
+        inspector.isAnalysisMode());
 
     if (mandala->isValidColoring()) {
         gameWon = true;
-    }
-}
-
-void ColoringScreen::handleColorSelection() {
-    if (!isDraggingCamera && Input::IsPointerPressed()) {
-        Vector2 pointerPos = Input::GetPointerPosition();
-        if (isPointerOverUi(pointerPos)) {
-            return;
-        }
-
-        Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
-        Region* region = mandala->getRegionAtPoint(worldPos);
-        if (region != nullptr) {
-            region->setColor(colorPalette.getSelectedColorIndex());
-        }
-    }
-}
-
-void ColoringScreen::updatePan() {
-    bool shouldPan = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) ||
-                     (IsKeyDown(KEY_SPACE) && IsMouseButtonDown(MOUSE_BUTTON_LEFT));
-    Vector2 pointerPos = Input::GetPointerPosition();
-
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
-    int touchCount = GetTouchPointCount();
-    if (touchCount >= 2) {
-        shouldPan = false;
-    } else if (touchCount == 1) {
-        pointerPos = GetTouchPosition(0);
-        shouldPan = !isPointerOverUi(pointerPos);
-    } else {
-        shouldPan = false;
-    }
-#endif
-
-    if (shouldPan) {
-        if (!isPanning) {
-            isPanning = true;
-            isDraggingCamera = false;
-            lastPanPointer = pointerPos;
-            return;
-        }
-
-        Vector2 delta = Vector2Subtract(pointerPos, lastPanPointer);
-        float deltaLength = Vector2Length(delta);
-
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
-        if (isDraggingCamera || deltaLength >= TOUCH_PAN_START_THRESHOLD) {
-            camera.target = Vector2Subtract(camera.target, Vector2Scale(delta, 1.0f / camera.zoom));
-            isDraggingCamera = true;
-        }
-#else
-        if (deltaLength > 0.0f) {
-            camera.target = Vector2Subtract(camera.target, Vector2Scale(delta, 1.0f / camera.zoom));
-            isDraggingCamera = true;
-        }
-#endif
-
-        lastPanPointer = pointerPos;
-    } else {
-        isPanning = false;
-        isDraggingCamera = false;
-    }
-}
-
-void ColoringScreen::updateZoom() {
-    camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
-
-    float zoomDelta = 0.0f;
-
-    float wheel = GetMouseWheelMove();
-    if (wheel != 0.0f) {
-        zoomDelta += wheel * ZOOM_STEP;
-    }
-
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
-    int touchCount = GetTouchPointCount();
-    if (touchCount >= 2) {
-        Vector2 touchA = GetTouchPosition(0);
-        Vector2 touchB = GetTouchPosition(1);
-        float currentPinchDistance = Vector2Distance(touchA, touchB);
-
-        if (isPinching) {
-            Vector2 screenSize = {static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight())};
-            float screenDiagonal = Vector2Length(screenSize);
-            float normalizedPinchDelta = (currentPinchDistance - lastPinchDistance) / std::max(1.0f, screenDiagonal);
-            zoomDelta += normalizedPinchDelta * TOUCH_PINCH_SENSITIVITY;
-        }
-
-        lastPinchDistance = currentPinchDistance;
-        isPinching = true;
-    } else {
-        isPinching = false;
-        lastPinchDistance = 0.0f;
-    }
-#endif
-
-    if (IsKeyDown(KEY_MINUS) || IsKeyDown(KEY_KP_SUBTRACT)) {
-        zoomDelta -= ZOOM_STEP * GetFrameTime();
-    }
-    if (IsKeyDown(KEY_EQUAL) || IsKeyDown(KEY_KP_ADD)) {
-        zoomDelta += ZOOM_STEP * GetFrameTime();
-    }
-
-    if (zoomDelta != 0.0f) {
-        Vector2 pointerPos = Input::GetPointerPosition();
-        Vector2 worldBeforeZoom = GetScreenToWorld2D(pointerPos, camera);
-
-        zoom = Clamp(zoom + zoomDelta, MIN_ZOOM, MAX_ZOOM);
-        camera.zoom = zoom;
-
-        Vector2 worldAfterZoom = GetScreenToWorld2D(pointerPos, camera);
-        camera.target = Vector2Add(camera.target, Vector2Subtract(worldBeforeZoom, worldAfterZoom));
     }
 }
 
@@ -345,34 +232,21 @@ void ColoringScreen::saveWinImage() {
     winImageSaved = true;
 }
 
-void ColoringScreen::updateAnalysisOverlay() {
-    if (!inspector.isAnalysisMode()) {
-        analysisButton.update();
-        if (analysisButton.isClicked()) {
-            inspector.enterAnalysisMode();
-        }
-        return;
-    }
-
-    analysisCloseButton.update();
-    analysisClearButton.update();
-
-    if (analysisCloseButton.isClicked()) {
-        inspector.exitAnalysisMode();
-        return;
-    }
-
-    if (analysisClearButton.isClicked()) {
-        inspector.clearAnalysisSelection();
-        return;
-    }
-
-    Vector2 pointerPos = Input::GetPointerPosition();
-    inspector.updateAnalysis(*mandala, camera, isPointerOverUi(pointerPos), isDraggingCamera);
+void ColoringScreen::updateAnalysisInteractions() {
+    interactionManager.updateAnalysisControls(
+        inspector,
+        *mandala,
+        camera,
+        cameraInputManager.isDraggingCamera(),
+        analysisButton,
+        analysisCloseButton,
+        analysisClearButton,
+        backButton,
+        colorButtons);
 }
 
-void ColoringScreen::updateDebugOverlay() {
-    inspector.updateDebug(*mandala, camera, camera);
+void ColoringScreen::updateDebugInteractions() {
+    interactionManager.updateDebugControls(inspector, *mandala, camera, camera);
 }
 
 void ColoringScreen::fitCameraToMandala() {
@@ -425,25 +299,14 @@ void ColoringScreen::drawDebugOverlay() const {
 }
 
 bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
-    if (CheckCollisionPointRec(screenPos, backButton.getBounds())) {
-        return true;
-    }
-
-    if (CheckCollisionPointRec(screenPos, inspector.isAnalysisMode() ? analysisCloseButton.getBounds() : analysisButton.getBounds())) {
-        return true;
-    }
-
-    if (inspector.isAnalysisMode() && CheckCollisionPointRec(screenPos, analysisClearButton.getBounds())) {
-        return true;
-    }
-
-    for (const auto& button : colorButtons) {
-        if (CheckCollisionPointRec(screenPos, button.getBounds())) {
-            return true;
-        }
-    }
-
-    return false;
+    return interactionManager.isPointerOverUi(
+        screenPos,
+        inspector.isAnalysisMode(),
+        backButton,
+        analysisButton,
+        analysisCloseButton,
+        analysisClearButton,
+        colorButtons);
 }
 void ColoringScreen::layoutTopButtons() {
     float uiScale = getUiScale();

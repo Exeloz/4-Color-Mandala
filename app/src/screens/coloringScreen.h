@@ -4,6 +4,8 @@
 #include "../ui/colorPalette.h"
 #include "../ui/button.h"
 #include "coloringInspector.h"
+#include "cameraInputManager.h"
+#include "coloringInteractionManager.h"
 #include "raylib.h"
 #include <memory>
 
@@ -29,20 +31,14 @@ private:
     bool gameWon;
     bool returnRequested;
     ColoringInspector inspector;
+    CameraInputManager cameraInputManager;
+    ColoringInteractionManager interactionManager;
     Camera2D camera;
     float zoom;
-    bool isPanning;
-    bool isDraggingCamera;
-    bool isPinching;
-    float lastPinchDistance;
-    Vector2 lastPanPointer;
 
     void drawColorPalette();
-    void handleColorSelection();
-    void updatePan();
-    void updateZoom();
-    void updateAnalysisOverlay();
-    void updateDebugOverlay();
+    void updateAnalysisInteractions();
+    void updateDebugInteractions();
     void drawAnalysisOverlay() const;
     void fitCameraToMandala();
     void drawDebugOverlay() const;
