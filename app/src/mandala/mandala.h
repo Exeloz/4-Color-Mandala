@@ -14,6 +14,7 @@ public:
     int getRegionCount() const;
     Region* getRegionAtPoint(Vector2 point);
     Region* getRegionById(int regionId);
+    const Region* getRegionById(int regionId) const;
     const std::vector<Region>& getRegions() const;
     const AdjacencyGraph& getAdjacencyGraph() const;
     bool isFullyColored() const;

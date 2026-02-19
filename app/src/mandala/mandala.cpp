@@ -35,6 +35,15 @@ Region* Mandala::getRegionById(int regionId) {
     return nullptr;
 }
 
+const Region* Mandala::getRegionById(int regionId) const {
+    for (const auto& region : regions) {
+        if (region.getId() == regionId) {
+            return &region;
+        }
+    }
+    return nullptr;
+}
+
 const std::vector<Region>& Mandala::getRegions() const {
     return regions;
 }

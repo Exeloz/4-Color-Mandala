@@ -23,8 +23,6 @@ private:
     int selectedMandalaButtonIndex;
     bool transitionRequested;
     bool paletteRequested;
-    bool returnToStartRequested;
-    Button backButton;
     Button paletteButton;
 
     void layoutControls();

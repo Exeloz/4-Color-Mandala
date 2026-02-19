@@ -1,5 +1,6 @@
 #include "paletteScreen.h"
 #include "../ui/colorPalette.h"
+#include "../ui/colorCatalog.h"
 #include "../ui/colorTileRenderer.h"
 #include "../ui/colors.h"
 #include "../ui/input.h"
@@ -15,11 +16,11 @@ namespace {
     constexpr float SLOT_GAP = 8.0f;
 
     constexpr float TILE_START_X = 90.0f;
-    constexpr float TILE_START_Y = 198.0f;
+    constexpr float TILE_START_Y = 184.0f;
     constexpr float TILE_WIDTH = 78.0f;
-    constexpr float TILE_HEIGHT = 36.0f;
+    constexpr float TILE_HEIGHT = 30.0f;
     constexpr float TILE_GAP_X = 12.0f;
-    constexpr float TILE_GAP_Y = 10.0f;
+    constexpr float TILE_GAP_Y = 8.0f;
     constexpr float NAV_BOTTOM_MARGIN = 20.0f;
     constexpr float NAV_RESERVED_HEIGHT = 96.0f;
 
@@ -69,26 +70,7 @@ PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
 
     ColorPalette defaultPalette;
     paletteColors = initialPaletteColors.empty() ? defaultPalette.getColors() : initialPaletteColors;
-
-    availableColors = {
-        Colors::None,
-        Colors::Red, Colors::DarkRed, Colors::Crimson, Colors::FireBrick, Colors::Coral, Colors::Salmon, Colors::LightCoral, Colors::IndianRed,
-        Colors::Orange, Colors::DarkOrange, Colors::OrangeRed, Colors::Tomato, Colors::Tangerine, Colors::PeachPuff,
-        Colors::Yellow, Colors::Gold, Colors::LightYellow, Colors::LemonChiffon, Colors::Khaki, Colors::DarkKhaki,
-        Colors::Green, Colors::DarkGreen, Colors::ForestGreen, Colors::LimeGreen, Colors::Lime, Colors::SpringGreen, Colors::SeaGreen, Colors::MediumSeaGreen,
-        Colors::LightGreen, Colors::PaleGreen, Colors::Chartreuse, Colors::YellowGreen, Colors::OliveDrab, Colors::Olive,
-        Colors::Cyan, Colors::Aqua, Colors::DarkCyan, Colors::LightCyan, Colors::Turquoise, Colors::MediumTurquoise, Colors::DarkTurquoise, Colors::Aquamarine, Colors::PaleTurquoise,
-        Colors::Blue, Colors::DarkBlue, Colors::MediumBlue, Colors::Navy, Colors::RoyalBlue, Colors::SteelBlue, Colors::DodgerBlue, Colors::DeepSkyBlue,
-        Colors::SkyBlue, Colors::LightSkyBlue, Colors::LightBlue, Colors::PowderBlue, Colors::CornflowerBlue, Colors::CadetBlue,
-        Colors::Purple, Colors::DarkMagenta, Colors::DarkViolet, Colors::DarkOrchid, Colors::Indigo, Colors::BlueViolet, Colors::MediumPurple, Colors::MediumOrchid,
-        Colors::Orchid, Colors::Violet, Colors::Plum, Colors::Thistle, Colors::Lavender,
-        Colors::Magenta, Colors::Fuchsia, Colors::DeepPink, Colors::HotPink, Colors::Pink, Colors::LightPink, Colors::PaleVioletRed, Colors::MediumVioletRed,
-        Colors::Brown, Colors::SaddleBrown, Colors::Sienna, Colors::Chocolate, Colors::Peru, Colors::SandyBrown, Colors::BurlyWood, Colors::Tan, Colors::RosyBrown, Colors::Wheat, Colors::Beige,
-        Colors::White, Colors::Snow, Colors::Ivory, Colors::Honeydew, Colors::MintCream, Colors::Azure, Colors::AliceBlue, Colors::GhostWhite, Colors::WhiteSmoke,
-        Colors::Seashell, Colors::OldLace, Colors::FloralWhite, Colors::AntiqueWhite, Colors::Linen, Colors::LavenderBlush, Colors::MistyRose,
-        Colors::Gray, Colors::DarkGray, Colors::Silver, Colors::LightGray, Colors::Gainsboro, Colors::DimGray, Colors::SlateGray, Colors::LightSlateGray, Colors::DarkSlateGray,
-        Colors::Black
-    };
+    availableColors = ColorCatalog::getAvailableColors();
 }
 
 void PaletteScreen::update(float deltaTime) {

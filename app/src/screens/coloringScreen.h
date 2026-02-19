@@ -3,10 +3,9 @@
 #include "../mandala/mandala.h"
 #include "../ui/colorPalette.h"
 #include "../ui/button.h"
+#include "coloringInspector.h"
 #include "raylib.h"
 #include <memory>
-#include <set>
-#include <utility>
 
 class ColoringScreen : public GameState {
 public:
@@ -29,9 +28,7 @@ private:
     bool winImageSaved;
     bool gameWon;
     bool returnRequested;
-    bool analysisMode;
-    int analysisInspectRegionId;
-    int analysisHoverRegionId;
+    ColoringInspector inspector;
     Camera2D camera;
     float zoom;
     bool isPanning;
@@ -39,11 +36,6 @@ private:
     bool isPinching;
     float lastPinchDistance;
     Vector2 lastPanPointer;
-    bool debugAdjacencyMode;
-    int debugInspectRegionId;
-    int debugHoverRegionId;
-    std::set<std::pair<int, int>> debugSuggestedAdds;
-    std::set<std::pair<int, int>> debugSuggestedRemoves;
 
     void drawColorPalette();
     void handleColorSelection();
@@ -52,11 +44,8 @@ private:
     void updateAnalysisOverlay();
     void updateDebugOverlay();
     void drawAnalysisOverlay() const;
-    void centerCameraOnRegion(int regionId);
     void fitCameraToMandala();
     void drawDebugOverlay() const;
-    int getRegionIdAtWorldPosition(Vector2 worldPos) const;
     bool isPointerOverUi(Vector2 screenPos) const;
     void layoutTopButtons();
-    void logAdjacencySuggestion(bool shouldExist, int regionA, int regionB);
 };

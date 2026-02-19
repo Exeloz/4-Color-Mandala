@@ -16,8 +16,7 @@ float getUiScale() {
 
 SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database)
         : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), transitionRequested(false),
-            paletteRequested(false), returnToStartRequested(false),
-            backButton(20, 20, 100, 50, "BACK"), paletteButton(620, 20, 160, 50, "PALETTE") {
+            paletteRequested(false), paletteButton(620, 20, 160, 50, "PALETTE") {
     
     const auto& mandalaList = database->getAllMandala();
     for (size_t i = 0; i < mandalaList.size(); i++) {
@@ -29,13 +28,7 @@ SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database)
 void SelectionScreen::update(float deltaTime) {
     layoutControls();
 
-    backButton.update();
     paletteButton.update();
-
-    if (backButton.isClicked()) {
-        returnToStartRequested = true;
-        return;
-    }
 
     if (paletteButton.isClicked()) {
         paletteRequested = true;
@@ -64,8 +57,7 @@ void SelectionScreen::draw() {
     int titleX = (GetScreenWidth() - titleWidth) / 2;
     int titleY = static_cast<int>(20.0f * uiScale);
     DrawText(title, titleX, titleY, titleSize, Colors::Black);
-    
-    backButton.draw();
+
     paletteButton.draw();
 
     for (size_t i = 0; i < mandalaButtons.size(); i++) {
@@ -85,11 +77,7 @@ void SelectionScreen::layoutControls() {
     float topMargin = 20.0f * uiScale;
 
     float topButtonHeight = mobileLayout ? (58.0f * uiScale) : 50.0f;
-    float backWidth = mobileLayout ? (136.0f * uiScale) : 100.0f;
     float paletteWidth = mobileLayout ? (190.0f * uiScale) : 160.0f;
-
-    backButton.setPosition(sideMargin, topMargin);
-    backButton.setSize(backWidth, topButtonHeight);
 
     paletteButton.setPosition(GetScreenWidth() - sideMargin - paletteWidth, topMargin);
     paletteButton.setSize(paletteWidth, topButtonHeight);
@@ -165,5 +153,5 @@ bool SelectionScreen::shouldTransitionToPalette() const {
 }
 
 bool SelectionScreen::shouldReturnToStart() const {
-    return returnToStartRequested;
+    return false;
 }

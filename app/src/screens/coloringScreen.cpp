@@ -46,47 +46,6 @@ namespace {
 
         return ellipsis;
     }
-
-    std::vector<int> collectSortedRegionIds(const std::vector<Region>& regions) {
-        std::vector<int> ids;
-        ids.reserve(regions.size());
-        for (const auto& region : regions) {
-            ids.push_back(region.getId());
-        }
-
-        std::sort(ids.begin(), ids.end());
-        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
-        return ids;
-    }
-
-    int cycleRegionId(const std::vector<int>& sortedIds, int currentId, int direction) {
-        if (sortedIds.empty()) {
-            return -1;
-        }
-
-        if (currentId < 0) {
-            return sortedIds.front();
-        }
-
-        auto it = std::lower_bound(sortedIds.begin(), sortedIds.end(), currentId);
-        if (it == sortedIds.end() || *it != currentId) {
-            if (direction > 0) {
-                return (it == sortedIds.end()) ? sortedIds.front() : *it;
-            }
-
-            if (it == sortedIds.begin()) {
-                return sortedIds.back();
-            }
-
-            --it;
-            return *it;
-        }
-
-        int index = static_cast<int>(it - sortedIds.begin());
-        int size = static_cast<int>(sortedIds.size());
-        int nextIndex = (index + direction + size) % size;
-        return sortedIds[nextIndex];
-    }
 }
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vector<Color>& customPaletteColors)
@@ -94,12 +53,8 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
             analysisButton(590, 20, 190, 50, "ANALYSIS"),
             analysisCloseButton(590, 20, 190, 50, "EXIT ANALYSIS"),
             analysisClearButton(710, 80, 70, 44, "CLEAR"),
-            winImageSaved(false), gameWon(false), returnRequested(false), analysisMode(false), analysisInspectRegionId(-1),
-            analysisHoverRegionId(-1), camera{}, zoom(1.0f), isPanning(false), isDraggingCamera(false),
-            isPinching(false), lastPinchDistance(0.0f),
-            lastPanPointer{},
-            debugAdjacencyMode(false), debugInspectRegionId(-1), debugHoverRegionId(-1),
-            debugSuggestedAdds(), debugSuggestedRemoves() {
+            winImageSaved(false), gameWon(false), returnRequested(false), camera{}, zoom(1.0f),
+            isPanning(false), isDraggingCamera(false), isPinching(false), lastPinchDistance(0.0f), lastPanPointer{} {
 
         camera.target = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
@@ -138,7 +93,7 @@ void ColoringScreen::update(float deltaTime) {
 
     updateAnalysisOverlay();
     updateDebugOverlay();
-    if (!analysisMode) {
+    if (!inspector.isAnalysisMode()) {
         handleColorSelection();
     }
 
@@ -270,55 +225,23 @@ void ColoringScreen::draw() {
     int titleY = static_cast<int>(20.0f * uiScale);
 
     int titleMaxWidth = GetScreenWidth() - titleX - static_cast<int>(20.0f * uiScale);
-    Rectangle actionBounds = analysisMode ? analysisCloseButton.getBounds() : analysisButton.getBounds();
+    Rectangle actionBounds = inspector.isAnalysisMode() ? analysisCloseButton.getBounds() : analysisButton.getBounds();
     titleMaxWidth = static_cast<int>(actionBounds.x - titleX - (12.0f * uiScale));
     titleMaxWidth = std::max(titleMaxWidth, static_cast<int>(140.0f * uiScale));
     std::string titleText = fitTextWithEllipsis(mandala->getName(), titleFont, titleMaxWidth);
     DrawText(titleText.c_str(), titleX, titleY, titleFont, Colors::Black);
 
     BeginMode2D(camera);
-    mandala->draw(colorPalette.getColors(), analysisMode);
+    mandala->draw(colorPalette.getColors(), inspector.isAnalysisMode());
     drawAnalysisOverlay();
     drawDebugOverlay();
     EndMode2D();
 
-    if (debugAdjacencyMode) {
-        int infoX = static_cast<int>(15.0f * uiScale);
-        int infoY = static_cast<int>(70.0f * uiScale);
-        int infoW = static_cast<int>(760.0f * uiScale);
-        int infoH = static_cast<int>(58.0f * uiScale);
-        DrawRectangle(infoX, infoY, infoW, infoH, Fade(Colors::White, 0.85f));
-        DrawRectangleLines(infoX, infoY, infoW, infoH, Colors::DarkGray);
-
-        std::ostringstream info;
-        info << "DEBUG ADJ: ON  |  Hover: " << debugHoverRegionId
-             << "  |  Inspect (Right Click): " << debugInspectRegionId
-               << "  |  Clear Inspect: C  |  A=Add  R=Remove";
-        DrawText(info.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(82.0f * uiScale),
-             static_cast<int>(20.0f * uiScale), Colors::Black);
-
-        if (debugInspectRegionId >= 0) {
-            const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(debugInspectRegionId);
-            std::ostringstream neighborText;
-            neighborText << "Neighbors(" << neighbors.size() << "): ";
-
-            bool first = true;
-            for (int id : neighbors) {
-                if (!first) {
-                    neighborText << ", ";
-                }
-                neighborText << id;
-                first = false;
-            }
-
-            DrawText(neighborText.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(103.0f * uiScale),
-                     static_cast<int>(18.0f * uiScale), Colors::DarkBlue);
-        }
-    }
+    inspector.drawDebugInfoPanel(*mandala, uiScale);
 
     drawColorPalette();
     backButton.draw();
-    if (analysisMode) {
+    if (inspector.isAnalysisMode()) {
         analysisCloseButton.draw();
         analysisClearButton.draw();
     } else {
@@ -423,12 +346,10 @@ void ColoringScreen::saveWinImage() {
 }
 
 void ColoringScreen::updateAnalysisOverlay() {
-    if (!analysisMode) {
+    if (!inspector.isAnalysisMode()) {
         analysisButton.update();
         if (analysisButton.isClicked()) {
-            analysisMode = true;
-            analysisInspectRegionId = -1;
-            analysisHoverRegionId = -1;
+            inspector.enterAnalysisMode();
         }
         return;
     }
@@ -437,92 +358,21 @@ void ColoringScreen::updateAnalysisOverlay() {
     analysisClearButton.update();
 
     if (analysisCloseButton.isClicked()) {
-        analysisMode = false;
-        analysisInspectRegionId = -1;
-        analysisHoverRegionId = -1;
+        inspector.exitAnalysisMode();
         return;
     }
 
     if (analysisClearButton.isClicked()) {
-        analysisInspectRegionId = -1;
-        analysisHoverRegionId = -1;
+        inspector.clearAnalysisSelection();
         return;
     }
 
     Vector2 pointerPos = Input::GetPointerPosition();
-    if (isPointerOverUi(pointerPos)) {
-        analysisHoverRegionId = -1;
-        return;
-    }
-
-    Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
-    analysisHoverRegionId = getRegionIdAtWorldPosition(worldPos);
-
-    if (!isDraggingCamera && Input::IsPointerPressed() && analysisHoverRegionId >= 0) {
-        analysisInspectRegionId = analysisHoverRegionId;
-    }
+    inspector.updateAnalysis(*mandala, camera, isPointerOverUi(pointerPos), isDraggingCamera);
 }
 
 void ColoringScreen::updateDebugOverlay() {
-    int previousInspectRegionId = debugInspectRegionId;
-
-    if (IsKeyPressed(KEY_F3)) {
-        debugAdjacencyMode = !debugAdjacencyMode;
-        if (!debugAdjacencyMode) {
-            debugInspectRegionId = -1;
-            debugHoverRegionId = -1;
-        }
-    }
-
-    if (!debugAdjacencyMode) {
-        return;
-    }
-
-    int arrowDirection = 0;
-    if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_UP)) {
-        arrowDirection = 1;
-    } else if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_DOWN)) {
-        arrowDirection = -1;
-    }
-
-    if (arrowDirection != 0) {
-        const auto& regions = mandala->getRegions();
-        std::vector<int> sortedIds = collectSortedRegionIds(regions);
-        debugInspectRegionId = cycleRegionId(sortedIds, debugInspectRegionId, arrowDirection);
-    }
-
-    Vector2 worldPos = GetScreenToWorld2D(Input::GetPointerPosition(), camera);
-    debugHoverRegionId = getRegionIdAtWorldPosition(worldPos);
-
-    if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && debugHoverRegionId >= 0) {
-        debugInspectRegionId = debugHoverRegionId;
-    }
-
-    if (IsKeyPressed(KEY_C)) {
-        debugInspectRegionId = -1;
-    }
-
-    if (debugInspectRegionId >= 0 && debugHoverRegionId >= 0 && debugInspectRegionId != debugHoverRegionId) {
-        if (IsKeyPressed(KEY_A)) {
-            logAdjacencySuggestion(true, debugInspectRegionId, debugHoverRegionId);
-        }
-        if (IsKeyPressed(KEY_R)) {
-            logAdjacencySuggestion(false, debugInspectRegionId, debugHoverRegionId);
-        }
-    }
-
-    if (debugInspectRegionId >= 0 && debugInspectRegionId != previousInspectRegionId) {
-        centerCameraOnRegion(debugInspectRegionId);
-    }
-}
-
-void ColoringScreen::centerCameraOnRegion(int regionId) {
-    const Region* region = mandala->getRegionById(regionId);
-    if (region == nullptr) {
-        return;
-    }
-
-    camera.target = region->getCentroid();
+    inspector.updateDebug(*mandala, camera, camera);
 }
 
 void ColoringScreen::fitCameraToMandala() {
@@ -567,76 +417,11 @@ void ColoringScreen::fitCameraToMandala() {
 }
 
 void ColoringScreen::drawAnalysisOverlay() const {
-    if (!analysisMode) {
-        return;
-    }
-
-    if (analysisInspectRegionId >= 0) {
-        const Region* selectedRegion = mandala->getRegionById(analysisInspectRegionId);
-        if (selectedRegion != nullptr) {
-            selectedRegion->drawWithColor(Fade(Colors::Cyan, 0.45f), Colors::DarkCyan, 6.0f);
-
-            const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(analysisInspectRegionId);
-            for (int neighborId : neighbors) {
-                const Region* neighborRegion = mandala->getRegionById(neighborId);
-                if (neighborRegion != nullptr) {
-                    neighborRegion->drawWithColor(Fade(Colors::Blue, 0.30f), Colors::Blue, 3.0f);
-                }
-            }
-        }
-    }
-
-    if (analysisHoverRegionId >= 0 && analysisHoverRegionId != analysisInspectRegionId) {
-        const Region* hoverRegion = mandala->getRegionById(analysisHoverRegionId);
-        if (hoverRegion != nullptr) {
-            hoverRegion->drawWithColor(Fade(Colors::LightSkyBlue, 0.35f), Colors::DodgerBlue, 2.0f);
-        }
-    }
+    inspector.drawAnalysisOverlay(*mandala);
 }
 
 void ColoringScreen::drawDebugOverlay() const {
-    if (!debugAdjacencyMode) {
-        return;
-    }
-
-    if (debugInspectRegionId < 0) {
-        return;
-    }
-
-    const Region* selectedRegion = mandala->getRegionById(debugInspectRegionId);
-    if (selectedRegion == nullptr) {
-        return;
-    }
-
-    selectedRegion->drawWithColor(Fade(Colors::Cyan, 0.45f), Colors::DarkCyan, 6.0f);
-
-    const auto& neighbors = mandala->getAdjacencyGraph().getAdjacentRegions(debugInspectRegionId);
-    for (int neighborId : neighbors) {
-        const Region* neighborRegion = mandala->getRegionById(neighborId);
-        if (neighborRegion == nullptr) {
-            continue;
-        }
-
-        neighborRegion->drawWithColor(Fade(Colors::Blue, 0.30f), Colors::Blue, 4.0f);
-    }
-
-    if (debugHoverRegionId >= 0 && debugHoverRegionId != debugInspectRegionId) {
-        const Region* hoverRegion = mandala->getRegionById(debugHoverRegionId);
-        if (hoverRegion != nullptr) {
-            hoverRegion->drawWithColor(Fade(Colors::LightSkyBlue, 0.35f), Colors::DodgerBlue, 2.0f);
-        }
-    }
-}
-
-int ColoringScreen::getRegionIdAtWorldPosition(Vector2 worldPos) const {
-    const auto& regions = mandala->getRegions();
-    for (const auto& region : regions) {
-        if (region.isPointInRegion(worldPos) && region.isColorable()) {
-            return region.getId();
-        }
-    }
-
-    return -1;
+    inspector.drawDebugOverlay(*mandala);
 }
 
 bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
@@ -644,11 +429,11 @@ bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
         return true;
     }
 
-    if (CheckCollisionPointRec(screenPos, analysisMode ? analysisCloseButton.getBounds() : analysisButton.getBounds())) {
+    if (CheckCollisionPointRec(screenPos, inspector.isAnalysisMode() ? analysisCloseButton.getBounds() : analysisButton.getBounds())) {
         return true;
     }
 
-    if (analysisMode && CheckCollisionPointRec(screenPos, analysisClearButton.getBounds())) {
+    if (inspector.isAnalysisMode() && CheckCollisionPointRec(screenPos, analysisClearButton.getBounds())) {
         return true;
     }
 
@@ -660,36 +445,6 @@ bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
 
     return false;
 }
-
-void ColoringScreen::logAdjacencySuggestion(bool shouldExist, int regionA, int regionB) {
-    int a = std::min(regionA, regionB);
-    int b = std::max(regionA, regionB);
-    std::pair<int, int> pair = {a, b};
-
-    bool currentlyAdjacent = mandala->getAdjacencyGraph().areAdjacent(a, b);
-
-    if (shouldExist) {
-        debugSuggestedAdds.insert(pair);
-        debugSuggestedRemoves.erase(pair);
-
-        TraceLog(LOG_INFO, "[ADJ DEBUG] Suggest ADD (%d, %d)", a, b);
-        if (currentlyAdjacent) {
-            TraceLog(LOG_INFO, "[ADJ DEBUG] Already adjacent in current graph.");
-        }
-        TraceLog(LOG_INFO, "[ADJ DEBUG] Line to add: adjacencyGraph.addAdjacency(%d, %d);", a, b);
-        return;
-    }
-
-    debugSuggestedRemoves.insert(pair);
-    debugSuggestedAdds.erase(pair);
-
-    TraceLog(LOG_INFO, "[ADJ DEBUG] Suggest REMOVE (%d, %d)", a, b);
-    if (!currentlyAdjacent) {
-        TraceLog(LOG_INFO, "[ADJ DEBUG] Pair not currently adjacent in graph.");
-    }
-    TraceLog(LOG_INFO, "[ADJ DEBUG] Line to remove from 3_adjacency.cpp: adjacencyGraph.addAdjacency(%d, %d);", a, b);
-}
-
 void ColoringScreen::layoutTopButtons() {
     float uiScale = getUiScale();
     bool mobileLayout = isMobileLayout();
