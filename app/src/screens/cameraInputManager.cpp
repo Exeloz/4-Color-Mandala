@@ -89,8 +89,8 @@ void CameraInputManager::update(Camera2D& camera, float& zoom, const std::functi
     Vector2 pointerPos = Input::GetPointerPosition();
 
 #if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
-    int touchCount = GetTouchPointCount();
-    if (touchCount == 1) {
+    int panTouchCount = GetTouchPointCount();
+    if (panTouchCount == 1) {
         pointerPos = GetTouchPosition(0);
         shouldPan = !isPointerOverUi(pointerPos);
     } else {

@@ -49,10 +49,11 @@ namespace {
 }
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vector<Color>& customPaletteColors)
-        : mandala(mandala), colorPalette(), colorButtons(), backButton(20, 20, 100, 50, "BACK"),
-            analysisButton(590, 20, 190, 50, "ANALYSIS"),
-            analysisCloseButton(590, 20, 190, 50, "EXIT ANALYSIS"),
-            analysisClearButton(710, 80, 70, 44, "CLEAR"),
+        : mandala(mandala), colorPalette(), colorButtons(), backButton(0, 0, 1, 1, "BACK"),
+            undoButton(0, 0, 1, 1, "UNDO"),
+            analysisButton(0, 0, 1, 1, "ANALYSIS"),
+            analysisCloseButton(0, 0, 1, 1, "EXIT ANALYSIS"),
+            analysisClearButton(0, 0, 1, 1, "CLEAR"),
             winImageSaved(false), gameWon(false), returnRequested(false),
             cameraInputManager(MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, TOUCH_PAN_START_THRESHOLD, TOUCH_PINCH_SENSITIVITY),
             camera{}, zoom(1.0f) {
@@ -72,6 +73,8 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
         float y = 550;
         colorButtons.emplace_back(x, y, 100, 40, "");
     }
+
+    layoutTopButtons();
 }
 
 void ColoringScreen::update(float deltaTime) {
@@ -85,17 +88,25 @@ void ColoringScreen::update(float deltaTime) {
         return;
     }
 
+    undoButton.update();
+    if (undoButton.isClicked()) {
+        actionManager.undoLast(*mandala);
+    }
+
     interactionManager.updateColorButtons(colorButtons, colorPalette);
 
     updateAnalysisInteractions();
     updateDebugInteractions();
-    interactionManager.handleRegionColorSelection(
+    int regionId = interactionManager.getRegionIdForColorSelection(
         *mandala,
         camera,
-        colorPalette,
         isPointerOverUi(Input::GetPointerPosition()),
         cameraInputManager.isDraggingCamera(),
         inspector.isAnalysisMode());
+
+    if (regionId >= 0) {
+        actionManager.applyColorChange(*mandala, regionId, colorPalette.getSelectedColorIndex());
+    }
 
     if (mandala->isValidColoring()) {
         gameWon = true;
@@ -128,6 +139,7 @@ void ColoringScreen::draw() {
 
     drawColorPalette();
     backButton.draw();
+    undoButton.draw();
     if (inspector.isAnalysisMode()) {
         analysisCloseButton.draw();
         analysisClearButton.draw();
@@ -242,6 +254,7 @@ void ColoringScreen::updateAnalysisInteractions() {
         analysisCloseButton,
         analysisClearButton,
         backButton,
+        undoButton,
         colorButtons);
 }
 
@@ -303,6 +316,7 @@ bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
         screenPos,
         inspector.isAnalysisMode(),
         backButton,
+        undoButton,
         analysisButton,
         analysisCloseButton,
         analysisClearButton,
@@ -324,6 +338,13 @@ void ColoringScreen::layoutTopButtons() {
 
     backButton.setPosition(leftMargin, topMargin);
     backButton.setSize(backButtonWidth, topButtonHeight);
+
+    float undoButtonWidth = mobileLayout ? 126.0f * uiScale : 110.0f;
+    float undoButtonHeight = topButtonHeight;
+    float undoButtonX = GetScreenWidth() - undoButtonWidth - rightMargin;
+    float undoButtonY = GetScreenHeight() - undoButtonHeight - (20.0f * uiScale);
+    undoButton.setPosition(undoButtonX, undoButtonY);
+    undoButton.setSize(undoButtonWidth, undoButtonHeight);
 
     float controlsY = topMargin + topButtonHeight + (10.0f * uiScale);
 

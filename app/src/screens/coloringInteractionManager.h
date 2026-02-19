@@ -20,6 +20,7 @@ public:
         Button& analysisCloseButton,
         Button& analysisClearButton,
         const Button& backButton,
+        const Button& undoButton,
         const std::vector<Button>& colorButtons) const;
     void updateDebugControls(
         ColoringInspector& inspector,
@@ -34,11 +35,18 @@ public:
         bool pointerOverUi,
         bool isDraggingCamera,
         bool analysisMode) const;
+    int getRegionIdForColorSelection(
+        Mandala& mandala,
+        const Camera2D& camera,
+        bool pointerOverUi,
+        bool isDraggingCamera,
+        bool analysisMode) const;
 
     bool isPointerOverUi(
         Vector2 screenPos,
         bool analysisMode,
         const Button& backButton,
+        const Button& undoButton,
         const Button& analysisButton,
         const Button& analysisCloseButton,
         const Button& analysisClearButton,

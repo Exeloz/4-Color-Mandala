@@ -24,6 +24,7 @@ void ColoringInteractionManager::updateAnalysisControls(
     Button& analysisCloseButton,
     Button& analysisClearButton,
     const Button& backButton,
+    const Button& undoButton,
     const std::vector<Button>& colorButtons) const {
     if (!inspector.isAnalysisMode()) {
         analysisButton.update();
@@ -51,6 +52,7 @@ void ColoringInteractionManager::updateAnalysisControls(
         pointerPos,
         inspector.isAnalysisMode(),
         backButton,
+        undoButton,
         analysisButton,
         analysisCloseButton,
         analysisClearButton,
@@ -86,15 +88,40 @@ void ColoringInteractionManager::handleRegionColorSelection(
     }
 }
 
+int ColoringInteractionManager::getRegionIdForColorSelection(
+    Mandala& mandala,
+    const Camera2D& camera,
+    bool pointerOverUi,
+    bool isDraggingCamera,
+    bool analysisMode) const {
+    if (analysisMode || isDraggingCamera || !Input::IsPointerPressed() || pointerOverUi) {
+        return -1;
+    }
+
+    Vector2 pointerPos = Input::GetPointerPosition();
+    Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
+    Region* region = mandala.getRegionAtPoint(worldPos);
+    if (region == nullptr || !region->isColorable()) {
+        return -1;
+    }
+
+    return region->getId();
+}
+
 bool ColoringInteractionManager::isPointerOverUi(
     Vector2 screenPos,
     bool analysisMode,
     const Button& backButton,
+    const Button& undoButton,
     const Button& analysisButton,
     const Button& analysisCloseButton,
     const Button& analysisClearButton,
     const std::vector<Button>& colorButtons) const {
     if (CheckCollisionPointRec(screenPos, backButton.getBounds())) {
+        return true;
+    }
+
+    if (CheckCollisionPointRec(screenPos, undoButton.getBounds())) {
         return true;
     }
 

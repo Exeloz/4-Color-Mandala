@@ -5,6 +5,7 @@
 #include "../ui/button.h"
 #include "coloringInspector.h"
 #include "cameraInputManager.h"
+#include "coloringActionManager.h"
 #include "coloringInteractionManager.h"
 #include "raylib.h"
 #include <memory>
@@ -24,6 +25,7 @@ private:
     ColorPalette colorPalette;
     std::vector<Button> colorButtons;
     Button backButton;
+    Button undoButton;
     Button analysisButton;
     Button analysisCloseButton;
     Button analysisClearButton;
@@ -32,6 +34,7 @@ private:
     bool returnRequested;
     ColoringInspector inspector;
     CameraInputManager cameraInputManager;
+    ColoringActionManager actionManager;
     ColoringInteractionManager interactionManager;
     Camera2D camera;
     float zoom;
