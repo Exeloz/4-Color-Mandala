@@ -63,8 +63,8 @@ bool Mandala::isValidColoring() const {
     return true;
 }
 
-void Mandala::draw(const std::vector<Color>& colorPalette) const {
+void Mandala::draw(const std::vector<Color>& colorPalette, bool ignoreColoring) const {
     for (const auto& region : regions) {
-        region.draw(colorPalette);
+        region.draw(colorPalette, ignoreColoring);
     }
 }

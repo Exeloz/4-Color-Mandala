@@ -277,7 +277,7 @@ void ColoringScreen::draw() {
     DrawText(titleText.c_str(), titleX, titleY, titleFont, Colors::Black);
 
     BeginMode2D(camera);
-    mandala->draw(colorPalette.getColors());
+    mandala->draw(colorPalette.getColors(), analysisMode);
     drawAnalysisOverlay();
     drawDebugOverlay();
     EndMode2D();

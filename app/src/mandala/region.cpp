@@ -148,11 +148,11 @@ bool Region::isPointInRegion(Vector2 point) const {
     return intersections % 2 == 1;
 }
 
-void Region::draw(const std::vector<Color>& colorPalette) const {
+void Region::draw(const std::vector<Color>& colorPalette, bool ignoreColoring) const {
     if (vertices.size() < 3) return;
 
     Color fillColor = defaultColor;
-    if (colored && colorIndex >= 0 && colorIndex < static_cast<int>(colorPalette.size())) {
+    if (!ignoreColoring && colored && colorIndex >= 0 && colorIndex < static_cast<int>(colorPalette.size())) {
         fillColor = colorPalette[colorIndex];
     }
 

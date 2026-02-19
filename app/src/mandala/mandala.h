@@ -18,7 +18,7 @@ public:
     const AdjacencyGraph& getAdjacencyGraph() const;
     bool isFullyColored() const;
     bool isValidColoring() const;
-    void draw(const std::vector<Color>& colorPalette) const;
+    void draw(const std::vector<Color>& colorPalette, bool ignoreColoring = false) const;
 
 private:
     int id;
