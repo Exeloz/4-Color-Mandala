@@ -57,7 +57,7 @@ void SelectionScreen::draw() {
     ClearBackground(Colors::Gainsboro);
 
     float uiScale = getUiScale();
-    int titleSize = static_cast<int>(40.0f * uiScale);
+    int titleSize = std::max(static_cast<int>(34.0f), static_cast<int>(48.0f * uiScale));
     const char* title = "Select a Mandala";
     int titleWidth = MeasureText(title, titleSize);
     int titleX = (GetScreenWidth() - titleWidth) / 2;

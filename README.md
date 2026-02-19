@@ -133,10 +133,10 @@ $ADB devices
 $HOME/Android/Sdk/platform-tools/adb devices
 
 # 2) Installer (ou mettre a jour) l'APK debug
-$ADB -r app/build/outputs/apk/debug/app-debug.apk
+$ADB install -r app/build/outputs/apk/debug/app-debug.apk
 
 #    Installer (ou mettre a jour) l'APK release (signe)
-$ADB -r app/build/outputs/apk/release/app-release-signed.apk
+$ADB install -r app/build/outputs/apk/release/app-release-signed.apk
 
 # 3) (Optionnel) Lancer l'app depuis le PC
 $HOME/Android/Sdk/platform-tools/adb shell monkey -p com.CegepGarneau.colormandala -c android.intent.category.LAUNCHER 1

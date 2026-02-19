@@ -263,17 +263,14 @@ void ColoringScreen::draw() {
     ClearBackground(Colors::LightBlue);
 
     float uiScale = getUiScale();
-    bool mobileLayout = isMobileLayout();
     Rectangle backBounds = backButton.getBounds();
     int titleFont = static_cast<int>(30.0f * uiScale);
     int titleX = static_cast<int>(backBounds.x + backBounds.width + (16.0f * uiScale));
     int titleY = static_cast<int>(20.0f * uiScale);
 
     int titleMaxWidth = GetScreenWidth() - titleX - static_cast<int>(20.0f * uiScale);
-    if (!mobileLayout) {
-        Rectangle actionBounds = analysisMode ? analysisCloseButton.getBounds() : analysisButton.getBounds();
-        titleMaxWidth = static_cast<int>(actionBounds.x - titleX - (12.0f * uiScale));
-    }
+    Rectangle actionBounds = analysisMode ? analysisCloseButton.getBounds() : analysisButton.getBounds();
+    titleMaxWidth = static_cast<int>(actionBounds.x - titleX - (12.0f * uiScale));
     titleMaxWidth = std::max(titleMaxWidth, static_cast<int>(140.0f * uiScale));
     std::string titleText = fitTextWithEllipsis(mandala->getName(), titleFont, titleMaxWidth);
     DrawText(titleText.c_str(), titleX, titleY, titleFont, Colors::Black);
@@ -701,39 +698,25 @@ void ColoringScreen::layoutTopButtons() {
     float rightMargin = 20.0f * uiScale;
     float topMargin = 20.0f * uiScale;
 
-    float topButtonHeight = mobileLayout ? 58.0f * uiScale : 50.0f;
+    float topButtonHeight = mobileLayout ? 56.0f * uiScale : 50.0f;
     float backButtonWidth = mobileLayout ? 136.0f * uiScale : 100.0f;
-    float mainButtonWidth = mobileLayout ? 220.0f * uiScale : 190.0f;
-    float clearButtonWidth = mobileLayout ? 100.0f * uiScale : 70.0f;
-    float clearButtonHeight = mobileLayout ? 52.0f * uiScale : 44.0f;
+    float mainButtonWidth = mobileLayout ? 190.0f * uiScale : 190.0f;
+    float clearButtonWidth = mobileLayout ? 86.0f * uiScale : 70.0f;
+    float clearButtonHeight = mobileLayout ? 44.0f * uiScale : 44.0f;
 
     backButton.setPosition(leftMargin, topMargin);
     backButton.setSize(backButtonWidth, topButtonHeight);
 
     float controlsY = topMargin + topButtonHeight + (10.0f * uiScale);
 
-    if (mobileLayout) {
-        float mobileColumnWidth = std::max(backButtonWidth, mainButtonWidth);
-        analysisButton.setPosition(leftMargin, controlsY);
-        analysisButton.setSize(mobileColumnWidth, topButtonHeight);
-        analysisCloseButton.setPosition(leftMargin, controlsY);
-        analysisCloseButton.setSize(mobileColumnWidth, topButtonHeight);
+    float mainButtonX = GetScreenWidth() - mainButtonWidth - rightMargin;
+    analysisButton.setPosition(mainButtonX, topMargin);
+    analysisButton.setSize(mainButtonWidth, topButtonHeight);
+    analysisCloseButton.setPosition(mainButtonX, topMargin);
+    analysisCloseButton.setSize(mainButtonWidth, topButtonHeight);
 
-        float clearY = controlsY + topButtonHeight + (10.0f * uiScale);
-        analysisClearButton.setPosition(leftMargin, clearY);
-        analysisClearButton.setSize(mobileColumnWidth, clearButtonHeight);
-
-        controlsY = clearY + clearButtonHeight + (10.0f * uiScale);
-    } else {
-        float mainButtonX = GetScreenWidth() - mainButtonWidth - rightMargin;
-        analysisButton.setPosition(mainButtonX, topMargin);
-        analysisButton.setSize(mainButtonWidth, topButtonHeight);
-        analysisCloseButton.setPosition(mainButtonX, topMargin);
-        analysisCloseButton.setSize(mainButtonWidth, topButtonHeight);
-
-        analysisClearButton.setPosition(GetScreenWidth() - clearButtonWidth - rightMargin, controlsY);
-        analysisClearButton.setSize(clearButtonWidth, clearButtonHeight);
-    }
+    analysisClearButton.setPosition(GetScreenWidth() - clearButtonWidth - rightMargin, controlsY);
+    analysisClearButton.setSize(clearButtonWidth, clearButtonHeight);
 
     if (colorButtons.empty()) {
         return;
@@ -742,34 +725,21 @@ void ColoringScreen::layoutTopButtons() {
     int colorCount = static_cast<int>(colorButtons.size());
 
     float paletteX = leftMargin;
-    float paletteTop = mobileLayout ? controlsY : (controlsY + clearButtonHeight + (18.0f * uiScale));
+    float paletteTop = controlsY;
     float paletteBottomMargin = 20.0f * uiScale;
     float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - paletteTop - paletteBottomMargin);
-    float verticalGap = mobileLayout ? (12.0f * uiScale) : 10.0f;
-
-    float columnWidth = std::max(backButtonWidth, mainButtonWidth);
-    int rowsSingleColumn = colorCount;
-    float singleColumnMinHeight = mobileLayout ? (52.0f * uiScale) : 40.0f;
-    float requiredSingleHeight = (rowsSingleColumn * singleColumnMinHeight) + ((rowsSingleColumn - 1) * verticalGap);
-
-    int columns = (mobileLayout && requiredSingleHeight > availableHeight) ? 2 : 1;
-    int rows = (colorCount + columns - 1) / columns;
-
-    float horizontalGap = 10.0f * uiScale;
-    float buttonWidth = (columns == 1)
-        ? (mobileLayout ? (104.0f * uiScale) : 90.0f)
-        : ((columnWidth - horizontalGap) / 2.0f);
+    float verticalGap = mobileLayout ? (8.0f * uiScale) : 10.0f;
+    int rows = colorCount;
+    float buttonWidth = mobileLayout ? (88.0f * uiScale) : 90.0f;
 
     float buttonHeightBySpace = (availableHeight - ((rows - 1) * verticalGap)) / std::max(1, rows);
-    float minButtonHeight = mobileLayout ? (44.0f * uiScale) : 36.0f;
-    float preferredButtonHeight = mobileLayout ? (62.0f * uiScale) : 48.0f;
+    float minButtonHeight = mobileLayout ? (24.0f * uiScale) : 36.0f;
+    float preferredButtonHeight = mobileLayout ? (36.0f * uiScale) : 48.0f;
     float buttonHeight = Clamp(buttonHeightBySpace, minButtonHeight, preferredButtonHeight);
 
     for (int i = 0; i < colorCount; i++) {
-        int col = (columns == 1) ? 0 : (i / rows);
-        int row = (columns == 1) ? i : (i % rows);
-
-        float buttonX = paletteX + col * (buttonWidth + horizontalGap);
+        int row = i;
+        float buttonX = paletteX;
         float buttonY = paletteTop + row * (buttonHeight + verticalGap);
         colorButtons[i].setPosition(buttonX, buttonY);
         colorButtons[i].setSize(buttonWidth, buttonHeight);

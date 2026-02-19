@@ -7,18 +7,20 @@
 #include <string>
 
 namespace {
-    constexpr float SLOT_START_X = 90.0f;
-    constexpr float SLOT_Y = 120.0f;
-    constexpr float SLOT_WIDTH = 120.0f;
-    constexpr float SLOT_HEIGHT = 70.0f;
-    constexpr float SLOT_GAP = 20.0f;
+    constexpr float SLOT_START_X = 86.0f;
+    constexpr float SLOT_Y = 112.0f;
+    constexpr float SLOT_WIDTH = 76.0f;
+    constexpr float SLOT_HEIGHT = 38.0f;
+    constexpr float SLOT_GAP = 8.0f;
 
     constexpr float SWATCH_START_X = 90.0f;
-    constexpr float SWATCH_START_Y = 260.0f;
-    constexpr float SWATCH_WIDTH = 95.0f;
-    constexpr float SWATCH_HEIGHT = 50.0f;
-    constexpr float SWATCH_GAP_X = 20.0f;
-    constexpr float SWATCH_GAP_Y = 15.0f;
+    constexpr float SWATCH_START_Y = 198.0f;
+    constexpr float SWATCH_WIDTH = 78.0f;
+    constexpr float SWATCH_HEIGHT = 36.0f;
+    constexpr float SWATCH_GAP_X = 12.0f;
+    constexpr float SWATCH_GAP_Y = 10.0f;
+    constexpr float NAV_BOTTOM_MARGIN = 20.0f;
+    constexpr float NAV_RESERVED_HEIGHT = 96.0f;
 
     bool isMobileLayout() {
         return true;
@@ -45,7 +47,7 @@ namespace {
         float swatchHeight = SWATCH_HEIGHT * uiScale;
         float gapY = SWATCH_GAP_Y * uiScale;
         float startY = SWATCH_START_Y * uiScale;
-        float bottomMargin = 20.0f * uiScale;
+        float bottomMargin = NAV_RESERVED_HEIGHT * uiScale;
 
         float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - startY - bottomMargin);
         int rows = static_cast<int>((availableHeight + gapY) / (swatchHeight + gapY));
@@ -172,7 +174,13 @@ void PaletteScreen::draw() {
     int swatchesPerPage = std::max(1, getSwatchesPerPage(uiScale));
     int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / swatchesPerPage);
     std::string pageText = "Page " + std::to_string(swatchPage + 1) + " / " + std::to_string(maxPage + 1);
-    DrawText(pageText.c_str(), static_cast<int>(90.0f * uiScale), static_cast<int>(208.0f * uiScale), pageSize, Colors::Black);
+    Rectangle prevBounds = prevPageButton.getBounds();
+    Rectangle nextBounds = nextPageButton.getBounds();
+    int pageTextWidth = MeasureText(pageText.c_str(), pageSize);
+    float pageCenterX = (prevBounds.x + nextBounds.x + nextBounds.width) * 0.5f;
+    int pageX = static_cast<int>(pageCenterX - (pageTextWidth * 0.5f));
+    int pageY = static_cast<int>(prevBounds.y - pageSize - (6.0f * uiScale));
+    DrawText(pageText.c_str(), pageX, pageY, pageSize, Colors::Black);
 
     for (int i = 0; i < static_cast<int>(paletteColors.size()); i++) {
         Rectangle slot = getPaletteSlotBounds(i);
@@ -183,7 +191,7 @@ void PaletteScreen::draw() {
         DrawRectangleLinesEx(slot, borderWidth, borderColor);
 
         if (i == 0) {
-            int lockSize = static_cast<int>(20.0f * uiScale);
+            int lockSize = std::min(static_cast<int>(16.0f * uiScale), static_cast<int>(slot.height * 0.45f));
             int lockWidth = MeasureText("LOCK", lockSize);
             int lockX = static_cast<int>(slot.x + (slot.width - lockWidth) * 0.5f);
             int lockY = static_cast<int>(slot.y + (slot.height - lockSize) * 0.5f);
@@ -226,7 +234,7 @@ void PaletteScreen::layoutControls() {
 
     float navWidth = mobileLayout ? (120.0f * uiScale) : 100.0f;
     float navHeight = mobileLayout ? (52.0f * uiScale) : 40.0f;
-    float navY = 200.0f * uiScale;
+    float navY = static_cast<float>(GetScreenHeight()) - navHeight - (NAV_BOTTOM_MARGIN * uiScale);
     nextPageButton.setPosition(GetScreenWidth() - sideMargin - navWidth, navY);
     nextPageButton.setSize(navWidth, navHeight);
     prevPageButton.setPosition(nextPageButton.getBounds().x - navWidth - (12.0f * uiScale), navY);
@@ -258,7 +266,7 @@ Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
     if (totalWidth > GetScreenWidth() - (2.0f * startX)) {
         width = ((GetScreenWidth() - (2.0f * startX)) - (static_cast<float>(paletteColors.size() - 1) * gap)) /
                 static_cast<float>(paletteColors.size());
-        width = std::max(width, 76.0f * uiScale);
+        width = std::max(width, 60.0f * uiScale);
     }
 
     float x = startX + slotIndex * (width + gap);
