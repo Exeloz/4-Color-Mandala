@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include <set>
 #include <utility>
+#include <vector>
 
 class ColoringInspector {
 public:
@@ -15,7 +16,7 @@ public:
     void updateAnalysis(const Mandala& mandala, const Camera2D& camera, bool pointerOverUi, bool isDraggingCamera);
     void updateDebug(const Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera);
 
-    void drawAnalysisOverlay(const Mandala& mandala) const;
+    void drawAnalysisOverlay(const Mandala& mandala, const std::vector<Color>& colorPalette) const;
     void drawDebugOverlay(const Mandala& mandala) const;
     void drawDebugInfoPanel(const Mandala& mandala, float uiScale) const;
 

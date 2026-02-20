@@ -130,7 +130,7 @@ void ColoringScreen::draw() {
     DrawText(titleText.c_str(), titleX, titleY, titleFont, Colors::Black);
 
     BeginMode2D(camera);
-    mandala->draw(colorPalette.getColors(), inspector.isAnalysisMode());
+    mandala->draw(colorPalette.getColors(), false);
     drawAnalysisOverlay();
     drawDebugOverlay();
     EndMode2D();
@@ -304,7 +304,7 @@ void ColoringScreen::fitCameraToMandala() {
 }
 
 void ColoringScreen::drawAnalysisOverlay() const {
-    inspector.drawAnalysisOverlay(*mandala);
+    inspector.drawAnalysisOverlay(*mandala, colorPalette.getColors());
 }
 
 void ColoringScreen::drawDebugOverlay() const {

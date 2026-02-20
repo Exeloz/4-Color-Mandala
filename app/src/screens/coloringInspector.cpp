@@ -4,6 +4,44 @@
 #include <algorithm>
 #include <sstream>
 
+namespace {
+Color oppositeColor(Color color) {
+    return {
+        static_cast<unsigned char>(255 - color.r),
+        static_cast<unsigned char>(255 - color.g),
+        static_cast<unsigned char>(255 - color.b),
+        color.a
+    };
+}
+
+FillPattern makeLargeDottedStyle(Color fillColor) {
+    FillPattern style;
+    style.type = FillPatternType::Dotted;
+    style.size = 7.5f;
+    style.useAccentColor = true;
+    style.accentColor = oppositeColor(fillColor);
+    return style;
+}
+
+FillPattern makeLargeStripedStyle(Color fillColor) {
+    FillPattern style;
+    style.type = FillPatternType::Striped;
+    style.size = 5.f;
+    style.useAccentColor = true;
+    style.accentColor = oppositeColor(fillColor);
+    return style;
+}
+
+Color resolveRegionPaletteColor(const Region& region, const std::vector<Color>& colorPalette, Color fallbackColor) {
+    int colorIndex = region.getColor();
+    if (region.hasColor() && colorIndex >= 0 && colorIndex < static_cast<int>(colorPalette.size())) {
+        return colorPalette[colorIndex];
+    }
+
+    return fallbackColor;
+}
+}
+
 void ColoringInspector::enterAnalysisMode() {
     analysisMode = true;
     clearAnalysisSelection();
@@ -94,7 +132,7 @@ void ColoringInspector::updateDebug(const Mandala& mandala, const Camera2D& came
     }
 }
 
-void ColoringInspector::drawAnalysisOverlay(const Mandala& mandala) const {
+void ColoringInspector::drawAnalysisOverlay(const Mandala& mandala, const std::vector<Color>& colorPalette) const {
     if (!analysisMode) {
         return;
     }
@@ -102,13 +140,17 @@ void ColoringInspector::drawAnalysisOverlay(const Mandala& mandala) const {
     if (analysisInspectRegionId >= 0) {
         const Region* selectedRegion = mandala.getRegionById(analysisInspectRegionId);
         if (selectedRegion != nullptr) {
-            selectedRegion->drawWithColor(Fade(Colors::Cyan, 0.45f), Colors::DarkCyan, 6.0f);
+            Color selectedFill = resolveRegionPaletteColor(*selectedRegion, colorPalette, selectedRegion->getDefaultColor());
+            selectedRegion->drawWithColor(selectedFill, Colors::DarkCyan, 6.0f,
+                                          makeLargeStripedStyle(selectedFill));
 
             const auto& neighbors = mandala.getAdjacencyGraph().getAdjacentRegions(analysisInspectRegionId);
             for (int neighborId : neighbors) {
                 const Region* neighborRegion = mandala.getRegionById(neighborId);
                 if (neighborRegion != nullptr) {
-                    neighborRegion->drawWithColor(Fade(Colors::Blue, 0.30f), Colors::Blue, 3.0f);
+                    Color neighborFill = resolveRegionPaletteColor(*neighborRegion, colorPalette, neighborRegion->getDefaultColor());
+                    neighborRegion->drawWithColor(neighborFill, Colors::Blue, 3.0f,
+                                                  makeLargeDottedStyle(neighborFill));
                 }
             }
         }
@@ -117,7 +159,9 @@ void ColoringInspector::drawAnalysisOverlay(const Mandala& mandala) const {
     if (analysisHoverRegionId >= 0 && analysisHoverRegionId != analysisInspectRegionId) {
         const Region* hoverRegion = mandala.getRegionById(analysisHoverRegionId);
         if (hoverRegion != nullptr) {
-            hoverRegion->drawWithColor(Fade(Colors::LightSkyBlue, 0.35f), Colors::DodgerBlue, 2.0f);
+            Color hoverFill = Fade(Colors::LightSkyBlue, 0.35f);
+            hoverRegion->drawWithColor(hoverFill, Colors::DodgerBlue, 2.0f,
+                                       makeLargeDottedStyle(hoverFill));
         }
     }
 }
