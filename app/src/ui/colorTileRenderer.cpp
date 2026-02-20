@@ -10,9 +10,10 @@ bool ColorTileRenderer::isNoneColor(const Color& color) {
            color.a == Colors::None.a;
 }
 
-void ColorTileRenderer::drawColorTile(const Color& color, Rectangle bounds, float uiScale, FillPattern pattern) {
+void ColorTileRenderer::drawColorTile(const Color& color, Rectangle bounds, float uiScale,
+                                      FillPattern style) {
     if (!isNoneColor(color)) {
-        FillPatternRenderer::drawRectangleFill(bounds, color, pattern);
+        FillPatternRenderer::drawRectangleFill(bounds, color, style);
         return;
     }
 

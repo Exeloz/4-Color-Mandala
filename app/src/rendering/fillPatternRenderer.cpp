@@ -1,5 +1,6 @@
 #include "fillPatternRenderer.h"
 #include "tesselator.h"
+#include "raymath.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,6 +13,10 @@ constexpr float STRIPE_STEP = 6.0f;
 
 constexpr float DOT_SPACING = 16.0f;
 constexpr float DOT_RADIUS = 3.0f;
+
+float clampPatternSize(float patternSize) {
+    return Clamp(patternSize, 0.25f, 4.0f);
+}
 
 struct Bounds {
     float minX;
@@ -103,8 +108,13 @@ void drawSolidFill(const std::vector<Vector2>& vertices, Color fillColor) {
     tessDeleteTess(tess);
 }
 
-void drawStripedFill(const std::vector<Vector2>& vertices, Color fillColor) {
+void drawStripedFill(const std::vector<Vector2>& vertices, Color fillColor, Color stripeColor, float patternSize) {
     drawSolidFill(vertices, Fade(fillColor, 0.35f));
+
+    float sizeScale = clampPatternSize(patternSize);
+    float stripeSpacing = STRIPE_SPACING * sizeScale;
+    float stripeThickness = std::max(1.0f, STRIPE_THICKNESS * sizeScale);
+    float stripeStep = std::max(1.0f, STRIPE_STEP * sizeScale);
 
     Bounds bounds = getBounds(vertices);
     float angleRadians = STRIPE_ANGLE_DEGREES * DEG2RAD;
@@ -130,16 +140,16 @@ void drawStripedFill(const std::vector<Vector2>& vertices, Color fillColor) {
         maxProjectionAlongNormal = std::max(maxProjectionAlongNormal, projectionAlongNormal);
     }
 
-    for (float normalOffset = minProjectionAlongNormal - STRIPE_SPACING;
-         normalOffset <= maxProjectionAlongNormal + STRIPE_SPACING;
-         normalOffset += STRIPE_SPACING) {
+        for (float normalOffset = minProjectionAlongNormal - stripeSpacing;
+            normalOffset <= maxProjectionAlongNormal + stripeSpacing;
+            normalOffset += stripeSpacing) {
         bool inRun = false;
         Vector2 runStart = {0.0f, 0.0f};
         Vector2 previousPoint = {0.0f, 0.0f};
 
-        for (float along = minProjectionAlongDirection - STRIPE_STEP;
-             along <= maxProjectionAlongDirection + STRIPE_STEP;
-             along += STRIPE_STEP) {
+           for (float along = minProjectionAlongDirection - stripeStep;
+               along <= maxProjectionAlongDirection + stripeStep;
+               along += stripeStep) {
             Vector2 samplePoint = {
                 direction.x * along + normal.x * normalOffset,
                 direction.y * along + normal.y * normalOffset,
@@ -152,7 +162,7 @@ void drawStripedFill(const std::vector<Vector2>& vertices, Color fillColor) {
             }
 
             if (!inside && inRun) {
-                DrawLineEx(runStart, previousPoint, STRIPE_THICKNESS, fillColor);
+                DrawLineEx(runStart, previousPoint, stripeThickness, stripeColor);
                 inRun = false;
             }
 
@@ -160,50 +170,58 @@ void drawStripedFill(const std::vector<Vector2>& vertices, Color fillColor) {
         }
 
         if (inRun) {
-            DrawLineEx(runStart, previousPoint, STRIPE_THICKNESS, fillColor);
+            DrawLineEx(runStart, previousPoint, stripeThickness, stripeColor);
         }
     }
 }
 
-void drawDottedFill(const std::vector<Vector2>& vertices, Color fillColor) {
+void drawDottedFill(const std::vector<Vector2>& vertices, Color fillColor, Color dotColor, float patternSize) {
     drawSolidFill(vertices, Fade(fillColor, 0.25f));
+
+    float sizeScale = clampPatternSize(patternSize);
+    float dotSpacing = DOT_SPACING * sizeScale;
+    float dotRadius = std::max(1.0f, DOT_RADIUS * sizeScale);
 
     Bounds bounds = getBounds(vertices);
     int rowIndex = 0;
 
-    for (float y = bounds.minY; y <= bounds.maxY; y += DOT_SPACING, rowIndex++) {
-        float xOffset = (rowIndex % 2 == 0) ? 0.0f : DOT_SPACING * 0.5f;
-        for (float x = bounds.minX + xOffset; x <= bounds.maxX; x += DOT_SPACING) {
+    for (float y = bounds.minY; y <= bounds.maxY; y += dotSpacing, rowIndex++) {
+        float xOffset = (rowIndex % 2 == 0) ? 0.0f : dotSpacing * 0.5f;
+        for (float x = bounds.minX + xOffset; x <= bounds.maxX; x += dotSpacing) {
             Vector2 center = {x, y};
             if (isPointInPolygon(vertices, center)) {
-                DrawCircleV(center, DOT_RADIUS, fillColor);
+                DrawCircleV(center, dotRadius, dotColor);
             }
         }
     }
 }
 }
 
-void FillPatternRenderer::drawPolygonFill(const std::vector<Vector2>& vertices, Color fillColor, FillPattern pattern) {
+void FillPatternRenderer::drawPolygonFill(const std::vector<Vector2>& vertices, Color fillColor,
+                                          FillPattern style) {
     if (vertices.size() < 3) {
         return;
     }
 
-    switch (pattern) {
-        case FillPattern::Striped:
-            drawStripedFill(vertices, fillColor);
+    Color patternColor = style.useAccentColor ? style.accentColor : fillColor;
+
+    switch (style.type) {
+        case FillPatternType::Striped:
+            drawStripedFill(vertices, fillColor, patternColor, style.size);
             return;
-        case FillPattern::Dotted:
-            drawDottedFill(vertices, fillColor);
+        case FillPatternType::Dotted:
+            drawDottedFill(vertices, fillColor, patternColor, style.size);
             return;
-        case FillPattern::Solid:
+        case FillPatternType::Solid:
         default:
             drawSolidFill(vertices, fillColor);
             return;
     }
 }
 
-void FillPatternRenderer::drawRectangleFill(Rectangle bounds, Color fillColor, FillPattern pattern) {
-    if (pattern == FillPattern::Solid) {
+void FillPatternRenderer::drawRectangleFill(Rectangle bounds, Color fillColor,
+                                            FillPattern style) {
+    if (style.type == FillPatternType::Solid) {
         DrawRectangleRec(bounds, fillColor);
         return;
     }
@@ -220,5 +238,5 @@ void FillPatternRenderer::drawRectangleFill(Rectangle bounds, Color fillColor, F
         {minX, maxY},
     };
 
-    drawPolygonFill(vertices, fillColor, pattern);
+    drawPolygonFill(vertices, fillColor, style);
 }

@@ -4,37 +4,40 @@
 namespace {
 class SolidRegionFillStyle final : public IRegionFillStyle {
 public:
-    void drawFill(const std::vector<Vector2>& vertices, Color fillColor) const override {
-        FillPatternRenderer::drawPolygonFill(vertices, fillColor, FillPattern::Solid);
+    void drawFill(const std::vector<Vector2>& vertices, Color fillColor,
+                  FillPattern style) const override {
+        FillPatternRenderer::drawPolygonFill(vertices, fillColor, style);
     }
 };
 
 class StripedRegionFillStyle final : public IRegionFillStyle {
 public:
-    void drawFill(const std::vector<Vector2>& vertices, Color fillColor) const override {
-        FillPatternRenderer::drawPolygonFill(vertices, fillColor, FillPattern::Striped);
+    void drawFill(const std::vector<Vector2>& vertices, Color fillColor,
+                  FillPattern style) const override {
+        FillPatternRenderer::drawPolygonFill(vertices, fillColor, style);
     }
 };
 
 class DottedRegionFillStyle final : public IRegionFillStyle {
 public:
-    void drawFill(const std::vector<Vector2>& vertices, Color fillColor) const override {
-        FillPatternRenderer::drawPolygonFill(vertices, fillColor, FillPattern::Dotted);
+    void drawFill(const std::vector<Vector2>& vertices, Color fillColor,
+                  FillPattern style) const override {
+        FillPatternRenderer::drawPolygonFill(vertices, fillColor, style);
     }
 };
 }
 
-const IRegionFillStyle& RegionFillStyleFactory::getStyle(FillPattern pattern) {
+const IRegionFillStyle& RegionFillStyleFactory::getStyle(FillPatternType patternType) {
     static SolidRegionFillStyle solidStyle;
     static StripedRegionFillStyle stripedStyle;
     static DottedRegionFillStyle dottedStyle;
 
-    switch (pattern) {
-        case FillPattern::Striped:
+    switch (patternType) {
+        case FillPatternType::Striped:
             return stripedStyle;
-        case FillPattern::Dotted:
+        case FillPatternType::Dotted:
             return dottedStyle;
-        case FillPattern::Solid:
+        case FillPatternType::Solid:
         default:
             return solidStyle;
     }

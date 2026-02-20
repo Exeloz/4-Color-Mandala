@@ -6,6 +6,8 @@
 
 class FillPatternRenderer {
 public:
-    static void drawPolygonFill(const std::vector<Vector2>& vertices, Color fillColor, FillPattern pattern);
-    static void drawRectangleFill(Rectangle bounds, Color fillColor, FillPattern pattern);
+    static void drawPolygonFill(const std::vector<Vector2>& vertices, Color fillColor,
+                                FillPattern style = FillPattern());
+    static void drawRectangleFill(Rectangle bounds, Color fillColor,
+                                  FillPattern style = FillPattern());
 };

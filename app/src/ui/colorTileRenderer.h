@@ -8,7 +8,7 @@ class ColorTileRenderer {
 public:
     static bool isNoneColor(const Color& color);
     static void drawColorTile(const Color& color, Rectangle bounds, float uiScale,
-                              FillPattern pattern = FillPattern::Solid);
+                              FillPattern style = FillPattern());
 };
 
 #endif

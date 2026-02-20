@@ -1,7 +1,16 @@
 #pragma once
 
-enum class FillPattern {
+#include <raylib.h>
+
+enum class FillPatternType {
     Solid,
     Striped,
     Dotted
+};
+
+struct FillPattern {
+    FillPatternType type = FillPatternType::Solid;
+    Color accentColor = BLANK;
+    float size = 1.0f;
+    bool useAccentColor = false;
 };

@@ -9,7 +9,7 @@ Region::Region(int id, const std::vector<Vector2>& vertices)
             colorIndex(-1),
             colored(false),
             defaultColor(Colors::None),
-            fillPattern(FillPattern::Solid),
+            fillPattern(),
             colorable(true) {}
 
 int Region::getId() const {
@@ -127,10 +127,14 @@ void Region::draw(const std::vector<Color>& colorPalette, bool ignoreColoring) c
     drawWithColor(fillColor, Colors::Black, 5.0f, fillPattern);
 }
 
-void Region::drawWithColor(Color fillColor, Color borderColor, float borderWidth, FillPattern pattern) const {
+void Region::drawWithColor(Color fillColor, Color borderColor, float borderWidth,
+                           FillPattern pattern) const {
     if (vertices.size() < 3) return;
 
-    RegionFillStyleFactory::getStyle(pattern).drawFill(vertices, fillColor);
+    RegionFillStyleFactory::getStyle(pattern.type).drawFill(
+        vertices,
+        fillColor,
+        pattern);
 
     for (int i = 0; i < static_cast<int>(vertices.size()); i++) {
         Vector2 p1 = vertices[i];

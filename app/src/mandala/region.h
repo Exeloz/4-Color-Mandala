@@ -22,7 +22,7 @@ public:
     bool isPointInRegion(Vector2 point) const;
     void draw(const std::vector<Color>& colorPalette, bool ignoreColoring = false) const;
     void drawWithColor(Color fillColor, Color borderColor, float borderWidth,
-                       FillPattern pattern = FillPattern::Solid) const;
+                       FillPattern pattern = FillPattern()) const;
 
 private:
     int id;

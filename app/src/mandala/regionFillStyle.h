@@ -7,10 +7,11 @@
 class IRegionFillStyle {
 public:
     virtual ~IRegionFillStyle() = default;
-    virtual void drawFill(const std::vector<Vector2>& vertices, Color fillColor) const = 0;
+    virtual void drawFill(const std::vector<Vector2>& vertices, Color fillColor,
+                          FillPattern style) const = 0;
 };
 
 class RegionFillStyleFactory {
 public:
-    static const IRegionFillStyle& getStyle(FillPattern pattern);
+    static const IRegionFillStyle& getStyle(FillPatternType patternType);
 };

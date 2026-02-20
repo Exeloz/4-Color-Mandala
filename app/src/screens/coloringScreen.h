@@ -7,6 +7,7 @@
 #include "cameraInputManager.h"
 #include "coloringActionManager.h"
 #include "coloringInteractionManager.h"
+#include "../rendering/fillPattern.h"
 #include "raylib.h"
 #include <memory>
 
@@ -38,8 +39,13 @@ private:
     ColoringInteractionManager interactionManager;
     Camera2D camera;
     float zoom;
+    FillPattern selectedPattern = FillPattern();
+    int selectedAccentColorIndex = 0;
+    float selectedPatternSize = 1.0f;
 
     void drawColorPalette();
+    void updatePatternControls();
+    void applyCurrentPatternStyle(int regionId);
     void updateAnalysisInteractions();
     void updateDebugInteractions();
     void drawAnalysisOverlay() const;
