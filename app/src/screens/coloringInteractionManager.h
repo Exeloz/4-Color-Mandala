@@ -28,13 +28,6 @@ public:
         const Camera2D& camera,
         Camera2D& mutableCamera) const;
 
-    void handleRegionColorSelection(
-        Mandala& mandala,
-        const Camera2D& camera,
-        const ColorPalette& colorPalette,
-        bool pointerOverUi,
-        bool isDraggingCamera,
-        bool analysisMode) const;
     int getRegionIdForColorSelection(
         Mandala& mandala,
         const Camera2D& camera,

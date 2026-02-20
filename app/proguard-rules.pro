@@ -21,6 +21,6 @@
 #-renamesourcefileattribute SourceFile
 
 # Keep the NativeLoader class and its methods for launching the native application.
--keep class com.raylib.raymob.NativeLoader {
+-keep class com.CegepGarneau.colormandala.NativeLoader {
     public <methods>;
 }

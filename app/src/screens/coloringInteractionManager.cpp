@@ -69,25 +69,6 @@ void ColoringInteractionManager::updateDebugControls(
     inspector.updateDebug(mandala, camera, mutableCamera);
 }
 
-void ColoringInteractionManager::handleRegionColorSelection(
-    Mandala& mandala,
-    const Camera2D& camera,
-    const ColorPalette& colorPalette,
-    bool pointerOverUi,
-    bool isDraggingCamera,
-    bool analysisMode) const {
-    if (analysisMode || isDraggingCamera || !Input::IsPointerPressed() || pointerOverUi) {
-        return;
-    }
-
-    Vector2 pointerPos = Input::GetPointerPosition();
-    Vector2 worldPos = GetScreenToWorld2D(pointerPos, camera);
-    Region* region = mandala.getRegionAtPoint(worldPos);
-    if (region != nullptr) {
-        region->setColor(colorPalette.getSelectedColorIndex());
-    }
-}
-
 int ColoringInteractionManager::getRegionIdForColorSelection(
     Mandala& mandala,
     const Camera2D& camera,
