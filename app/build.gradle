@@ -3,7 +3,7 @@ plugins {
 }
 
 // Updates a file during compilation
-// Used to replace instances of 'com.raylib.raymob'
+// Used to replace instances of 'com.CegepGarneau.colormandala'
 def updateFile(filePath, toReplace, replacement) {
     def file = file(filePath)
     if (!file.exists()) return
@@ -87,7 +87,7 @@ android {
         applicationVariants.all { variant ->
             // Change output names to the correct ones
             variant.outputs.all {
-                outputFileName = outputFileName.replace("com.raylib.raymob", project.properties['app.application_id'])
+                outputFileName = outputFileName.replace("com.CegepGarneau.colormandala", project.properties['app.application_id'])
                 outputFileName = outputFileName.replace("raymob", project.properties['app.native_library_name'])
             }
         }
@@ -106,7 +106,7 @@ android {
         updateFile("src/main/java/com/raylib/raymob/SoftKeyboard.java", "package com.raylib.raymob;", "package " + project.properties['app.application_id'] + ";")
 
         // Modify the package name in proguard-rules.pro
-        updateFile("proguard-rules.pro", "com.raylib.raymob", project.properties['app.application_id'])
+        updateFile("proguard-rules.pro", "com.CegepGarneau.colormandala", project.properties['app.application_id'])
 
         // Modify the library name in raymob C source
         updateFile("src/main/cpp/deps/raymob/display.c", "com/raylib/raymob", project.properties['app.application_id'].replace(".", "/"))
@@ -126,7 +126,7 @@ android {
         updateFile("src/main/java/com/raylib/raymob/SoftKeyboard.java", "package " + project.properties['app.application_id'] + ";", "package com.raylib.raymob;")
 
         // Restore the package name in proguard-rules.pro
-        updateFile("proguard-rules.pro", project.properties['app.application_id'], "com.raylib.raymob")
+        updateFile("proguard-rules.pro", project.properties['app.application_id'], "com.CegepGarneau.colormandala")
 
         // Restore the library name in raymob C source
         updateFile("src/main/cpp/deps/raymob/display.c", project.properties['app.application_id'].replace(".", "/"), "com/raylib/raymob")

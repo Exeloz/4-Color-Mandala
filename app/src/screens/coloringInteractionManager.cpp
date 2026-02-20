@@ -75,7 +75,17 @@ int ColoringInteractionManager::getRegionIdForColorSelection(
     bool pointerOverUi,
     bool isDraggingCamera,
     bool analysisMode) const {
-    if (analysisMode || isDraggingCamera || !Input::IsPointerPressed() || pointerOverUi) {
+    constexpr int MIN_POINTER_HOLD_FRAMES = 2;
+    static int pointerHoldFrames = 0;
+
+    if (!Input::IsPointerDown()) {
+        pointerHoldFrames = 0;
+        return -1;
+    }
+
+    pointerHoldFrames++;
+
+    if (analysisMode || isDraggingCamera || pointerOverUi || pointerHoldFrames < MIN_POINTER_HOLD_FRAMES) {
         return -1;
     }
 
