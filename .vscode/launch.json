@@ -33,8 +33,7 @@
           "linux": {
             "miDebuggerPath": "/usr/bin/gdb",
             "program": "${workspaceFolder}/main"
-          },
-          "preLaunchTask": "build debug"
+          }
         },
         {
           "name": "Run",

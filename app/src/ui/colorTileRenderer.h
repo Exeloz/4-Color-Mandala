@@ -2,11 +2,13 @@
 #define COLOR_TILE_RENDERER_H
 
 #include "raylib.h"
+#include "../rendering/fillPattern.h"
 
 class ColorTileRenderer {
 public:
     static bool isNoneColor(const Color& color);
-    static void drawColorTile(const Color& color, Rectangle bounds, float uiScale);
+    static void drawColorTile(const Color& color, Rectangle bounds, float uiScale,
+                              FillPattern pattern = FillPattern::Solid);
 };
 
 #endif

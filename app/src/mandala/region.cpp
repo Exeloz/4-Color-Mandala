@@ -1,48 +1,7 @@
 #include "region.h"
 #include "../ui/colors.h"
-#include "tesselator.h"
 #include <cmath>
 #include <algorithm>
-
-namespace {
-void drawRegionFill(const std::vector<Vector2>& vertices, Color fillColor) {
-    TESStesselator* tess = tessNewTess(nullptr);
-    if (!tess) {
-        for (size_t i = 0; i < vertices.size() - 2; i++) {
-            DrawTriangle(vertices[0], vertices[i + 1], vertices[i + 2], fillColor);
-        }
-        return;
-    }
-
-    std::vector<float> coords;
-    coords.reserve(vertices.size() * 2);
-    for (const auto& v : vertices) {
-        coords.push_back(v.x);
-        coords.push_back(v.y);
-    }
-
-    tessAddContour(tess, 2, coords.data(), sizeof(float) * 2, vertices.size());
-
-    if (tessTesselate(tess, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, nullptr)) {
-        const float* verts = tessGetVertices(tess);
-        const TESSindex* elems = tessGetElements(tess);
-        const int nelems = tessGetElementCount(tess);
-        const int nvp = 3;
-
-        for (int i = 0; i < nelems; i++) {
-            const TESSindex* p = &elems[i * nvp];
-            if (p[0] != TESS_UNDEF && p[1] != TESS_UNDEF && p[2] != TESS_UNDEF) {
-                Vector2 v0 = {verts[p[0] * 2], verts[p[0] * 2 + 1]};
-                Vector2 v1 = {verts[p[1] * 2], verts[p[1] * 2 + 1]};
-                Vector2 v2 = {verts[p[2] * 2], verts[p[2] * 2 + 1]};
-                DrawTriangle(v0, v1, v2, fillColor);
-            }
-        }
-    }
-
-    tessDeleteTess(tess);
-}
-}
 
 Region::Region(int id, const std::vector<Vector2>& vertices)
         : id(id),
@@ -50,6 +9,7 @@ Region::Region(int id, const std::vector<Vector2>& vertices)
             colorIndex(-1),
             colored(false),
             defaultColor(Colors::None),
+            fillPattern(FillPattern::Solid),
             colorable(true) {}
 
 int Region::getId() const {
@@ -78,6 +38,14 @@ void Region::setDefaultColor(Color color) {
 
 Color Region::getDefaultColor() const {
     return defaultColor;
+}
+
+void Region::setFillPattern(FillPattern pattern) {
+    fillPattern = pattern;
+}
+
+FillPattern Region::getFillPattern() const {
+    return fillPattern;
 }
 
 void Region::setColorable(bool canColor) {
@@ -156,13 +124,13 @@ void Region::draw(const std::vector<Color>& colorPalette, bool ignoreColoring) c
         fillColor = colorPalette[colorIndex];
     }
 
-    drawWithColor(fillColor, Colors::Black, 5.0f);
+    drawWithColor(fillColor, Colors::Black, 5.0f, fillPattern);
 }
 
-void Region::drawWithColor(Color fillColor, Color borderColor, float borderWidth) const {
+void Region::drawWithColor(Color fillColor, Color borderColor, float borderWidth, FillPattern pattern) const {
     if (vertices.size() < 3) return;
 
-    drawRegionFill(vertices, fillColor);
+    RegionFillStyleFactory::getStyle(pattern).drawFill(vertices, fillColor);
 
     for (int i = 0; i < static_cast<int>(vertices.size()); i++) {
         Vector2 p1 = vertices[i];

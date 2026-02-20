@@ -1,5 +1,6 @@
 #include "colorTileRenderer.h"
 #include "colors.h"
+#include "../rendering/fillPatternRenderer.h"
 #include <algorithm>
 
 bool ColorTileRenderer::isNoneColor(const Color& color) {
@@ -9,9 +10,9 @@ bool ColorTileRenderer::isNoneColor(const Color& color) {
            color.a == Colors::None.a;
 }
 
-void ColorTileRenderer::drawColorTile(const Color& color, Rectangle bounds, float uiScale) {
+void ColorTileRenderer::drawColorTile(const Color& color, Rectangle bounds, float uiScale, FillPattern pattern) {
     if (!isNoneColor(color)) {
-        DrawRectangleRec(bounds, color);
+        FillPatternRenderer::drawRectangleFill(bounds, color, pattern);
         return;
     }
 
