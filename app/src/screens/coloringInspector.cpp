@@ -32,6 +32,14 @@ FillPattern makeLargeStripedStyle(Color fillColor) {
     return style;
 }
 
+bool isNativeMobilePlatform() {
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_IOS)
+    return true;
+#else
+    return false;
+#endif
+}
+
 Color resolveRegionPaletteColor(const Region& region, const std::vector<Color>& colorPalette, Color fallbackColor) {
     int colorIndex = region.getColor();
     if (region.hasColor() && colorIndex >= 0 && colorIndex < static_cast<int>(colorPalette.size())) {
@@ -63,6 +71,23 @@ bool ColoringInspector::isAnalysisMode() const {
 
 void ColoringInspector::updateAnalysis(const Mandala& mandala, const Camera2D& camera, bool pointerOverUi, bool isDraggingCamera) {
     if (!analysisMode) {
+        return;
+    }
+
+    if (isNativeMobilePlatform()) {
+        analysisHoverRegionId = -1;
+
+        if (pointerOverUi) {
+            return;
+        }
+
+        if (!isDraggingCamera && Input::IsPointerPressed()) {
+            Vector2 worldPos = GetScreenToWorld2D(Input::GetPointerPosition(), camera);
+            int tappedRegionId = getRegionIdAtWorldPosition(mandala, worldPos);
+            if (tappedRegionId >= 0) {
+                analysisInspectRegionId = tappedRegionId;
+            }
+        }
         return;
     }
 
@@ -161,7 +186,7 @@ void ColoringInspector::drawAnalysisOverlay(const Mandala& mandala, const std::v
         if (hoverRegion != nullptr) {
             Color hoverFill = Fade(Colors::LightSkyBlue, 0.35f);
             hoverRegion->drawWithColor(hoverFill, Colors::DodgerBlue, 2.0f,
-                                       makeLargeDottedStyle(hoverFill));
+                                       makeLargeStripedStyle(hoverFill));
         }
     }
 }
