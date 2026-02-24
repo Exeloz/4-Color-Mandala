@@ -32,6 +32,15 @@ FillPattern makeLargeStripedStyle(Color fillColor) {
     return style;
 }
 
+FillPattern makeBorderStyle() {
+    FillPattern style;
+    style.type = FillPatternType::Bordered;
+    style.size = 5.f;
+    style.useAccentColor = true;
+    style.accentColor = Colors::Black;
+    return style;
+}
+
 bool isNativeMobilePlatform() {
 #if defined(PLATFORM_ANDROID) || defined(PLATFORM_IOS)
     return true;
@@ -48,6 +57,16 @@ Color resolveRegionPaletteColor(const Region& region, const std::vector<Color>& 
 
     return fallbackColor;
 }
+}
+
+void ColoringInspector::validateAdjacency(const Mandala& mandala) {
+    std::vector<int> wrongRegionIds = verifyWrongRegions(mandala);
+    const std::vector<Region>& regions = mandala.getRegions();
+
+    for (std::vector<int>::iterator itr = wrongRegionIds.begin(); itr != wrongRegionIds.end(); itr++) {
+        regions[*itr].drawWithColor(Colors::Transparent, Colors::Red, 12.0f, makeBorderStyle());
+    }
+
 }
 
 void ColoringInspector::enterAnalysisMode() {
@@ -273,6 +292,25 @@ int ColoringInspector::getDebugInspectRegionId() const {
 
 int ColoringInspector::getDebugHoverRegionId() const {
     return debugHoverRegionId;
+}
+
+std::vector<int> ColoringInspector::verifyWrongRegions(const Mandala& mandala) {
+    std::vector<int> wrongRegionIds;
+    const std::vector<Region>& regions = mandala.getRegions();
+    const AdjacencyGraph& adjacencyGraph = mandala.getAdjacencyGraph();
+
+    for (size_t i = 0; i < regions.size(); i++) {
+        if(regions[i].hasColor()){
+            const auto& adjacentRegions = adjacencyGraph.getAdjacentRegions(i);
+            for (int adjacentId : adjacentRegions) {
+                if (regions[i].getColor() == regions[adjacentId].getColor()) {
+                    wrongRegionIds.emplace_back(i);
+                    break;
+                }
+            }
+        }
+    }
+    return wrongRegionIds;
 }
 
 std::vector<int> ColoringInspector::collectSortedRegionIds(const std::vector<Region>& regions) {

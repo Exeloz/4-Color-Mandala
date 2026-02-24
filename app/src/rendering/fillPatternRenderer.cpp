@@ -212,7 +212,9 @@ void FillPatternRenderer::drawPolygonFill(const std::vector<Vector2>& vertices, 
         case FillPatternType::Dotted:
             drawDottedFill(vertices, fillColor, patternColor, style.size);
             return;
-        case FillPatternType::Solid:
+        case FillPatternType::Bordered:
+        
+        case FillPatternType::Solid:            
         default:
             drawSolidFill(vertices, fillColor);
             return;

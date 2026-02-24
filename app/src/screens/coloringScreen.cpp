@@ -49,8 +49,10 @@ namespace {
 }
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vector<Color>& customPaletteColors)
-        : mandala(mandala), colorPalette(), colorButtons(), backButton(0, 0, 1, 1, "BACK"),
+        : mandala(mandala), colorPalette(), colorButtons(), 
+            backButton(0, 0, 1, 1, "BACK"),
             undoButton(0, 0, 1, 1, "UNDO"),
+            validateButton(0, 0, 1, 1, "VALIDATE"),
             analysisButton(0, 0, 1, 1, "ANALYSIS"),
             analysisCloseButton(0, 0, 1, 1, "EXIT ANALYSIS"),
             analysisClearButton(0, 0, 1, 1, "CLEAR"),
@@ -92,6 +94,11 @@ void ColoringScreen::update(float deltaTime) {
     if (undoButton.isClicked()) {
         actionManager.undoLast(*mandala);
     }
+
+    validateButton.update();
+    if (validateButton.isClicked()) {
+        inspector.validateAdjacency(*mandala);
+    }  
 
     interactionManager.updateColorButtons(colorButtons, colorPalette);
 
@@ -140,6 +147,7 @@ void ColoringScreen::draw() {
     drawColorPalette();
     backButton.draw();
     undoButton.draw();
+    validateButton.draw();
     if (inspector.isAnalysisMode()) {
         analysisCloseButton.draw();
         analysisClearButton.draw();
@@ -250,6 +258,7 @@ void ColoringScreen::updateAnalysisInteractions() {
         *mandala,
         camera,
         cameraInputManager.isDraggingCamera(),
+        validateButton,
         analysisButton,
         analysisCloseButton,
         analysisClearButton,
@@ -317,6 +326,7 @@ bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
         inspector.isAnalysisMode(),
         backButton,
         undoButton,
+        validateButton,
         analysisButton,
         analysisCloseButton,
         analysisClearButton,
@@ -346,6 +356,10 @@ void ColoringScreen::layoutTopButtons() {
     undoButton.setPosition(undoButtonX, undoButtonY);
     undoButton.setSize(undoButtonWidth, undoButtonHeight);
 
+    float validateButtonX = GetScreenWidth() - 2*mainButtonWidth - rightMargin;
+    validateButton.setPosition(validateButtonX, topMargin);
+    validateButton.setSize(mainButtonWidth, topButtonHeight);
+    
     float controlsY = topMargin + topButtonHeight + (10.0f * uiScale);
 
     float mainButtonX = GetScreenWidth() - mainButtonWidth - rightMargin;

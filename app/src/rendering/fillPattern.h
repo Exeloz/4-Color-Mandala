@@ -5,7 +5,8 @@
 enum class FillPatternType {
     Solid,
     Striped,
-    Dotted
+    Dotted,
+    Bordered
 };
 
 struct FillPattern {

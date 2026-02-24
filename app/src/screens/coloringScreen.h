@@ -27,6 +27,7 @@ private:
     std::vector<Button> colorButtons;
     Button backButton;
     Button undoButton;
+    Button validateButton;
     Button analysisButton;
     Button analysisCloseButton;
     Button analysisClearButton;

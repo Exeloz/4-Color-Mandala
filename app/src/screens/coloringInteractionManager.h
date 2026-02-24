@@ -16,11 +16,12 @@ public:
         Mandala& mandala,
         const Camera2D& camera,
         bool isDraggingCamera,
+        const Button& backButton,
+        const Button& undoButton,
+        Button& validateButton,
         Button& analysisButton,
         Button& analysisCloseButton,
         Button& analysisClearButton,
-        const Button& backButton,
-        const Button& undoButton,
         const std::vector<Button>& colorButtons) const;
     void updateDebugControls(
         ColoringInspector& inspector,
@@ -40,6 +41,7 @@ public:
         bool analysisMode,
         const Button& backButton,
         const Button& undoButton,
+        const Button& validateButton,
         const Button& analysisButton,
         const Button& analysisCloseButton,
         const Button& analysisClearButton,

@@ -5,6 +5,7 @@
 
 namespace Colors {
     constexpr Color None = {200, 200, 200, 255};
+    constexpr Color Transparent = {0, 0, 0, 0};
     
     constexpr Color Red = {255, 0, 0, 255};
     constexpr Color DarkRed = {139, 0, 0, 255};
