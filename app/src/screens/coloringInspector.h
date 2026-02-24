@@ -14,6 +14,7 @@ public:
     bool isAnalysisMode() const;
 
     void validateAdjacency(const Mandala& mandala);
+    void drawValidationOverlay(const Mandala& mandala) const;
 
     void updateAnalysis(const Mandala& mandala, const Camera2D& camera, bool pointerOverUi, bool isDraggingCamera);
     void updateDebug(const Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera);
@@ -37,7 +38,10 @@ private:
     std::set<std::pair<int, int>> debugSuggestedAdds;
     std::set<std::pair<int, int>> debugSuggestedRemoves;
 
-    std::vector<int> verifyWrongRegions(const Mandala& mandala);
+    std::vector<int> verifyWrongRegions(const Mandala& mandala) const;
+
+    bool validationOverlayEnabled = false;
+    std::vector<std::pair<int, int>> validatedWrongRegions;
     static std::vector<int> collectSortedRegionIds(const std::vector<Region>& regions);
     static int cycleRegionId(const std::vector<int>& sortedIds, int currentId, int direction);
     int getRegionIdAtWorldPosition(const Mandala& mandala, Vector2 worldPos) const;

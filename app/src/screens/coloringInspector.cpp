@@ -60,13 +60,48 @@ Color resolveRegionPaletteColor(const Region& region, const std::vector<Color>& 
 }
 
 void ColoringInspector::validateAdjacency(const Mandala& mandala) {
+    validatedWrongRegions.clear();
+
     std::vector<int> wrongRegionIds = verifyWrongRegions(mandala);
     const std::vector<Region>& regions = mandala.getRegions();
+    validatedWrongRegions.reserve(wrongRegionIds.size());
 
-    for (std::vector<int>::iterator itr = wrongRegionIds.begin(); itr != wrongRegionIds.end(); itr++) {
-        regions[*itr].drawWithColor(Colors::Transparent, Colors::Red, 12.0f, makeBorderStyle());
+    for (int regionId : wrongRegionIds) {
+        if (regionId < 0 || regionId >= static_cast<int>(regions.size())) {
+            continue;
+        }
+        validatedWrongRegions.emplace_back(regionId, regions[regionId].getColor());
     }
 
+    validationOverlayEnabled = true;
+}
+
+void ColoringInspector::drawValidationOverlay(const Mandala& mandala) const {
+    if (!validationOverlayEnabled) {
+        return;
+    }
+
+    const std::vector<Region>& regions = mandala.getRegions();
+
+    for (const auto& entry : validatedWrongRegions) {
+        int regionId = entry.first;
+        int validatedColor = entry.second;
+
+        if (regionId < 0 || regionId >= static_cast<int>(regions.size())) {
+            continue;
+        }
+
+        const Region& region = regions[regionId];
+        if (!region.hasColor()) {
+            continue;
+        }
+
+        if (region.getColor() != validatedColor) {
+            continue;
+        }
+
+        region.drawWithColor(Colors::Transparent, Colors::Red, 12.0f, makeBorderStyle());
+    }
 }
 
 void ColoringInspector::enterAnalysisMode() {
@@ -294,7 +329,7 @@ int ColoringInspector::getDebugHoverRegionId() const {
     return debugHoverRegionId;
 }
 
-std::vector<int> ColoringInspector::verifyWrongRegions(const Mandala& mandala) {
+std::vector<int> ColoringInspector::verifyWrongRegions(const Mandala& mandala) const {
     std::vector<int> wrongRegionIds;
     const std::vector<Region>& regions = mandala.getRegions();
     const AdjacencyGraph& adjacencyGraph = mandala.getAdjacencyGraph();

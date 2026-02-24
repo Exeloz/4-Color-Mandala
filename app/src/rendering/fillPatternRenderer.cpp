@@ -46,6 +46,21 @@ Bounds getBounds(const std::vector<Vector2>& vertices) {
     return bounds;
 }
 
+float getSignedPolygonArea(const std::vector<Vector2>& vertices) {
+    if (vertices.size() < 3) {
+        return 0.0f;
+    }
+
+    float areaTimesTwo = 0.0f;
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        const Vector2& current = vertices[i];
+        const Vector2& next = vertices[(i + 1) % vertices.size()];
+        areaTimesTwo += current.x * next.y - next.x * current.y;
+    }
+
+    return areaTimesTwo * 0.5f;
+}
+
 bool isPointInPolygon(const std::vector<Vector2>& vertices, Vector2 point) {
     if (vertices.size() < 3) {
         return false;
@@ -195,6 +210,43 @@ void drawDottedFill(const std::vector<Vector2>& vertices, Color fillColor, Color
         }
     }
 }
+
+void drawInsetBorder(const std::vector<Vector2>& vertices, Color borderColor, float borderThickness) {
+    if (vertices.size() < 2) {
+        return;
+    }
+
+    const float signedArea = getSignedPolygonArea(vertices);
+    const bool isCounterClockwise = signedArea > 0.0f;
+    const float insetOffset = std::max(1.0f, borderThickness * 0.9f);
+
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        const Vector2 p1 = vertices[i];
+        const Vector2 p2 = vertices[(i + 1) % vertices.size()];
+
+        Vector2 edge = Vector2Subtract(p2, p1);
+        const float edgeLength = Vector2Length(edge);
+        if (edgeLength <= 0.0001f) {
+            continue;
+        }
+
+        edge = Vector2Scale(edge, 1.0f / edgeLength);
+
+        Vector2 leftNormal = {-edge.y, edge.x};
+        Vector2 inwardNormal = isCounterClockwise ? leftNormal : Vector2Negate(leftNormal);
+        Vector2 offset = Vector2Scale(inwardNormal, insetOffset);
+
+        DrawLineEx(Vector2Add(p1, offset), Vector2Add(p2, offset), borderThickness, borderColor);
+    }
+}
+
+void drawBorderedFill(const std::vector<Vector2>& vertices, Color fillColor, Color borderColor, float patternSize) {
+    drawSolidFill(vertices, fillColor);
+
+    const float sizeScale = clampPatternSize(patternSize);
+    const float borderThickness = std::max(1.0f, 3.0f * sizeScale);
+    drawInsetBorder(vertices, borderColor, borderThickness);
+}
 }
 
 void FillPatternRenderer::drawPolygonFill(const std::vector<Vector2>& vertices, Color fillColor,
@@ -213,8 +265,9 @@ void FillPatternRenderer::drawPolygonFill(const std::vector<Vector2>& vertices, 
             drawDottedFill(vertices, fillColor, patternColor, style.size);
             return;
         case FillPatternType::Bordered:
-        
-        case FillPatternType::Solid:            
+            drawBorderedFill(vertices, fillColor, patternColor, style.size);
+            return;
+        case FillPatternType::Solid:
         default:
             drawSolidFill(vertices, fillColor);
             return;
