@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../mandala/mandala.h"
+#include "validationInspector.h"
 #include "raylib.h"
 #include <set>
 #include <utility>
@@ -38,10 +39,7 @@ private:
     std::set<std::pair<int, int>> debugSuggestedAdds;
     std::set<std::pair<int, int>> debugSuggestedRemoves;
 
-    std::vector<int> verifyWrongRegions(const Mandala& mandala) const;
-
-    bool validationOverlayEnabled = false;
-    std::vector<std::pair<int, int>> validatedWrongRegions;
+    ValidationInspector validationInspector;
     static std::vector<int> collectSortedRegionIds(const std::vector<Region>& regions);
     static int cycleRegionId(const std::vector<int>& sortedIds, int currentId, int direction);
     int getRegionIdAtWorldPosition(const Mandala& mandala, Vector2 worldPos) const;

@@ -32,15 +32,6 @@ FillPattern makeLargeStripedStyle(Color fillColor) {
     return style;
 }
 
-FillPattern makeBorderStyle() {
-    FillPattern style;
-    style.type = FillPatternType::Bordered;
-    style.size = 5.f;
-    style.useAccentColor = true;
-    style.accentColor = Colors::Black;
-    return style;
-}
-
 bool isNativeMobilePlatform() {
 #if defined(PLATFORM_ANDROID) || defined(PLATFORM_IOS)
     return true;
@@ -60,48 +51,11 @@ Color resolveRegionPaletteColor(const Region& region, const std::vector<Color>& 
 }
 
 void ColoringInspector::validateAdjacency(const Mandala& mandala) {
-    validatedWrongRegions.clear();
-
-    std::vector<int> wrongRegionIds = verifyWrongRegions(mandala);
-    const std::vector<Region>& regions = mandala.getRegions();
-    validatedWrongRegions.reserve(wrongRegionIds.size());
-
-    for (int regionId : wrongRegionIds) {
-        if (regionId < 0 || regionId >= static_cast<int>(regions.size())) {
-            continue;
-        }
-        validatedWrongRegions.emplace_back(regionId, regions[regionId].getColor());
-    }
-
-    validationOverlayEnabled = true;
+    validationInspector.validateAdjacency(mandala);
 }
 
 void ColoringInspector::drawValidationOverlay(const Mandala& mandala) const {
-    if (!validationOverlayEnabled) {
-        return;
-    }
-
-    const std::vector<Region>& regions = mandala.getRegions();
-
-    for (const auto& entry : validatedWrongRegions) {
-        int regionId = entry.first;
-        int validatedColor = entry.second;
-
-        if (regionId < 0 || regionId >= static_cast<int>(regions.size())) {
-            continue;
-        }
-
-        const Region& region = regions[regionId];
-        if (!region.hasColor()) {
-            continue;
-        }
-
-        if (region.getColor() != validatedColor) {
-            continue;
-        }
-
-        region.drawWithColor(Colors::Transparent, Colors::Red, 12.0f, makeBorderStyle());
-    }
+    validationInspector.drawValidationOverlay(mandala);
 }
 
 void ColoringInspector::enterAnalysisMode() {
@@ -327,25 +281,6 @@ int ColoringInspector::getDebugInspectRegionId() const {
 
 int ColoringInspector::getDebugHoverRegionId() const {
     return debugHoverRegionId;
-}
-
-std::vector<int> ColoringInspector::verifyWrongRegions(const Mandala& mandala) const {
-    std::vector<int> wrongRegionIds;
-    const std::vector<Region>& regions = mandala.getRegions();
-    const AdjacencyGraph& adjacencyGraph = mandala.getAdjacencyGraph();
-
-    for (size_t i = 0; i < regions.size(); i++) {
-        if(regions[i].hasColor()){
-            const auto& adjacentRegions = adjacencyGraph.getAdjacentRegions(i);
-            for (int adjacentId : adjacentRegions) {
-                if (regions[i].getColor() == regions[adjacentId].getColor()) {
-                    wrongRegionIds.emplace_back(i);
-                    break;
-                }
-            }
-        }
-    }
-    return wrongRegionIds;
 }
 
 std::vector<int> ColoringInspector::collectSortedRegionIds(const std::vector<Region>& regions) {

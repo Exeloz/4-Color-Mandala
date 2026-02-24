@@ -259,13 +259,13 @@ void ColoringScreen::updateAnalysisInteractions() {
         *mandala,
         camera,
         cameraInputManager.isDraggingCamera(),
-        validateButton,
-        analysisButton,
-        analysisCloseButton,
-        analysisClearButton,
-        backButton,
-        undoButton,
-        colorButtons);
+    backButton,
+    undoButton,
+    validateButton,
+    analysisButton,
+    analysisCloseButton,
+    analysisClearButton,
+    colorButtons);
 }
 
 void ColoringScreen::updateDebugInteractions() {
