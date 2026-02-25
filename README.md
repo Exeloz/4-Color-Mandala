@@ -39,6 +39,16 @@ Execution (release):
 ./main
 ```
 
+## Tests unitaires (code C++)
+
+Depuis la racine du projet:
+
+```bash
+make test
+```
+
+Ce target compile un binaire `tests_runner` avec les modules coeur (mandala, base de donnees, palette/couleurs, actions de coloriage) et execute toute la suite.
+
 ## Debug (VS Code)
 
 - Ouvrir `main.code-workspace`

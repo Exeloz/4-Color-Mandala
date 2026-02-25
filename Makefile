@@ -21,7 +21,7 @@
 #
 #**************************************************************************************************
 
-.PHONY: all clean
+.PHONY: all clean test test-build coverage coverage-build uncovered uncovered-report
 
 # Define required raylib variables
 PROJECT_NAME       ?= game
@@ -401,12 +401,29 @@ SRC_DIR ?= src
 endif
 OBJ_DIR = obj
 LIBTESS2_DIR = external/libtess2/Source
+TEST_DIR = tests
+TEST_BINARY = tests_runner
+COVERAGE_DIR = coverage
 
 # Define all object files from source files
 CPP_SRC = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 LIBTESS2_SRC = $(wildcard $(LIBTESS2_DIR)/*.c)
 LIBTESS2_OBJS = $(LIBTESS2_SRC:.c=.o)
 SRC = $(CPP_SRC)
+TEST_SRC = $(call rwildcard, $(TEST_DIR)/, *.cpp)
+TEST_APP_SRC = \
+    app/src/mandala/adjacencyGraph.cpp \
+    app/src/mandala/region.cpp \
+    app/src/mandala/mandala.cpp \
+    app/src/mandala/regionFillStyle.cpp \
+    app/src/rendering/fillPatternRenderer.cpp \
+    app/src/ui/button.cpp \
+    app/src/ui/colorPalette.cpp \
+    app/src/ui/colorCatalog.cpp \
+    app/src/screens/coloringActionManager.cpp \
+    app/src/database/mandalaDatabase.cpp \
+    app/src/database/1/1_regions.cpp \
+    app/src/database/1/1_adjacency.cpp
 #OBJS = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 OBJS = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 CFLAGS_C = $(filter-out -std=c++14 -fpermissive,$(CFLAGS))
@@ -435,6 +452,25 @@ all:
 $(PROJECT_NAME): $(SRC) $(LIBTESS2_OBJS)
 	$(CC) -o $(PROJECT_NAME)$(EXT) $(SRC) $(LIBTESS2_OBJS) $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM)
 
+test-build: $(TEST_SRC) $(TEST_APP_SRC) $(LIBTESS2_OBJS)
+	$(CC) -o $(TEST_BINARY) $(TEST_SRC) $(TEST_APP_SRC) $(LIBTESS2_OBJS) $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) -Wl,-rpath,"$(RAYLIB_RELEASE_PATH)" $(LDLIBS) -D$(PLATFORM)
+
+test: test-build
+	LD_LIBRARY_PATH="$(RAYLIB_RELEASE_PATH):$${LD_LIBRARY_PATH}" ./$(TEST_BINARY)
+
+coverage-build: $(TEST_SRC) $(TEST_APP_SRC) $(LIBTESS2_OBJS)
+	$(CC) -o $(TEST_BINARY) $(TEST_SRC) $(TEST_APP_SRC) $(LIBTESS2_OBJS) $(filter-out -s -O1,$(CFLAGS)) -O0 -g --coverage $(INCLUDE_PATHS) $(LDFLAGS) --coverage -Wl,-rpath,"$(RAYLIB_RELEASE_PATH)" $(LDLIBS) -D$(PLATFORM)
+
+coverage: clean coverage-build ; @LD_LIBRARY_PATH="$(RAYLIB_RELEASE_PATH):$${LD_LIBRARY_PATH}" ./$(TEST_BINARY) && mkdir -p $(COVERAGE_DIR); mv -f *.gcno $(COVERAGE_DIR)/ 2>/dev/null || true; mv -f *.gcda $(COVERAGE_DIR)/ 2>/dev/null || true; cd $(COVERAGE_DIR) && gcov *.gcno > gcov_all.txt 2>&1 || true
+	awk '/^File /{include = ($$0 ~ /^File '\''.*app\/src\//)} include && /^File / {print; next} include && /^Lines executed:/ {print}' $(COVERAGE_DIR)/gcov_all.txt > $(COVERAGE_DIR)/gcov.txt || true
+	@echo "Coverage summary (lines):"
+	@awk -F'[:% ]+' '/^Lines executed:/{covered += ($$3 * $$5 / 100.0); total += $$5} END { if (total > 0) printf "Overall line coverage (app/src): %.2f%% (%.0f/%.0f)\n", (covered/total)*100.0, covered, total; else print "No gcov data found."; }' $(COVERAGE_DIR)/gcov.txt
+	@echo "Detailed report: $(COVERAGE_DIR)/gcov.txt"
+
+uncovered-report: ; @mkdir -p $(COVERAGE_DIR) && awk -F: '/^[[:space:]]*-[[:space:]]*: *0:Source:/{src=$$4; sub(/^\.\.\//,"",src); include=(src ~ /app\/src\//)} include && /^[[:space:]]*#####:/{line=$$2; gsub(/[[:space:]]/,"",line); print src ":" line}' $(COVERAGE_DIR)/*.gcov > $(COVERAGE_DIR)/uncovered_lines.txt && echo "Uncovered lines report: $(COVERAGE_DIR)/uncovered_lines.txt" && echo -n "Uncovered line count: " && wc -l < $(COVERAGE_DIR)/uncovered_lines.txt
+
+uncovered: coverage uncovered-report
+
 $(LIBTESS2_DIR)/%.o: $(LIBTESS2_DIR)/%.c
 	gcc -c $< -o $@ $(CFLAGS_C) $(INCLUDE_PATHS) -D$(PLATFORM)
 
@@ -451,7 +487,8 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
 		del *.o *.exe /s
     endif
     ifeq ($(PLATFORM_OS),LINUX)
-	rm -f *.o $(LIBTESS2_OBJS) $(PROJECT_NAME)$(EXT)
+	rm -f *.o $(LIBTESS2_OBJS) $(PROJECT_NAME)$(EXT) $(TEST_BINARY) *.gcda *.gcno *.gcov
+	rm -rf $(COVERAGE_DIR)
     endif
     ifeq ($(PLATFORM_OS),OSX)
 		find . -type f -perm +ugo+x -delete

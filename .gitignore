@@ -13,6 +13,12 @@ local.properties
 # Log/OS Files
 *.log
 
+# Coverage artifacts
+coverage/
+*.gcda
+*.gcno
+*.gcov
+
 # Android Studio generated files and folders
 captures/
 .externalNativeBuild/
@@ -38,3 +44,5 @@ google-services.json
 # Android Profiling
 *.hprof
 
+
+/app/proguard-rules.pro
