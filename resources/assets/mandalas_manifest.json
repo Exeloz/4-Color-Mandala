@@ -4,5 +4,11 @@
     "name": "Real",
     "regions": "1/mandala_1_regions.json",
     "adjacency": "1/mandala_1_adjacency.json"
+  },
+  {
+    "id": 2,
+    "name": "Mandala 2",
+    "regions": "2/mandala_2_regions.json",
+    "adjacency": "2/mandala_2_adjacency.json"
   }
 ]

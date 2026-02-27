@@ -28,8 +28,29 @@ class Polygon:
         svg = "<polygon points=\""
         for point in self.points:
             svg += f"{point[0]},{point[1]} "
-        svg += "\" style=\"fill:white;stroke:black;stroke-width:1\" />"
+        svg += "\" style=\"fill:none;stroke:black;stroke-width:1\" />"
         return svg
+
+
+def compute_bounds(polygons):
+    all_x = []
+    all_y = []
+    for polygon in polygons:
+        for point in polygon.points:
+            all_x.append(float(point[0]))
+            all_y.append(float(point[1]))
+
+    if not all_x or not all_y:
+        return 0.0, 0.0, 800.0, 600.0
+
+    min_x = min(all_x)
+    max_x = max(all_x)
+    min_y = min(all_y)
+    max_y = max(all_y)
+
+    width = max(1.0, max_x - min_x)
+    height = max(1.0, max_y - min_y)
+    return min_x, min_y, width, height
 
 
 def main():
@@ -58,16 +79,27 @@ def main():
     with open(input_file) as f:
         data = json.load(f)
     
+    # Support both raw polygon arrays and runtime regions JSON objects
+    if isinstance(data, dict):
+        data = data.get("regions", [])
+
     # Create polygons
     polygons = []
     for polygon_data in data:
-        polygons.append(Polygon(polygon_data["points"], polygon_data.get("closed", True)))
+        if not isinstance(polygon_data, dict):
+            continue
+        points = polygon_data.get("points", [])
+        if len(points) < 3:
+            continue
+        polygons.append(Polygon(points, polygon_data.get("closed", True)))
     
     print(f"Found {len(polygons)} polygons")
     
+    min_x, min_y, width, height = compute_bounds(polygons)
+
     # Generate SVG
     svg_lines = [
-        """<?xml version="1.0" encoding="UTF-8"?><svg id="a" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600.7">\n"""
+        f"<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg id=\"a\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{min_x} {min_y} {width} {height}\">\n"
     ]
     
     for polygon in polygons:

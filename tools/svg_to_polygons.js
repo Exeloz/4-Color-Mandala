@@ -1,4 +1,5 @@
 const { pathDataToPolys } = require('svg-path-to-polygons');
+const { parseSVG, makeAbsolute } = require('svg-path-parser');
 const { parse } = require('svg-parser');
 const fs = require('fs');
 const path = require('path');
@@ -57,6 +58,155 @@ function cleanAndNormalizePolygon(points, targetClockwise = false) {
     }
 
     return cleaned;
+}
+
+function cubicPoint(p0, p1, p2, p3, t) {
+    const oneMinusT = 1 - t;
+    const x = oneMinusT ** 3 * p0[0]
+        + 3 * oneMinusT ** 2 * t * p1[0]
+        + 3 * oneMinusT * t ** 2 * p2[0]
+        + t ** 3 * p3[0];
+    const y = oneMinusT ** 3 * p0[1]
+        + 3 * oneMinusT ** 2 * t * p1[1]
+        + 3 * oneMinusT * t ** 2 * p2[1]
+        + t ** 3 * p3[1];
+    return [x, y];
+}
+
+function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
+    const commands = makeAbsolute(parseSVG(pathData));
+    const polygons = [];
+
+    let current = [];
+    let closed = false;
+    let currentX = 0;
+    let currentY = 0;
+    let startX = 0;
+    let startY = 0;
+    let previousCommand = '';
+    let previousControlX = 0;
+    let previousControlY = 0;
+
+    const roundPoint = (pt) => [
+        Number(pt[0].toFixed(decimals)),
+        Number(pt[1].toFixed(decimals)),
+    ];
+
+    const pushCurrentIfValid = () => {
+        if (current.length >= 3) {
+            const poly = current.slice();
+            poly.closed = closed;
+            polygons.push(poly);
+        }
+        current = [];
+        closed = false;
+    };
+
+    for (const command of commands) {
+        const code = String(command.code || '').toUpperCase();
+
+        if (code === 'M') {
+            pushCurrentIfValid();
+            currentX = command.x;
+            currentY = command.y;
+            startX = currentX;
+            startY = currentY;
+            current.push(roundPoint([currentX, currentY]));
+            previousCommand = 'M';
+            continue;
+        }
+
+        if (code === 'L' || code === 'H' || code === 'V') {
+            currentX = command.x;
+            currentY = command.y;
+            current.push(roundPoint([currentX, currentY]));
+            previousCommand = 'L';
+            continue;
+        }
+
+        if (code === 'C') {
+            const p0 = [currentX, currentY];
+            const p1 = [command.x1, command.y1];
+            const p2 = [command.x2, command.y2];
+            const p3 = [command.x, command.y];
+
+            for (let sampleIndex = 1; sampleIndex <= curveSamples; sampleIndex += 1) {
+                const t = sampleIndex / curveSamples;
+                current.push(roundPoint(cubicPoint(p0, p1, p2, p3, t)));
+            }
+
+            currentX = command.x;
+            currentY = command.y;
+            previousControlX = command.x2;
+            previousControlY = command.y2;
+            previousCommand = 'C';
+            continue;
+        }
+
+        if (code === 'S') {
+            const reflectedControlX = (previousCommand === 'C' || previousCommand === 'S')
+                ? (2 * currentX - previousControlX)
+                : currentX;
+            const reflectedControlY = (previousCommand === 'C' || previousCommand === 'S')
+                ? (2 * currentY - previousControlY)
+                : currentY;
+
+            const p0 = [currentX, currentY];
+            const p1 = [reflectedControlX, reflectedControlY];
+            const p2 = [command.x2, command.y2];
+            const p3 = [command.x, command.y];
+
+            for (let sampleIndex = 1; sampleIndex <= curveSamples; sampleIndex += 1) {
+                const t = sampleIndex / curveSamples;
+                current.push(roundPoint(cubicPoint(p0, p1, p2, p3, t)));
+            }
+
+            currentX = command.x;
+            currentY = command.y;
+            previousControlX = command.x2;
+            previousControlY = command.y2;
+            previousCommand = 'S';
+            continue;
+        }
+
+        if (code === 'Z') {
+            closed = true;
+            if (current.length > 0) {
+                current.push(roundPoint([startX, startY]));
+            }
+            previousCommand = 'Z';
+            continue;
+        }
+    }
+
+    pushCurrentIfValid();
+    return polygons;
+}
+
+function convertPathToPolygonsWithFallback(pathData) {
+    const tolerances = [1, 2, 4, 8, 12, 16];
+    let lastError = null;
+
+    for (const tolerance of tolerances) {
+        try {
+            const polygons = pathDataToPolys(pathData, { tolerance, decimals: 3 });
+            if (tolerance > 1) {
+                console.log(`Conversion succeeded with fallback tolerance=${tolerance}`);
+            }
+            return polygons;
+        } catch (error) {
+            lastError = error;
+            const message = String(error && error.message ? error.message : error);
+            const isStackOverflow = message.includes('Maximum call stack size exceeded');
+            if (!isStackOverflow) {
+                throw error;
+            }
+            console.warn(`Conversion failed at tolerance=${tolerance}, retrying with coarser sampling...`);
+        }
+    }
+
+    console.warn('Falling back to manual non-recursive path sampling...');
+    return manualPathToPolygons(pathData);
 }
 
 // Parse command line arguments
@@ -154,7 +304,7 @@ pathsData.forEach(pathData => {
     const newPathData = replaceQuadraticWithCubic(pathData);
     console.log('Path conversion complete. Original length:', pathData.length, 'New length:', newPathData.length);
 
-    let points = pathDataToPolys(newPathData, {tolerance:1, decimals:3});
+    let points = convertPathToPolygonsWithFallback(newPathData);
     const jsonOutput = points
         .map((poly) => {
             const normalizedPoints = cleanAndNormalizePolygon(poly, true);

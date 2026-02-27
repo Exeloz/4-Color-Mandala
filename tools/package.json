@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "svg-parser": "^2.0.4",
+    "svg-path-parser": "^1.1.0",
     "svg-path-to-polygons": "^0.1.0"
   }
 }
