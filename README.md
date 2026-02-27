@@ -96,6 +96,11 @@ Winding (`json_to_mandala_code.py`):
 - `--counter-clockwise`: force anti-horaire
 - `--no-normalize`: garde l'ordre source
 
+Scale (`json_to_mandala_code.py`):
+- défaut: largeur cible `10000` (pour garder une épaisseur de contour visuellement cohérente entre mandalas)
+- `--target-width <valeur>`: changer la largeur cible
+- `--target-width 0`: désactiver le scale automatique
+
 ## Manifest runtime
 
 Ajouter/mettre a jour `resources/assets/mandalas_manifest.json`:

@@ -91,20 +91,48 @@ def calculate_bounds(polygons: List[Polygon]) -> Tuple[Point, Point]:
     return Point(min(all_x), min(all_y)), Point(max(all_x), max(all_y))
 
 
+def scale_polygons_to_target_width(polygons: List[Polygon], target_width: float) -> float:
+    if target_width <= 0:
+        return 1.0
+
+    min_bound, max_bound = calculate_bounds(polygons)
+    current_width = max_bound.x - min_bound.x
+    if current_width <= 0.0:
+        return 1.0
+
+    scale = target_width / current_width
+    if abs(scale - 1.0) <= 1e-6:
+        return 1.0
+
+    center_x = (min_bound.x + max_bound.x) * 0.5
+    center_y = (min_bound.y + max_bound.y) * 0.5
+
+    for polygon in polygons:
+        for point in polygon.points:
+            point.x = round((point.x - center_x) * scale + center_x, 3)
+            point.y = round((point.y - center_y) * scale + center_y, 3)
+
+    return scale
+
+
 def to_regions_payload(
     polygons: List[Polygon],
     mandala_name: str,
     mandala_id: int,
     normalize_winding: bool,
     target_clockwise: bool,
+    target_width: float,
 ) -> dict:
     if normalize_winding:
         for polygon in polygons:
             polygon.reverse_if_needed(target_clockwise)
 
+    applied_scale = scale_polygons_to_target_width(polygons, target_width)
+
     min_bound, max_bound = calculate_bounds(polygons)
     center_x = round((min_bound.x + max_bound.x) / 2.0, 3)
     center_y = round((min_bound.y + max_bound.y) / 2.0, 3)
+    width = round(max_bound.x - min_bound.x, 3)
 
     regions = []
     for polygon in polygons:
@@ -120,6 +148,8 @@ def to_regions_payload(
         "id": mandala_id,
         "name": mandala_name,
         "source_center": [center_x, center_y],
+        "source_width": width,
+        "source_scale": round(applied_scale, 6),
         "region_count": len(regions),
         "regions": regions,
     }
@@ -176,6 +206,12 @@ def main() -> None:
         action="store_true",
         help="Normalize to counter-clockwise winding (default: clockwise)",
     )
+    parser.add_argument(
+        "--target-width",
+        type=float,
+        default=10000.0,
+        help="Scale polygons to this width in source units (default: 10000). Set <=0 to disable scaling.",
+    )
 
     args = parser.parse_args()
 
@@ -192,6 +228,7 @@ def main() -> None:
         mandala_id=args.id,
         normalize_winding=normalize_winding,
         target_clockwise=target_clockwise,
+        target_width=args.target_width,
     )
 
     output_path = args.output if args.output else infer_output_path(args.json_file, args.id)
