@@ -45,4 +45,8 @@ private:
     int getRegionIdAtWorldPosition(const Mandala& mandala, Vector2 worldPos) const;
     void centerCameraOnRegion(const Mandala& mandala, int regionId, Camera2D& camera) const;
     void logAdjacencySuggestion(const Mandala& mandala, bool shouldExist, int regionA, int regionB);
+    bool applyAdjacencyJsonEdit(int mandalaId, bool shouldExist, int regionA, int regionB) const;
+    static bool resolveAdjacencyPathForMandala(int mandalaId, std::string& adjacencyPath);
+    static bool readFileText(const std::string& path, std::string& content);
+    static bool writeFileText(const std::string& path, const std::string& content);
 };

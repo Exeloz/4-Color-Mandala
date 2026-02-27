@@ -2,6 +2,8 @@
 #include "../ui/colors.h"
 #include "../ui/input.h"
 #include <algorithm>
+#include <fstream>
+#include <regex>
 #include <sstream>
 
 namespace {
@@ -360,6 +362,11 @@ void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala, bool shou
             TraceLog(LOG_INFO, "[ADJ DEBUG] Already adjacent in current graph.");
         }
         TraceLog(LOG_INFO, "[ADJ DEBUG] Line to add: adjacencyGraph.addAdjacency(%d, %d);", a, b);
+        if (applyAdjacencyJsonEdit(mandala.getId(), true, a, b)) {
+            TraceLog(LOG_INFO, "[ADJ DEBUG] Updated adjacency JSON on disk for mandala %d.", mandala.getId());
+        } else {
+            TraceLog(LOG_WARNING, "[ADJ DEBUG] Failed to update adjacency JSON on disk for mandala %d.", mandala.getId());
+        }
         return;
     }
 
@@ -371,4 +378,123 @@ void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala, bool shou
         TraceLog(LOG_INFO, "[ADJ DEBUG] Pair not currently adjacent in graph.");
     }
     TraceLog(LOG_INFO, "[ADJ DEBUG] Line to remove from 3_adjacency.cpp: adjacencyGraph.addAdjacency(%d, %d);", a, b);
+    if (applyAdjacencyJsonEdit(mandala.getId(), false, a, b)) {
+        TraceLog(LOG_INFO, "[ADJ DEBUG] Updated adjacency JSON on disk for mandala %d.", mandala.getId());
+    } else {
+        TraceLog(LOG_WARNING, "[ADJ DEBUG] Failed to update adjacency JSON on disk for mandala %d.", mandala.getId());
+    }
+}
+
+bool ColoringInspector::applyAdjacencyJsonEdit(int mandalaId, bool shouldExist, int regionA, int regionB) const {
+    std::string adjacencyPath;
+    if (!resolveAdjacencyPathForMandala(mandalaId, adjacencyPath)) {
+        return false;
+    }
+
+    std::string content;
+    if (!readFileText(adjacencyPath, content)) {
+        return false;
+    }
+
+    std::set<std::pair<int, int>> pairs;
+    const std::regex pairRegex(R"(\[\s*(-?\d+)\s*,\s*(-?\d+)\s*\])");
+    for (std::sregex_iterator it(content.begin(), content.end(), pairRegex), end; it != end; ++it) {
+        const int first = std::stoi((*it)[1].str());
+        const int second = std::stoi((*it)[2].str());
+        if (first == second) {
+            continue;
+        }
+        pairs.emplace(std::min(first, second), std::max(first, second));
+    }
+
+    const std::pair<int, int> targetPair{std::min(regionA, regionB), std::max(regionA, regionB)};
+    if (shouldExist) {
+        pairs.insert(targetPair);
+    } else {
+        pairs.erase(targetPair);
+    }
+
+    std::ostringstream output;
+    output << "{\n";
+    output << "  \"mandala_id\": " << mandalaId << ",\n";
+    output << "  \"pairs\": [\n";
+
+    bool first = true;
+    for (const auto& pair : pairs) {
+        if (!first) {
+            output << ",\n";
+        }
+        output << "    [" << pair.first << ", " << pair.second << "]";
+        first = false;
+    }
+
+    output << "\n  ]\n";
+    output << "}\n";
+
+    return writeFileText(adjacencyPath, output.str());
+}
+
+bool ColoringInspector::resolveAdjacencyPathForMandala(int mandalaId, std::string& adjacencyPath) {
+    std::string manifest;
+    if (!readFileText("resources/assets/mandalas_manifest.json", manifest)
+        && !readFileText("mandalas_manifest.json", manifest)) {
+        return false;
+    }
+
+    const std::regex objectRegex(R"(\{[\s\S]*?\})");
+    const std::regex idRegex(R"("id"\s*:\s*(-?\d+))");
+    const std::regex adjacencyRegex(R"adj("adjacency"\s*:\s*"([^"]+)")adj");
+
+    for (std::sregex_iterator it(manifest.begin(), manifest.end(), objectRegex), end; it != end; ++it) {
+        const std::string objectText = it->str();
+        std::smatch idMatch;
+        if (!std::regex_search(objectText, idMatch, idRegex)) {
+            continue;
+        }
+
+        const int id = std::stoi(idMatch[1].str());
+        if (id != mandalaId) {
+            continue;
+        }
+
+        std::smatch adjacencyMatch;
+        if (!std::regex_search(objectText, adjacencyMatch, adjacencyRegex)) {
+            return false;
+        }
+
+        const std::string relativePath = adjacencyMatch[1].str();
+
+        std::ifstream directPath(relativePath);
+        if (directPath.is_open()) {
+            adjacencyPath = relativePath;
+            return true;
+        }
+
+        adjacencyPath = std::string("resources/assets/") + relativePath;
+        return true;
+    }
+
+    return false;
+}
+
+bool ColoringInspector::readFileText(const std::string& path, std::string& content) {
+    std::ifstream stream(path);
+    if (!stream.is_open()) {
+        return false;
+    }
+
+    std::ostringstream buffer;
+    buffer << stream.rdbuf();
+    content = buffer.str();
+    return true;
+}
+
+bool ColoringInspector::writeFileText(const std::string& path, const std::string& content) {
+    std::ofstream stream(path, std::ios::trunc);
+    if (!stream.is_open()) {
+        return false;
+    }
+
+    stream << content;
+    return stream.good();
 }
