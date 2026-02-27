@@ -3,6 +3,62 @@ const { parse } = require('svg-parser');
 const fs = require('fs');
 const path = require('path');
 
+function pointsEqual(a, b, epsilon = 1e-6) {
+    return Math.abs(a[0] - b[0]) <= epsilon && Math.abs(a[1] - b[1]) <= epsilon;
+}
+
+function signedArea(points) {
+    if (!Array.isArray(points) || points.length < 3) {
+        return 0;
+    }
+
+    let areaTimesTwo = 0;
+    for (let i = 0; i < points.length; i += 1) {
+        const current = points[i];
+        const next = points[(i + 1) % points.length];
+        areaTimesTwo += current[0] * next[1] - next[0] * current[1];
+    }
+    return areaTimesTwo * 0.5;
+}
+
+function cleanAndNormalizePolygon(points, targetClockwise = false) {
+    if (!Array.isArray(points)) {
+        return [];
+    }
+
+    const cleaned = [];
+    for (const point of points) {
+        if (!Array.isArray(point) || point.length < 2) {
+            continue;
+        }
+
+        const candidate = [Number(point[0]), Number(point[1])];
+        if (!Number.isFinite(candidate[0]) || !Number.isFinite(candidate[1])) {
+            continue;
+        }
+
+        if (cleaned.length === 0 || !pointsEqual(cleaned[cleaned.length - 1], candidate)) {
+            cleaned.push(candidate);
+        }
+    }
+
+    if (cleaned.length >= 2 && pointsEqual(cleaned[0], cleaned[cleaned.length - 1])) {
+        cleaned.pop();
+    }
+
+    if (cleaned.length < 3) {
+        return [];
+    }
+
+    const area = signedArea(cleaned);
+    const isClockwise = area < 0;
+    if (isClockwise !== targetClockwise) {
+        cleaned.reverse();
+    }
+
+    return cleaned;
+}
+
 // Parse command line arguments
 const args = process.argv.slice(2);
 let inputFile = args[0] || "test.svg";
@@ -99,10 +155,16 @@ pathsData.forEach(pathData => {
     console.log('Path conversion complete. Original length:', pathData.length, 'New length:', newPathData.length);
 
     let points = pathDataToPolys(newPathData, {tolerance:1, decimals:3});
-    const jsonOutput = points.map((poly) => ({
-        points: poly,
-        closed: poly.closed === true,
-    }));
+    const jsonOutput = points
+        .map((poly) => {
+            const normalizedPoints = cleanAndNormalizePolygon(poly, true);
+            return {
+                points: normalizedPoints,
+                closed: poly.closed === true,
+                winding: 'CW',
+            };
+        })
+        .filter((poly) => poly.points.length >= 3);
 
     index += 1;
 

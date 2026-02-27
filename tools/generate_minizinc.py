@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
 """
-Generate MiniZinc graph-coloring models from mandala region/adjacency C++ files.
+Generate MiniZinc graph-coloring models from mandala regions/adjacency JSON files.
 
-The generated model minimizes the number of colors while ensuring adjacent
-regions never share the same color.
-
-By default, this script auto-discovers mandala ids under:
-  - app/src/database/<id>/<id>_regions.cpp
-  - app/src/database/<id>/<id>_adjacency.cpp
-
-For each discovered id, it writes a .mzn file next to the asset JSON files:
-  - resources/assets/<id>/mandala_<id>.mzn (or based on existing mandala_*.json)
+Expected assets under resources/assets/<id>/:
+- mandala_<id>_regions.json (or legacy mandala_1.json)
+- mandala_<id>_adjacency.json
 """
 
 from __future__ import annotations
 
 import argparse
-import re
+import json
 from pathlib import Path
 from typing import Iterable, List, Sequence, Set, Tuple
 
@@ -24,53 +18,92 @@ from typing import Iterable, List, Sequence, Set, Tuple
 Edge = Tuple[int, int]
 
 
-def parse_region_ids(regions_cpp_path: Path) -> Set[int]:
-    text = regions_cpp_path.read_text(encoding="utf-8")
-    pattern = re.compile(r"regions\.emplace_back\(\s*(\d+)\s*,")
-    return {int(match.group(1)) for match in pattern.finditer(text)}
+def parse_region_ids(regions_json_path: Path) -> Set[int]:
+    data = json.loads(regions_json_path.read_text(encoding="utf-8"))
+
+    if isinstance(data, dict):
+        regions = data.get("regions", [])
+    elif isinstance(data, list):
+        regions = data
+    else:
+        raise ValueError(f"Invalid regions JSON root in {regions_json_path}")
+
+    ids: Set[int] = set()
+    for index, region in enumerate(regions):
+        if not isinstance(region, dict):
+            continue
+        region_id = region.get("id", index)
+        if isinstance(region_id, int):
+            ids.add(region_id)
+
+    return ids
 
 
-def parse_adjacency_edges(adjacency_cpp_path: Path) -> Set[Edge]:
-    text = adjacency_cpp_path.read_text(encoding="utf-8")
-    pattern = re.compile(r"addAdjacency\(\s*(\d+)\s*,\s*(\d+)\s*\)")
+def parse_adjacency_edges(adjacency_json_path: Path) -> Set[Edge]:
+    data = json.loads(adjacency_json_path.read_text(encoding="utf-8"))
+
+    if isinstance(data, dict):
+        pairs = data.get("pairs", [])
+    elif isinstance(data, list):
+        pairs = data
+    else:
+        raise ValueError(f"Invalid adjacency JSON root in {adjacency_json_path}")
 
     edges: Set[Edge] = set()
-    for match in pattern.finditer(text):
-        a = int(match.group(1))
-        b = int(match.group(2))
-        if a == b:
+    for pair in pairs:
+        if not isinstance(pair, list) or len(pair) < 2:
             continue
+
+        a = pair[0]
+        b = pair[1]
+        if not isinstance(a, int) or not isinstance(b, int) or a == b:
+            continue
+
         edges.add((a, b) if a < b else (b, a))
 
     return edges
 
 
-def find_mandala_ids(database_root: Path) -> List[int]:
+def find_mandala_ids(assets_root: Path) -> List[int]:
     ids: List[int] = []
-    for child in database_root.iterdir():
+    for child in assets_root.iterdir():
         if not child.is_dir() or not child.name.isdigit():
             continue
 
         mandala_id = int(child.name)
-        regions_cpp = child / f"{mandala_id}_regions.cpp"
-        adjacency_cpp = child / f"{mandala_id}_adjacency.cpp"
-        if regions_cpp.exists() and adjacency_cpp.exists():
+        has_regions = (child / f"mandala_{mandala_id}_regions.json").exists() or bool(list(child.glob("mandala_*.json")))
+        has_adjacency = (child / f"mandala_{mandala_id}_adjacency.json").exists() or bool(list(child.glob("*adjacency*.json")))
+        if has_regions and has_adjacency:
             ids.append(mandala_id)
 
     return sorted(ids)
 
 
+def find_regions_file(asset_dir: Path, mandala_id: int) -> Path:
+    preferred = asset_dir / f"mandala_{mandala_id}_regions.json"
+    if preferred.exists():
+        return preferred
+
+    legacy = sorted(path for path in asset_dir.glob("mandala_*.json") if "adjacency" not in path.name)
+    if not legacy:
+        raise FileNotFoundError(f"No regions JSON found in {asset_dir}")
+    return legacy[0]
+
+
+def find_adjacency_file(asset_dir: Path, mandala_id: int) -> Path:
+    preferred = asset_dir / f"mandala_{mandala_id}_adjacency.json"
+    if preferred.exists():
+        return preferred
+
+    candidates = sorted(asset_dir.glob("*adjacency*.json"))
+    if not candidates:
+        raise FileNotFoundError(f"No adjacency JSON found in {asset_dir}")
+    return candidates[0]
+
+
 def infer_output_filename(asset_dir: Path, mandala_id: int) -> str:
-    direct_name = f"mandala_{mandala_id}.json"
-    direct_path = asset_dir / direct_name
-    if direct_path.exists():
-        return direct_path.stem + ".mzn"
-
-    candidates = sorted(asset_dir.glob("mandala_*.json"))
-    if len(candidates) == 1:
-        return candidates[0].stem + ".mzn"
-
-    return f"mandala_{mandala_id}.mzn"
+    regions_path = find_regions_file(asset_dir, mandala_id)
+    return regions_path.stem + ".mzn"
 
 
 def format_int_set(values: Sequence[int]) -> str:
@@ -100,6 +133,7 @@ def build_minizinc_model(region_ids: Sequence[int], edges: Sequence[Edge], sourc
     lines.append("array[REGIONS] of var 1..REGION_COUNT: color;")
     lines.append("var 1..REGION_COUNT: max_color;")
     lines.append("")
+
     if edges:
         lines.append("array[1..EDGE_COUNT] of int: edge_u = " + format_int_array(edge_u) + ";")
         lines.append("array[1..EDGE_COUNT] of int: edge_v = " + format_int_array(edge_v) + ";")
@@ -119,30 +153,24 @@ def build_minizinc_model(region_ids: Sequence[int], edges: Sequence[Edge], sourc
     return "\n".join(lines) + "\n"
 
 
-def process_mandala(database_root: Path, assets_root: Path, mandala_id: int, output_name: str | None) -> Path:
-    source_dir = database_root / str(mandala_id)
-    regions_cpp = source_dir / f"{mandala_id}_regions.cpp"
-    adjacency_cpp = source_dir / f"{mandala_id}_adjacency.cpp"
+def process_mandala(assets_root: Path, mandala_id: int, output_name: str | None) -> Path:
+    asset_dir = assets_root / str(mandala_id)
+    asset_dir.mkdir(parents=True, exist_ok=True)
 
-    if not regions_cpp.exists():
-        raise FileNotFoundError(f"Missing regions file: {regions_cpp}")
-    if not adjacency_cpp.exists():
-        raise FileNotFoundError(f"Missing adjacency file: {adjacency_cpp}")
+    regions_json = find_regions_file(asset_dir, mandala_id)
+    adjacency_json = find_adjacency_file(asset_dir, mandala_id)
 
-    region_ids = parse_region_ids(regions_cpp)
-    edges = parse_adjacency_edges(adjacency_cpp)
+    region_ids = parse_region_ids(regions_json)
+    edges = parse_adjacency_edges(adjacency_json)
 
     ids_from_edges = {id_value for edge in edges for id_value in edge}
     all_ids = sorted(region_ids | ids_from_edges)
     sorted_edges = sorted(edges)
 
-    asset_dir = assets_root / str(mandala_id)
-    asset_dir.mkdir(parents=True, exist_ok=True)
-
     output_filename = output_name if output_name else infer_output_filename(asset_dir, mandala_id)
     output_path = asset_dir / output_filename
 
-    source_note = f"{regions_cpp.relative_to(database_root.parent)} and {adjacency_cpp.relative_to(database_root.parent)}"
+    source_note = f"{regions_json} and {adjacency_json}"
     model = build_minizinc_model(all_ids, sorted_edges, source_note)
     output_path.write_text(model, encoding="utf-8")
 
@@ -154,16 +182,7 @@ def parse_args() -> argparse.Namespace:
     project_root = script_dir.parent
 
     parser = argparse.ArgumentParser(
-        description=(
-            "Generate MiniZinc models for mandala graph coloring from "
-            "<id>_regions.cpp and <id>_adjacency.cpp files."
-        )
-    )
-    parser.add_argument(
-        "--database-root",
-        type=Path,
-        default=project_root / "app" / "src" / "database",
-        help="Path to app/src/database (default: project app/src/database)",
+        description="Generate MiniZinc models for mandala graph coloring from JSON assets."
     )
     parser.add_argument(
         "--assets-root",
@@ -189,27 +208,27 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    database_root: Path = args.database_root.resolve()
     assets_root: Path = args.assets_root.resolve()
 
-    if not database_root.exists():
-        raise FileNotFoundError(f"Database root does not exist: {database_root}")
+    if not assets_root.exists():
+        raise FileNotFoundError(f"Assets root does not exist: {assets_root}")
 
     selected_ids: Iterable[int]
     if args.mandala_id:
         selected_ids = sorted(set(args.mandala_id))
     else:
-        selected_ids = find_mandala_ids(database_root)
+        selected_ids = find_mandala_ids(assets_root)
 
+    selected_ids = list(selected_ids)
     if not selected_ids:
         raise RuntimeError("No mandala ids found to process.")
 
-    if args.output_name and len(list(selected_ids)) != 1:
+    if args.output_name and len(selected_ids) != 1:
         raise ValueError("--output-name can only be used with a single --mandala-id")
 
     generated_paths: List[Path] = []
     for mandala_id in selected_ids:
-        output_path = process_mandala(database_root, assets_root, mandala_id, args.output_name)
+        output_path = process_mandala(assets_root, mandala_id, args.output_name)
         generated_paths.append(output_path)
 
     print(f"Generated {len(generated_paths)} MiniZinc file(s):")

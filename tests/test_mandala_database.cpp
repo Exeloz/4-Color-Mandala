@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "../app/src/database/mandalaDatabase.h"
+#include "../app/src/ui/colors.h"
 
 TEST_CASE(mandala_database_loads_default_mandalas) {
     MandalaDatabase database;
@@ -22,4 +23,20 @@ TEST_CASE(mandala_database_can_lookup_known_ids) {
 
     std::shared_ptr<Mandala> missing = database.getMandalaById(99999);
     EXPECT_NULL(missing);
+}
+
+TEST_CASE(mandala_database_loads_region_colorability_and_default_color_from_json) {
+    MandalaDatabase database;
+    std::shared_ptr<Mandala> real = database.getMandalaById(3);
+    EXPECT_NOT_NULL(real);
+
+    Region* region = real->getRegionById(0);
+    EXPECT_NOT_NULL(region);
+    EXPECT_FALSE(region->isColorable());
+
+    const Color color = region->getDefaultColor();
+    EXPECT_EQ(color.r, Colors::Black.r);
+    EXPECT_EQ(color.g, Colors::Black.g);
+    EXPECT_EQ(color.b, Colors::Black.b);
+    EXPECT_EQ(color.a, Colors::Black.a);
 }

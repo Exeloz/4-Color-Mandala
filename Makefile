@@ -410,6 +410,7 @@ CPP_SRC = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 LIBTESS2_SRC = $(wildcard $(LIBTESS2_DIR)/*.c)
 LIBTESS2_OBJS = $(LIBTESS2_SRC:.c=.o)
 SRC = $(CPP_SRC)
+APP_OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(CPP_SRC))
 TEST_SRC = $(call rwildcard, $(TEST_DIR)/, *.cpp)
 TEST_APP_SRC = \
     app/src/mandala/adjacencyGraph.cpp \
@@ -421,9 +422,7 @@ TEST_APP_SRC = \
     app/src/ui/colorPalette.cpp \
     app/src/ui/colorCatalog.cpp \
     app/src/screens/coloringActionManager.cpp \
-    app/src/database/mandalaDatabase.cpp \
-    app/src/database/1/1_regions.cpp \
-    app/src/database/1/1_adjacency.cpp
+    app/src/database/mandalaDatabase.cpp
 #OBJS = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 OBJS = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 CFLAGS_C = $(filter-out -std=c++14 -fpermissive,$(CFLAGS))
@@ -449,8 +448,8 @@ all:
 	$(MAKE_COMMAND) $(MAKEFILE_PARAMS)
 
 # Project target defined by PROJECT_NAME
-$(PROJECT_NAME): $(SRC) $(LIBTESS2_OBJS)
-	$(CC) -o $(PROJECT_NAME)$(EXT) $(SRC) $(LIBTESS2_OBJS) $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM)
+$(PROJECT_NAME): $(APP_OBJS) $(LIBTESS2_OBJS)
+	$(CC) -o $(PROJECT_NAME)$(EXT) $(APP_OBJS) $(LIBTESS2_OBJS) $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM)
 
 test-build: $(TEST_SRC) $(TEST_APP_SRC) $(LIBTESS2_OBJS)
 	$(CC) -o $(TEST_BINARY) $(TEST_SRC) $(TEST_APP_SRC) $(LIBTESS2_OBJS) $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) -Wl,-rpath,"$(RAYLIB_RELEASE_PATH)" $(LDLIBS) -D$(PLATFORM)
@@ -474,10 +473,9 @@ uncovered: coverage uncovered-report
 $(LIBTESS2_DIR)/%.o: $(LIBTESS2_DIR)/%.c
 	gcc -c $< -o $@ $(CFLAGS_C) $(INCLUDE_PATHS) -D$(PLATFORM)
 
-# Compile source files
-# NOTE: This pattern will compile every module defined on $(OBJS)
-#%.o: %.c
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+# Compile C++ source files into incremental object cache under obj/
+$(OBJ_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CC) -c $< -o $@ $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM)
 
 # Clean everything
@@ -487,8 +485,7 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
 		del *.o *.exe /s
     endif
     ifeq ($(PLATFORM_OS),LINUX)
-	rm -f *.o $(LIBTESS2_OBJS) $(PROJECT_NAME)$(EXT) $(TEST_BINARY) *.gcda *.gcno *.gcov
-	rm -rf $(COVERAGE_DIR)
+	rm -f *.o $(LIBTESS2_OBJS) $(PROJECT_NAME)$(EXT) $(TEST_BINARY) *.gcda *.gcno *.gcov && rm -rf $(OBJ_DIR) && rm -rf $(COVERAGE_DIR)
     endif
     ifeq ($(PLATFORM_OS),OSX)
 		find . -type f -perm +ugo+x -delete

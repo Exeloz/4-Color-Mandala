@@ -160,6 +160,11 @@ android {
             version '3.30.3'
         }
     }
+    sourceSets {
+        main {
+            assets.srcDirs += ['../resources/assets']
+        }
+    }
     buildFeatures {
         buildConfig true
         viewBinding true

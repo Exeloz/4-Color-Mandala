@@ -2,6 +2,7 @@ main
 **/node_modules/**
 /test.png
 **/__pycache__/**
+*.o
 
 # Gradle files
 .gradle/

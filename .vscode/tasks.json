@@ -22,7 +22,7 @@
         {
             "label": "build debug",
             "type": "shell",
-            "command": "make clean PROJECT_NAME=main && make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG",
+            "command": "make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG",
             "windows": {
                 "command": "C:/raylib/w64devkit/bin/mingw32-make.exe",
                 "args": [
@@ -34,10 +34,10 @@
             },
             "osx": {
                 "type": "shell",
-                "command": "make clean PROJECT_NAME=main && make PROJECT_NAME=main OBJS=src/*.cpp BUILD_MODE=DEBUG"
+                "command": "make PROJECT_NAME=main OBJS=src/*.cpp BUILD_MODE=DEBUG"
             },
             "linux": {
-                "command": "make clean PROJECT_NAME=main && make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG"
+                "command": "make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG"
             },
             "group": {
                 "kind": "build",

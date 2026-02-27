@@ -160,20 +160,21 @@ Notes utiles:
 
 ## Outils de création de mandalas
 
-Les outils dans le dossier `tools/` permettent de convertir des SVG en code C++:
+Les outils dans le dossier `tools/` permettent de convertir des SVG en assets JSON charges au runtime (plus de gros fichiers C++ generes):
 
 ```bash
 # 1. SVG paths → JSON polygones
 npm run svg-to-polygons -- ../resources/assets/3/3.svg ../resources/assets/3/mandala_
 
-# 2. JSON → C++ code avec normalisation automatique du winding
+# 2. JSON polygones → JSON regions runtime (winding normalise)
 python json_to_mandala_code.py ../resources/assets/3/mandala_1.json \
   --name "Real" --id 3 \
-  -o ../src/database/3/3_regions.cpp
+  -o ../resources/assets/3/mandala_3_regions.json
 
-# 3. JSON/C++ regions → C++ adjacency graph (tolérant aux petits écarts)
-python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
-  -o ../src/database/3/3_adjacency.cpp
+# 3. JSON regions/polygones → JSON adjacency graph (fichier separe)
+python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
+  --mandala-id 3 \
+  -o ../resources/assets/3/mandala_3_adjacency.json
 ```
 
 Le script normalise automatiquement l'ordre des vertices (counter-clockwise par défaut) pour assurer une tessellation correcte. Options disponibles:
@@ -181,18 +182,36 @@ Le script normalise automatiquement l'ordre des vertices (counter-clockwise par 
 - `--no-normalize`: préserver l'ordre original (non recommandé)
 - `--no-summary`: masquer le résumé des polygones
 
-Le script d'adjacence accepte aussi une source C++ existante:
+Le script d'adjacence accepte aussi une source C++ existante (mode legacy):
 
 ```bash
 python generate_adjacency.py --regions-cpp ../src/database/3/3_regions.cpp \
-  -o ../src/database/3/3_adjacency.cpp
+  --format json \
+  -o ../resources/assets/3/mandala_3_adjacency.json
 ```
+
+### Enregistrer le mandala dans le manifest runtime
+
+Ajouter une entree dans `resources/assets/mandalas_manifest.json`:
+
+```json
+[
+  {
+    "id": 3,
+    "name": "Real",
+    "regions": "3/mandala_3_regions.json",
+    "adjacency": "3/mandala_3_adjacency.json"
+  }
+]
+```
+
+Le jeu charge ce manifest au runtime. Sur Android, `resources/assets` est embarque automatiquement dans l'APK.
 
 ### Generer un modele MiniZinc (nombre minimal de couleurs)
 
 Le script `generate_minizinc.py` lit:
-- `app/src/database/<id>/<id>_regions.cpp`
-- `app/src/database/<id>/<id>_adjacency.cpp`
+- `resources/assets/<id>/mandala_<id>_regions.json` (ou `mandala_*.json` legacy)
+- `resources/assets/<id>/mandala_<id>_adjacency.json`
 
 et cree un fichier `.mzn` a cote des assets, par exemple:
 - `resources/assets/1/mandala_1.mzn`
@@ -209,23 +228,24 @@ python generate_minizinc.py
 
 ```bash
 # 1) Generation standard (recommandee pour commencer)
-python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
-  -o ../src/database/3/3_adjacency.cpp
+python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
+  --mandala-id 3 \
+  -o ../resources/assets/3/mandala_3_adjacency.json
 
 # 2) Voir le resultat sans ecrire de fichier
-python generate_adjacency.py --json ../resources/assets/3/mandala_1.json --stdout
+python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json --stdout
 
 # 3) Tolerance plus grande pour des bordures plus espacees
-python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
   --eps-edge 95 \
   --min-overlap 5 \
   --min-shared-len 28 \
-  -o ../src/database/3/3_adjacency.cpp
+  -o ../resources/assets/3/mandala_3_adjacency.json
 
 # 4) Exclure certaines regions (ex: ignorer la region 0)
-python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
   --exclude-regions 0 \
-  -o ../src/database/3/3_adjacency.cpp
+  -o ../resources/assets/3/mandala_3_adjacency.json
 ```
 
 ### Comment augmenter la tolerance (distance entre bordures)
@@ -246,12 +266,12 @@ Regle pratique:
 Exemple "tolerance large" pour debug initial:
 
 ```bash
-python generate_adjacency.py --json ../resources/assets/3/mandala_1.json \
+python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
   --eps-edge 40 \
   --min-overlap 0 \
   --min-shared-len 0 \
   --exclude-regions 0 \
-  -o ../src/database/3/3_adjacency.cpp
+  -o ../resources/assets/3/mandala_3_adjacency.json
 ```
 
 ```

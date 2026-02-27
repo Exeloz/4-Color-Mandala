@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Generate adjacency graph C++ code from mandala polygon data.
+Generate adjacency graph data from mandala polygon data.
 
 Supports:
 - JSON polygon input (preferred): output from svg_to_polygons.js
-- C++ region declarations input: src/database/*/*_regions.cpp
+- C++ region declarations input: src/database/*/*_regions.cpp (legacy)
 
 Adjacency detection is tolerant to slight boundary gaps by using near-collinear,
 near-overlapping segment matching with configurable thresholds.
@@ -120,6 +120,9 @@ def clean_polygon(points: Sequence[Point], eps_vertex: float) -> List[Point]:
 def parse_json_polygons(json_path: Path) -> RegionPolygons:
     with json_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
+
+    if isinstance(data, dict) and "regions" in data:
+        data = data["regions"]
 
     regions: RegionPolygons = {}
     for idx, poly in enumerate(data):
@@ -349,9 +352,26 @@ def generate_cpp(adjacency_pairs: Sequence[Pair], function_name: str) -> str:
     return "\n".join(lines)
 
 
+def generate_json(adjacency_pairs: Sequence[Pair], mandala_id: int | None, cfg: DetectionConfig) -> str:
+    payload = {
+        "mandala_id": mandala_id,
+        "pair_count": len(adjacency_pairs),
+        "pairs": [[a, b] for a, b in adjacency_pairs],
+        "generation": {
+            "eps_vertex": cfg.eps_vertex,
+            "eps_edge": cfg.eps_edge,
+            "min_overlap": cfg.min_overlap,
+            "min_shared_len": cfg.min_shared_len,
+            "min_contacts": cfg.min_contacts,
+            "cell_size": cfg.cell_size,
+        },
+    }
+    return json.dumps(payload, indent=2)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate C++ adjacency graph code from polygon data."
+        description="Generate adjacency graph JSON (or optional C++) from polygon data."
     )
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--json", type=Path, help="Input polygon JSON file")
@@ -361,14 +381,21 @@ def parse_args() -> argparse.Namespace:
         "-o",
         "--output",
         type=Path,
-        default=Path("../src/database/3/3_adjacency.cpp"),
-        help="Output C++ file path (default: ../src/database/3/3_adjacency.cpp)",
+        default=Path("../resources/assets/3/mandala_3_adjacency.json"),
+        help="Output file path (default: ../resources/assets/3/mandala_3_adjacency.json)",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["json", "cpp"],
+        default="json",
+        help="Output format: json (default) or cpp",
     )
     parser.add_argument(
         "--function-name",
         default="addRealMandalaAdjacency",
-        help="MandalaDatabase method name to generate",
+        help="MandalaDatabase method name for --format cpp",
     )
+    parser.add_argument("--mandala-id", type=int, default=None, help="Mandala id metadata for JSON output")
     parser.add_argument("--eps-vertex", type=float, default=None, help="Vertex dedupe tolerance")
     parser.add_argument("--eps-edge", type=float, default=None, help="Edge gap tolerance")
     parser.add_argument("--min-overlap", type=float, default=None, help="Minimum projected overlap")
@@ -407,7 +434,10 @@ def main() -> None:
 
     cfg = default_detection_config(regions, args)
     pairs = detect_adjacency_pairs(regions, cfg)
-    cpp_code = generate_cpp(pairs, args.function_name)
+    if args.format == "cpp":
+        output_data = generate_cpp(pairs, args.function_name)
+    else:
+        output_data = generate_json(pairs, args.mandala_id, cfg)
 
     print(f"Input: {input_label}")
     print(f"Regions: {len(regions)}")
@@ -425,13 +455,13 @@ def main() -> None:
     )
 
     if args.stdout:
-        print("\n" + cpp_code)
+        print("\n" + output_data)
     else:
         output_path = args.output
         if not output_path.is_absolute():
             output_path = (Path(__file__).resolve().parent / output_path).resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(cpp_code + "\n", encoding="utf-8")
+        output_path.write_text(output_data + "\n", encoding="utf-8")
         print(f"Wrote: {output_path}")
 
 
