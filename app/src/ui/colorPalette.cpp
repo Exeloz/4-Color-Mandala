@@ -3,10 +3,10 @@
 
 ColorPalette::ColorPalette() : selectedColorIndex(0) {
     colors.push_back(Colors::None);
-    colors.push_back(Colors::Red);
-    colors.push_back(Colors::Blue);
-    colors.push_back(Colors::Yellow);
-    colors.push_back(Colors::Green);
+    colors.push_back(Colors::DarkBlue);
+    colors.push_back(Colors::RoyalBlue);
+    colors.push_back(Colors::DeepSkyBlue);
+    colors.push_back(Colors::PaleTurquoise);
 }
 
 Color ColorPalette::getColor(int index) const {
