@@ -4,195 +4,101 @@ Application de coloriage de mandalas en C++ avec raylib.
 
 Note: `$HOME/cegep` correspond a `/mnt/c/Users/Admin/OneDrive - Cégep Garneau`.
 
-## Compilation sur ordinateur (Linux/WSL)
+## Quickstart (Linux/WSL)
 
 ```bash
-# Init/update submodules (raylib + libtess2)
 cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
 git submodule update --init --recursive
 
-# Raylib desktop (shared)
+# Build raylib (shared)
 cd external/raylib/src
-make clean
 make RAYLIB_LIBTYPE=SHARED
 
-# Application (debug)
+# Build app (debug)
 cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
-make clean PROJECT_NAME=main
 make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED BUILD_MODE=DEBUG
 
-# Application (release)
-make clean PROJECT_NAME=main
-make PROJECT_NAME=main RAYLIB_LIBTYPE=SHARED
-```
-
-Execution:
-
-```bash
-export LD_LIBRARY_PATH=$HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/external/raylib/src:$LD_LIBRARY_PATH
+# Run
+export LD_LIBRARY_PATH=$PWD/external/raylib/src:$LD_LIBRARY_PATH
 ./main
 ```
 
-Execution (release):
+## Tests
 
 ```bash
-./main
-```
-
-## Tests unitaires (code C++)
-
-Depuis la racine du projet:
-
-```bash
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
 make test
 ```
 
-Ce target compile un binaire `tests_runner` avec les modules coeur (mandala, base de donnees, palette/couleurs, actions de coloriage) et execute toute la suite.
+## Android (debug APK)
 
-## Debug (VS Code)
-
-- Ouvrir `main.code-workspace`
-- Appuyer sur `F5`
-
-Le task `build debug` compile automatiquement avant le lancement.
-
-## Compilation Android (APK) - recommande (`gradlew`)
-
-Installation rapide (apres pairing/connexion ADB):
-
-```bash
-cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
-./gradlew assembleDebug
-$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-Prerequis:
-- NDK: `$HOME/android-ndk-r26d`
+Prerequis principaux:
 - SDK: `$HOME/Android/Sdk`
-- Java: `/usr/lib/jvm/java-17-openjdk-amd64`
-- CMake: `cmake;3.30.3` (via `sdkmanager`)
+- NDK: `$HOME/android-ndk-r26d`
+- Java 17
 
-Configurer `local.properties` (a la racine du projet, adaptez le chemin utilisateur):
+`local.properties` (a la racine):
 
 ```properties
-sdk.dir=/home/ccoulombe/Android/Sdk
-ndk.dir=/home/ccoulombe/android-ndk-r26d
+sdk.dir=/home/<user>/Android/Sdk
+ndk.dir=/home/<user>/android-ndk-r26d
 ```
 
-Commandes:
+Build + install:
 
 ```bash
 cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala
-
-# Installer CMake si absent
-$HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager "cmake;3.30.3"
-
-# Build debug / release
 ./gradlew assembleDebug
-./gradlew assembleRelease
-```
 
-APK generes:
-
-```
-app/build/outputs/apk/debug/app-debug.apk
-app/build/outputs/apk/release/app-release-unsigned.apk
-```
-
-Signer l'APK release avant installation (obligatoire):
-
-```bash
-APKSIGNER=$(ls -1 $HOME/Android/Sdk/build-tools/*/apksigner | sort -V | tail -n 1)
-
-# Keystore debug local (si absent)
-[ -f "$HOME/.android/debug.keystore" ] || keytool -genkeypair -v -storetype PKCS12 \
-  -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android \
-  -alias androiddebugkey -dname "CN=Android Debug,O=Android,C=US" \
-  -keyalg RSA -keysize 2048 -validity 10000
-
-cp app/build/outputs/apk/release/app-release-unsigned.apk \
-   app/build/outputs/apk/release/app-release-signed.apk
-
-$APKSIGNER sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android \
-  --key-pass pass:android --ks-key-alias androiddebugkey \
-  app/build/outputs/apk/release/app-release-signed.apk
-```
-
-Installation debug sur appareil:
-
-```bash
-# Generer d'abord l'APK debug si le dossier n'existe pas:
-# ./gradlew assembleDebug
-$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
-
-# Installation release (APK non signe):
-# ./gradlew assembleRelease
-$ADB -r app/build/outputs/apk/release/app-release-signed.apk
-```
-
-### Installer sur le telephone
-
-# 0) Pair / connexion ADB (Wi-Fi)
+# ADB Wi-Fi (optionnel, si pas en USB)
 ADB=$HOME/Android/Sdk/platform-tools/adb
-$ADB pair <IP_TEL>:<PORT_PAIR>        # entrer le code affiché sur le téléphone
+$ADB pair <IP_TEL>:<PORT_PAIR>
 $ADB connect <IP_TEL>:<PORT_CONNECT>
-$ADB devices
 
-```bash
-# 1) Verifier que le telephone est visible
-$HOME/Android/Sdk/platform-tools/adb devices
-
-# 2) Installer (ou mettre a jour) l'APK debug
-$ADB install -r app/build/outputs/apk/debug/app-debug.apk
-
-#    Installer (ou mettre a jour) l'APK release (signe)
-$ADB install -r app/build/outputs/apk/release/app-release-signed.apk
-
-# 3) (Optionnel) Lancer l'app depuis le PC
-$HOME/Android/Sdk/platform-tools/adb shell monkey -p com.CegepGarneau.colormandala -c android.intent.category.LAUNCHER 1
+$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Notes utiles:
-- Si `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, desinstaller puis reinstaller:
-  - `$HOME/Android/Sdk/platform-tools/adb uninstall com.CegepGarneau.colormandala`
-  - relancer la commande `adb install -r ...`
-- Un APK release non signe (`app-release-unsigned.apk`) ne peut pas etre installe.
+## Outils mandala (JSON runtime)
 
-## Outils de création de mandalas
+Pipeline recommande:
+1. `svg_to_polygons.js` -> polygones JSON
+2. `json_to_mandala_code.py` -> `*_regions.json`
+3. `generate_adjacency.py` -> `*_adjacency.json`
+4. (optionnel) `generate_minizinc.py` -> `.mzn`
 
-Les outils dans le dossier `tools/` permettent de convertir des SVG en assets JSON charges au runtime (plus de gros fichiers C++ generes):
-
-```bash
-# 1. SVG paths → JSON polygones
-npm run svg-to-polygons -- ../resources/assets/3/3.svg ../resources/assets/3/mandala_
-
-# 2. JSON polygones → JSON regions runtime (winding normalise)
-python json_to_mandala_code.py ../resources/assets/3/mandala_1.json \
-  --name "Real" --id 3 \
-  -o ../resources/assets/3/mandala_3_regions.json
-
-# 3. JSON regions/polygones → JSON adjacency graph (fichier separe)
-python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
-  --mandala-id 3 \
-  -o ../resources/assets/3/mandala_3_adjacency.json
-```
-
-Le script normalise automatiquement l'ordre des vertices (counter-clockwise par défaut) pour assurer une tessellation correcte. Options disponibles:
-- `--clockwise`: normaliser en sens horaire
-- `--no-normalize`: préserver l'ordre original (non recommandé)
-- `--no-summary`: masquer le résumé des polygones
-
-Le script d'adjacence accepte aussi une source C++ existante (mode legacy):
+### Setup rapide (copier-coller)
 
 ```bash
-python generate_adjacency.py --regions-cpp ../src/database/3/3_regions.cpp \
-  --format json \
-  -o ../resources/assets/3/mandala_3_adjacency.json
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/tools
+
+MID=3
+SVG=../resources/assets/$MID/$MID.svg
+
+# 1) SVG -> polygones
+node svg_to_polygons.js "$SVG" ../resources/assets/$MID/mandala_
+
+# 2) Polygones -> regions runtime
+python3 json_to_mandala_code.py ../resources/assets/$MID/mandala_1.json \
+  --name "Mandala $MID" --id $MID \
+  -o ../resources/assets/$MID/mandala_${MID}_regions.json
+
+# 3) Regions -> adjacency
+python3 generate_adjacency.py --json ../resources/assets/$MID/mandala_${MID}_regions.json \
+  --mandala-id $MID \
+  -o ../resources/assets/$MID/mandala_${MID}_adjacency.json
+
+# 4) (Optionnel) MiniZinc
+python3 generate_minizinc.py --mandala-id $MID
 ```
 
-### Enregistrer le mandala dans le manifest runtime
+Winding (`json_to_mandala_code.py`):
+- défaut: clockwise
+- `--counter-clockwise`: force anti-horaire
+- `--no-normalize`: garde l'ordre source
 
-Ajouter une entree dans `resources/assets/mandalas_manifest.json`:
+## Manifest runtime
+
+Ajouter/mettre a jour `resources/assets/mandalas_manifest.json`:
 
 ```json
 [
@@ -205,73 +111,12 @@ Ajouter une entree dans `resources/assets/mandalas_manifest.json`:
 ]
 ```
 
-Le jeu charge ce manifest au runtime. Sur Android, `resources/assets` est embarque automatiquement dans l'APK.
+Le jeu charge ce manifest au runtime (desktop + Android assets).
 
-### Generer un modele MiniZinc (nombre minimal de couleurs)
+## Debug adjacency en jeu
 
-Le script `generate_minizinc.py` lit:
-- `resources/assets/<id>/mandala_<id>_regions.json` (ou `mandala_*.json` legacy)
-- `resources/assets/<id>/mandala_<id>_adjacency.json`
+En mode debug adjacency (`F3`):
+- `A`: ajoute une adjacency entre region inspectee et region survolee
+- `R`: retire une adjacency
 
-et cree un fichier `.mzn` a cote des assets, par exemple:
-- `resources/assets/1/mandala_1.mzn`
-
-```bash
-# Depuis le dossier tools/
-python generate_minizinc.py --mandala-id 1
-
-# Generer pour tous les IDs detectes
-python generate_minizinc.py
-```
-
-### Exemples rapides (adjacency)
-
-```bash
-# 1) Generation standard (recommandee pour commencer)
-python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
-  --mandala-id 3 \
-  -o ../resources/assets/3/mandala_3_adjacency.json
-
-# 2) Voir le resultat sans ecrire de fichier
-python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json --stdout
-
-# 3) Tolerance plus grande pour des bordures plus espacees
-python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
-  --eps-edge 95 \
-  --min-overlap 5 \
-  --min-shared-len 28 \
-  -o ../resources/assets/3/mandala_3_adjacency.json
-
-# 4) Exclure certaines regions (ex: ignorer la region 0)
-python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
-  --exclude-regions 0 \
-  -o ../resources/assets/3/mandala_3_adjacency.json
-```
-
-### Comment augmenter la tolerance (distance entre bordures)
-
-Le parametre principal est `--eps-edge`:
-- plus grand `--eps-edge` => plus de regions considerees adjacentes meme avec un petit espace
-- trop grand `--eps-edge` => risque de faux positifs (regions proches mais pas vraiment voisines)
-
-Parametres utiles a ajuster ensemble:
-- `--eps-edge`: distance max entre segments pour etre candidats (principal)
-- `--min-overlap`: longueur minimale de recouvrement projete
-- `--min-shared-len`: longueur cumulee minimale pour accepter une adjacency
-
-Regle pratique:
-- si des voisins manquent: augmenter `--eps-edge` (ex: 70 -> 85 -> 100)
-- si trop de voisins apparaissent: augmenter `--min-overlap` et/ou `--min-shared-len`
-
-Exemple "tolerance large" pour debug initial:
-
-```bash
-python generate_adjacency.py --json ../resources/assets/3/mandala_3_regions.json \
-  --eps-edge 40 \
-  --min-overlap 0 \
-  --min-shared-len 0 \
-  --exclude-regions 0 \
-  -o ../resources/assets/3/mandala_3_adjacency.json
-```
-
-```
+Les changements sont maintenant ecrits automatiquement dans le fichier `*_adjacency.json` du mandala actif.

@@ -1,4 +1,6 @@
 main
+tests_runner
+obj/
 **/node_modules/**
 /test.png
 **/__pycache__/**

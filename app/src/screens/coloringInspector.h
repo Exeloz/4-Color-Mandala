@@ -3,8 +3,6 @@
 #include "../mandala/mandala.h"
 #include "validationInspector.h"
 #include "raylib.h"
-#include <set>
-#include <utility>
 #include <vector>
 
 class ColoringInspector {
@@ -36,8 +34,6 @@ private:
     bool debugAdjacencyMode = false;
     int debugInspectRegionId = -1;
     int debugHoverRegionId = -1;
-    std::set<std::pair<int, int>> debugSuggestedAdds;
-    std::set<std::pair<int, int>> debugSuggestedRemoves;
 
     ValidationInspector validationInspector;
     static std::vector<int> collectSortedRegionIds(const std::vector<Region>& regions);

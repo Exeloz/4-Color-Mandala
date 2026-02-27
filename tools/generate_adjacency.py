@@ -2,9 +2,7 @@
 """
 Generate adjacency graph data from mandala polygon data.
 
-Supports:
-- JSON polygon input (preferred): output from svg_to_polygons.js
-- C++ region declarations input: src/database/*/*_regions.cpp (legacy)
+JSON polygon input: output from svg_to_polygons.js or runtime regions JSON.
 
 Adjacency detection is tolerant to slight boundary gaps by using near-collinear,
 near-overlapping segment matching with configurable thresholds.
@@ -15,7 +13,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -129,34 +126,6 @@ def parse_json_polygons(json_path: Path) -> RegionPolygons:
         points = poly.get("points", [])
         if len(points) >= 3:
             regions[idx] = [(float(p[0]), float(p[1])) for p in points]
-    return regions
-
-
-def parse_cpp_regions(cpp_path: Path) -> RegionPolygons:
-    text = cpp_path.read_text(encoding="utf-8")
-
-    region_start = re.compile(r"regions\.emplace_back\((\d+),\s*std::vector<Vector2>\{", re.MULTILINE)
-    vertex_re = re.compile(
-        r"\{\s*offsetX\s*\+\s*([-+]?\d*\.?\d+)f\s*,\s*offsetY\s*\+\s*([-+]?\d*\.?\d+)f\s*\}"
-    )
-
-    regions: RegionPolygons = {}
-    starts = list(region_start.finditer(text))
-    for i, m in enumerate(starts):
-        region_id = int(m.group(1))
-        start_idx = m.end()
-        end_idx = starts[i + 1].start() if i + 1 < len(starts) else len(text)
-        block = text[start_idx:end_idx]
-
-        block_points: List[Point] = []
-        for vm in vertex_re.finditer(block):
-            x = float(vm.group(1))
-            y = float(vm.group(2))
-            block_points.append((x, y))
-
-        if len(block_points) >= 3:
-            regions[region_id] = block_points
-
     return regions
 
 
@@ -341,17 +310,6 @@ def default_detection_config(regions: RegionPolygons, args: argparse.Namespace) 
     )
 
 
-def generate_cpp(adjacency_pairs: Sequence[Pair], function_name: str) -> str:
-    lines: List[str] = []
-    lines.append('#include "../mandalaDatabase.h"')
-    lines.append("")
-    lines.append(f"void MandalaDatabase::{function_name}(AdjacencyGraph& adjacencyGraph) {{")
-    for a, b in adjacency_pairs:
-        lines.append(f"    adjacencyGraph.addAdjacency({a}, {b});")
-    lines.append("}")
-    return "\n".join(lines)
-
-
 def generate_json(adjacency_pairs: Sequence[Pair], mandala_id: int | None, cfg: DetectionConfig) -> str:
     payload = {
         "mandala_id": mandala_id,
@@ -371,11 +329,9 @@ def generate_json(adjacency_pairs: Sequence[Pair], mandala_id: int | None, cfg: 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate adjacency graph JSON (or optional C++) from polygon data."
+        description="Generate adjacency graph JSON from polygon data."
     )
-    source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument("--json", type=Path, help="Input polygon JSON file")
-    source.add_argument("--regions-cpp", type=Path, help="Input *_regions.cpp file")
+    parser.add_argument("--json", type=Path, required=True, help="Input polygon/regions JSON file")
 
     parser.add_argument(
         "-o",
@@ -383,17 +339,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("../resources/assets/3/mandala_3_adjacency.json"),
         help="Output file path (default: ../resources/assets/3/mandala_3_adjacency.json)",
-    )
-    parser.add_argument(
-        "--format",
-        choices=["json", "cpp"],
-        default="json",
-        help="Output format: json (default) or cpp",
-    )
-    parser.add_argument(
-        "--function-name",
-        default="addRealMandalaAdjacency",
-        help="MandalaDatabase method name for --format cpp",
     )
     parser.add_argument("--mandala-id", type=int, default=None, help="Mandala id metadata for JSON output")
     parser.add_argument("--eps-vertex", type=float, default=None, help="Vertex dedupe tolerance")
@@ -408,7 +353,7 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Comma-separated region IDs to exclude from adjacency generation (example: 0,14,27)",
     )
-    parser.add_argument("--stdout", action="store_true", help="Print generated C++ to stdout")
+    parser.add_argument("--stdout", action="store_true", help="Print generated JSON to stdout")
 
     return parser.parse_args()
 
@@ -416,12 +361,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    if args.json is not None:
-        regions = parse_json_polygons(args.json)
-        input_label = str(args.json)
-    else:
-        regions = parse_cpp_regions(args.regions_cpp)
-        input_label = str(args.regions_cpp)
+    regions = parse_json_polygons(args.json)
+    input_label = str(args.json)
 
     if not regions:
         raise ValueError("No valid regions found in input.")
@@ -434,10 +375,7 @@ def main() -> None:
 
     cfg = default_detection_config(regions, args)
     pairs = detect_adjacency_pairs(regions, cfg)
-    if args.format == "cpp":
-        output_data = generate_cpp(pairs, args.function_name)
-    else:
-        output_data = generate_json(pairs, args.mandala_id, cfg)
+    output_data = generate_json(pairs, args.mandala_id, cfg)
 
     print(f"Input: {input_label}")
     print(f"Regions: {len(regions)}")

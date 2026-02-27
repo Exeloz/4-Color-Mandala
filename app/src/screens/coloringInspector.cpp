@@ -349,14 +349,10 @@ void ColoringInspector::centerCameraOnRegion(const Mandala& mandala, int regionI
 void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala, bool shouldExist, int regionA, int regionB) {
     int a = std::min(regionA, regionB);
     int b = std::max(regionA, regionB);
-    std::pair<int, int> pair = {a, b};
 
     bool currentlyAdjacent = mandala.getAdjacencyGraph().areAdjacent(a, b);
 
     if (shouldExist) {
-        debugSuggestedAdds.insert(pair);
-        debugSuggestedRemoves.erase(pair);
-
         TraceLog(LOG_INFO, "[ADJ DEBUG] Suggest ADD (%d, %d)", a, b);
         if (currentlyAdjacent) {
             TraceLog(LOG_INFO, "[ADJ DEBUG] Already adjacent in current graph.");
@@ -370,14 +366,11 @@ void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala, bool shou
         return;
     }
 
-    debugSuggestedRemoves.insert(pair);
-    debugSuggestedAdds.erase(pair);
-
     TraceLog(LOG_INFO, "[ADJ DEBUG] Suggest REMOVE (%d, %d)", a, b);
     if (!currentlyAdjacent) {
         TraceLog(LOG_INFO, "[ADJ DEBUG] Pair not currently adjacent in graph.");
     }
-    TraceLog(LOG_INFO, "[ADJ DEBUG] Line to remove from 3_adjacency.cpp: adjacencyGraph.addAdjacency(%d, %d);", a, b);
+    TraceLog(LOG_INFO, "[ADJ DEBUG] Remove pair from adjacency JSON: [%d, %d]", a, b);
     if (applyAdjacencyJsonEdit(mandala.getId(), false, a, b)) {
         TraceLog(LOG_INFO, "[ADJ DEBUG] Updated adjacency JSON on disk for mandala %d.", mandala.getId());
     } else {
