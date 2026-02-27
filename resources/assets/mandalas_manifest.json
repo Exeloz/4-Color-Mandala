@@ -1,6 +1,6 @@
 [
   {
-    "id": 3,
+    "id": 1,
     "name": "Real",
     "regions": "1/mandala_1_regions.json",
     "adjacency": "1/mandala_1_adjacency.json"

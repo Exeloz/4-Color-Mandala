@@ -582,7 +582,7 @@ void MandalaDatabase::createHexagonMandala() {
         adjacencyGraph.addAdjacency(i, (i + 1) % HEXAGON_SEGMENTS);
     }
 
-    auto mandala = std::make_shared<Mandala>(1, "Tutorial", regions, adjacencyGraph);
+    auto mandala = std::make_shared<Mandala>(0, "Tutorial", regions, adjacencyGraph);
     mandalaList.push_back(mandala);
 }
 

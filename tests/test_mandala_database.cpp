@@ -12,12 +12,12 @@ TEST_CASE(mandala_database_loads_default_mandalas) {
 TEST_CASE(mandala_database_can_lookup_known_ids) {
     MandalaDatabase database;
 
-    std::shared_ptr<Mandala> tutorial = database.getMandalaById(1);
+    std::shared_ptr<Mandala> tutorial = database.getMandalaById(0);
     EXPECT_NOT_NULL(tutorial);
     EXPECT_EQ(tutorial->getName(), std::string("Tutorial"));
     EXPECT_TRUE(tutorial->getRegionCount() > 0);
 
-    std::shared_ptr<Mandala> real = database.getMandalaById(3);
+    std::shared_ptr<Mandala> real = database.getMandalaById(1);
     EXPECT_NOT_NULL(real);
     EXPECT_TRUE(real->getRegionCount() == 450);
 
@@ -27,7 +27,7 @@ TEST_CASE(mandala_database_can_lookup_known_ids) {
 
 TEST_CASE(mandala_database_loads_region_colorability_and_default_color_from_json) {
     MandalaDatabase database;
-    std::shared_ptr<Mandala> real = database.getMandalaById(3);
+    std::shared_ptr<Mandala> real = database.getMandalaById(1);
     EXPECT_NOT_NULL(real);
 
     Region* region = real->getRegionById(0);

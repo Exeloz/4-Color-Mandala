@@ -71,7 +71,7 @@ Pipeline recommande:
 ```bash
 cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/tools
 
-MID=3
+MID=1
 SVG=../resources/assets/$MID/$MID.svg
 
 # 1) SVG -> polygones
@@ -103,10 +103,10 @@ Ajouter/mettre a jour `resources/assets/mandalas_manifest.json`:
 ```json
 [
   {
-    "id": 3,
+    "id": 1,
     "name": "Real",
-    "regions": "3/mandala_3_regions.json",
-    "adjacency": "3/mandala_3_adjacency.json"
+    "regions": "1/mandala_1_regions.json",
+    "adjacency": "1/mandala_1_adjacency.json"
   }
 ]
 ```

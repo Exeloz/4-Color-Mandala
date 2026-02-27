@@ -74,7 +74,7 @@ TEST_CASE(database_adjacency_is_symmetric_and_in_bounds) {
 
 TEST_CASE(database_real_mandala_contains_edges) {
     MandalaDatabase database;
-    auto real = database.getMandalaById(3);
+    auto real = database.getMandalaById(1);
     EXPECT_NOT_NULL(real);
 
     const auto& graph = real->getAdjacencyGraph();
@@ -95,7 +95,7 @@ TEST_CASE(database_generated_mandala_regions_are_clockwise_and_valid) {
     const auto& all = database.getAllMandala();
 
     for (const auto& mandala : all) {
-        if (mandala->getId() == 1) {
+        if (mandala->getId() == 0) {
             continue;
         }
 
