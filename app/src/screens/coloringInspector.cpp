@@ -50,6 +50,126 @@ Color resolveRegionPaletteColor(const Region& region, const std::vector<Color>& 
 
     return fallbackColor;
 }
+
+bool findMatchingClosingBrace(const std::string& content, size_t openingBraceIndex, size_t& closingBraceIndex) {
+    if (openingBraceIndex >= content.size() || content[openingBraceIndex] != '{') {
+        return false;
+    }
+
+    int depth = 0;
+    bool inString = false;
+    bool escaped = false;
+
+    for (size_t i = openingBraceIndex; i < content.size(); ++i) {
+        const char ch = content[i];
+
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+            } else if (ch == '\\') {
+                escaped = true;
+            } else if (ch == '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (ch == '"') {
+            inString = true;
+            continue;
+        }
+
+        if (ch == '{') {
+            ++depth;
+            continue;
+        }
+
+        if (ch == '}') {
+            --depth;
+            if (depth == 0) {
+                closingBraceIndex = i;
+                return true;
+            }
+            if (depth < 0) {
+                return false;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool applyRegionBlackoutToObjectText(std::string& regionObjectText) {
+    if (regionObjectText.empty() || regionObjectText.front() != '{' || regionObjectText.back() != '}') {
+        return false;
+    }
+
+    std::string updated = regionObjectText;
+    const std::regex colorableRegex(R"("colorable"\s*:\s*(true|false))");
+    if (std::regex_search(updated, colorableRegex)) {
+        updated = std::regex_replace(updated, colorableRegex, "\"colorable\": false");
+    }
+
+    const std::regex defaultColorRegex(R"("defaultColor"\s*:\s*("[^"]*"|\[[^\]]*\]|\{[^{}]*\}|-?\d+(\.\d+)?|true|false|null))");
+    if (std::regex_search(updated, defaultColorRegex)) {
+        updated = std::regex_replace(updated, defaultColorRegex, "\"defaultColor\": \"black\"");
+    }
+
+    const bool hasColorable = std::regex_search(updated, std::regex(R"("colorable"\s*:)"));
+    const bool hasDefaultColor = std::regex_search(updated, std::regex(R"("defaultColor"\s*:)"));
+    if (hasColorable && hasDefaultColor) {
+        regionObjectText = std::move(updated);
+        return true;
+    }
+
+    size_t closeBrace = updated.rfind('}');
+    if (closeBrace == std::string::npos) {
+        return false;
+    }
+
+    size_t closeLineStart = updated.rfind('\n', closeBrace);
+    if (closeLineStart == std::string::npos) {
+        closeLineStart = 0;
+    } else {
+        ++closeLineStart;
+    }
+
+    std::string closeIndent;
+    while (closeLineStart < updated.size() && (updated[closeLineStart] == ' ' || updated[closeLineStart] == '\t')) {
+        closeIndent.push_back(updated[closeLineStart]);
+        ++closeLineStart;
+    }
+
+    const std::string fieldIndent = closeIndent + "  ";
+
+    size_t tail = closeBrace;
+    while (tail > 0 && std::isspace(static_cast<unsigned char>(updated[tail - 1])) != 0) {
+        --tail;
+    }
+
+    const bool objectHasEntries = tail > 0 && updated[tail - 1] != '{';
+    std::ostringstream insert;
+    if (objectHasEntries && updated[tail - 1] != ',') {
+        insert << ",";
+    }
+
+    if (!hasColorable) {
+        insert << "\n" << fieldIndent << "\"colorable\": false";
+        if (!hasDefaultColor) {
+            insert << ",";
+        }
+    }
+
+    if (!hasDefaultColor) {
+        insert << "\n" << fieldIndent << "\"defaultColor\": \"black\"";
+    }
+
+    insert << "\n" << closeIndent;
+    updated.insert(closeBrace, insert.str());
+
+    regionObjectText = std::move(updated);
+    return true;
+}
 }
 
 void ColoringInspector::validateAdjacency(const Mandala& mandala) {
@@ -114,7 +234,7 @@ void ColoringInspector::updateAnalysis(const Mandala& mandala, const Camera2D& c
     }
 }
 
-void ColoringInspector::updateDebug(const Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera) {
+void ColoringInspector::updateDebug(Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera) {
     int previousInspectRegionId = debugInspectRegionId;
 
     if (IsKeyPressed(KEY_F3)) {
@@ -159,6 +279,13 @@ void ColoringInspector::updateDebug(const Mandala& mandala, const Camera2D& came
         }
         if (IsKeyPressed(KEY_R)) {
             logAdjacencySuggestion(mandala, false, debugInspectRegionId, debugHoverRegionId);
+        }
+    }
+
+    if (IsKeyPressed(KEY_B)) {
+        int targetRegionId = debugInspectRegionId >= 0 ? debugInspectRegionId : debugHoverRegionId;
+        if (targetRegionId >= 0) {
+            logRegionBlackoutSuggestion(mandala, targetRegionId);
         }
     }
 
@@ -250,7 +377,7 @@ void ColoringInspector::drawDebugInfoPanel(const Mandala& mandala, float uiScale
     std::ostringstream info;
     info << "DEBUG ADJ: ON  |  Hover: " << debugHoverRegionId
          << "  |  Inspect (Right Click): " << debugInspectRegionId
-         << "  |  Clear Inspect: C  |  A=Add  R=Remove";
+            << "  |  Clear Inspect: C  |  A=Add  R=Remove  B=Black+Lock";
     DrawText(info.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(82.0f * uiScale),
              static_cast<int>(20.0f * uiScale), Colors::Black);
 
@@ -270,6 +397,32 @@ void ColoringInspector::drawDebugInfoPanel(const Mandala& mandala, float uiScale
 
         DrawText(neighborText.str().c_str(), static_cast<int>(24.0f * uiScale), static_cast<int>(103.0f * uiScale),
                  static_cast<int>(18.0f * uiScale), Colors::DarkBlue);
+    }
+}
+
+void ColoringInspector::logRegionBlackoutSuggestion(Mandala& mandala, int regionId) {
+    TraceLog(LOG_INFO, "[REGION DEBUG] Set region %d defaultColor=black and colorable=false", regionId);
+
+    Region* region = mandala.getRegionById(regionId);
+    if (region != nullptr) {
+        region->setDefaultColor(Colors::Black);
+        region->setColor(-1);
+        region->setColorable(false);
+        TraceLog(LOG_INFO, "[REGION DEBUG] Applied immediate in-memory blackout for region %d.", regionId);
+    } else {
+        TraceLog(LOG_WARNING, "[REGION DEBUG] Region %d not found in current mandala instance.", regionId);
+    }
+
+    if (applyRegionBlackoutJsonEdit(mandala.getId(), regionId)) {
+        TraceLog(LOG_INFO, "[REGION DEBUG] Updated regions JSON on disk for mandala %d.", mandala.getId());
+    } else {
+        TraceLog(LOG_WARNING, "[REGION DEBUG] Failed to update regions JSON on disk for mandala %d.", mandala.getId());
+    }
+
+    if (applyAdjacencyJsonRemoveAllForRegion(mandala.getId(), regionId)) {
+        TraceLog(LOG_INFO, "[REGION DEBUG] Removed all adjacency pairs containing region %d in JSON.", regionId);
+    } else {
+        TraceLog(LOG_WARNING, "[REGION DEBUG] Failed to clear adjacency JSON pairs for region %d.", regionId);
     }
 }
 
@@ -427,6 +580,51 @@ bool ColoringInspector::applyAdjacencyJsonEdit(int mandalaId, bool shouldExist, 
     return writeFileText(adjacencyPath, output.str());
 }
 
+bool ColoringInspector::applyAdjacencyJsonRemoveAllForRegion(int mandalaId, int regionId) const {
+    std::string adjacencyPath;
+    if (!resolveAdjacencyPathForMandala(mandalaId, adjacencyPath)) {
+        return false;
+    }
+
+    std::string content;
+    if (!readFileText(adjacencyPath, content)) {
+        return false;
+    }
+
+    std::set<std::pair<int, int>> pairs;
+    const std::regex pairRegex(R"(\[\s*(-?\d+)\s*,\s*(-?\d+)\s*\])");
+    for (std::sregex_iterator it(content.begin(), content.end(), pairRegex), end; it != end; ++it) {
+        const int first = std::stoi((*it)[1].str());
+        const int second = std::stoi((*it)[2].str());
+        if (first == second) {
+            continue;
+        }
+        if (first == regionId || second == regionId) {
+            continue;
+        }
+        pairs.emplace(std::min(first, second), std::max(first, second));
+    }
+
+    std::ostringstream output;
+    output << "{\n";
+    output << "  \"mandala_id\": " << mandalaId << ",\n";
+    output << "  \"pairs\": [\n";
+
+    bool first = true;
+    for (const auto& pair : pairs) {
+        if (!first) {
+            output << ",\n";
+        }
+        output << "    [" << pair.first << ", " << pair.second << "]";
+        first = false;
+    }
+
+    output << "\n  ]\n";
+    output << "}\n";
+
+    return writeFileText(adjacencyPath, output.str());
+}
+
 bool ColoringInspector::resolveAdjacencyPathForMandala(int mandalaId, std::string& adjacencyPath) {
     std::string manifest;
     if (!readFileText("resources/assets/mandalas_manifest.json", manifest)
@@ -464,6 +662,86 @@ bool ColoringInspector::resolveAdjacencyPathForMandala(int mandalaId, std::strin
         }
 
         adjacencyPath = std::string("resources/assets/") + relativePath;
+        return true;
+    }
+
+    return false;
+}
+
+bool ColoringInspector::applyRegionBlackoutJsonEdit(int mandalaId, int regionId) const {
+    std::string regionsPath;
+    if (!resolveRegionsPathForMandala(mandalaId, regionsPath)) {
+        return false;
+    }
+
+    std::string content;
+    if (!readFileText(regionsPath, content)) {
+        return false;
+    }
+
+    const std::regex idRegex(std::string("\\\"id\\\"\\s*:\\s*") + std::to_string(regionId) + "(?!\\d)");
+    std::smatch idMatch;
+    if (!std::regex_search(content, idMatch, idRegex)) {
+        return false;
+    }
+
+    const size_t idPos = static_cast<size_t>(idMatch.position(0));
+    size_t objectStart = content.rfind('{', idPos);
+    if (objectStart == std::string::npos) {
+        return false;
+    }
+
+    size_t objectEnd = std::string::npos;
+    if (!findMatchingClosingBrace(content, objectStart, objectEnd)) {
+        return false;
+    }
+
+    std::string regionObject = content.substr(objectStart, objectEnd - objectStart + 1);
+    if (!applyRegionBlackoutToObjectText(regionObject)) {
+        return false;
+    }
+
+    content.replace(objectStart, objectEnd - objectStart + 1, regionObject);
+    return writeFileText(regionsPath, content);
+}
+
+bool ColoringInspector::resolveRegionsPathForMandala(int mandalaId, std::string& regionsPath) {
+    std::string manifest;
+    if (!readFileText("resources/assets/mandalas_manifest.json", manifest)
+        && !readFileText("mandalas_manifest.json", manifest)) {
+        return false;
+    }
+
+    const std::regex objectRegex(R"(\{[\s\S]*?\})");
+    const std::regex idRegex(R"("id"\s*:\s*(-?\d+))");
+    const std::regex regionsRegex(R"regions("regions"\s*:\s*"([^"]+)")regions");
+
+    for (std::sregex_iterator it(manifest.begin(), manifest.end(), objectRegex), end; it != end; ++it) {
+        const std::string objectText = it->str();
+        std::smatch idMatch;
+        if (!std::regex_search(objectText, idMatch, idRegex)) {
+            continue;
+        }
+
+        const int id = std::stoi(idMatch[1].str());
+        if (id != mandalaId) {
+            continue;
+        }
+
+        std::smatch regionsMatch;
+        if (!std::regex_search(objectText, regionsMatch, regionsRegex)) {
+            return false;
+        }
+
+        const std::string relativePath = regionsMatch[1].str();
+
+        std::ifstream directPath(relativePath);
+        if (directPath.is_open()) {
+            regionsPath = relativePath;
+            return true;
+        }
+
+        regionsPath = std::string("resources/assets/") + relativePath;
         return true;
     }
 

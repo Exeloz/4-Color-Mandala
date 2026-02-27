@@ -3,6 +3,7 @@
 #include "../mandala/mandala.h"
 #include "validationInspector.h"
 #include "raylib.h"
+#include <string>
 #include <vector>
 
 class ColoringInspector {
@@ -16,7 +17,7 @@ public:
     void drawValidationOverlay(const Mandala& mandala) const;
 
     void updateAnalysis(const Mandala& mandala, const Camera2D& camera, bool pointerOverUi, bool isDraggingCamera);
-    void updateDebug(const Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera);
+    void updateDebug(Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera);
 
     void drawAnalysisOverlay(const Mandala& mandala, const std::vector<Color>& colorPalette) const;
     void drawDebugOverlay(const Mandala& mandala) const;
@@ -41,8 +42,12 @@ private:
     int getRegionIdAtWorldPosition(const Mandala& mandala, Vector2 worldPos) const;
     void centerCameraOnRegion(const Mandala& mandala, int regionId, Camera2D& camera) const;
     void logAdjacencySuggestion(const Mandala& mandala, bool shouldExist, int regionA, int regionB);
+    void logRegionBlackoutSuggestion(Mandala& mandala, int regionId);
     bool applyAdjacencyJsonEdit(int mandalaId, bool shouldExist, int regionA, int regionB) const;
+    bool applyAdjacencyJsonRemoveAllForRegion(int mandalaId, int regionId) const;
+    bool applyRegionBlackoutJsonEdit(int mandalaId, int regionId) const;
     static bool resolveAdjacencyPathForMandala(int mandalaId, std::string& adjacencyPath);
+    static bool resolveRegionsPathForMandala(int mandalaId, std::string& regionsPath);
     static bool readFileText(const std::string& path, std::string& content);
     static bool writeFileText(const std::string& path, const std::string& content);
 };
