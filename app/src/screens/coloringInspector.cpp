@@ -328,9 +328,9 @@ int ColoringInspector::cycleRegionId(const std::vector<int>& sortedIds, int curr
 
 int ColoringInspector::getRegionIdAtWorldPosition(const Mandala& mandala, Vector2 worldPos) const {
     const auto& regions = mandala.getRegions();
-    for (const auto& region : regions) {
-        if (region.isPointInRegion(worldPos) && region.isColorable()) {
-            return region.getId();
+    for (auto it = regions.rbegin(); it != regions.rend(); ++it) {
+        if (it->isPointInRegion(worldPos) && it->isColorable()) {
+            return it->getId();
         }
     }
 

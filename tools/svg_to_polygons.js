@@ -60,6 +60,124 @@ function cleanAndNormalizePolygon(points, targetClockwise = false) {
     return cleaned;
 }
 
+function boundsOf(points) {
+    let minX = points[0][0];
+    let minY = points[0][1];
+    let maxX = points[0][0];
+    let maxY = points[0][1];
+    for (const [x, y] of points) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+    }
+    return { minX, minY, maxX, maxY };
+}
+
+function boundsContained(inner, outer, epsilon = 1e-6) {
+    return inner.minX >= outer.minX - epsilon
+        && inner.minY >= outer.minY - epsilon
+        && inner.maxX <= outer.maxX + epsilon
+        && inner.maxY <= outer.maxY + epsilon;
+}
+
+function pointInPolygonOrOnEdge(point, polygon) {
+    const [px, py] = point;
+    let inside = false;
+
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+        const [x1, y1] = polygon[i];
+        const [x2, y2] = polygon[j];
+
+        const cross = (py - y1) * (x2 - x1) - (px - x1) * (y2 - y1);
+        const onSegment = Math.abs(cross) <= 1e-6
+            && px >= Math.min(x1, x2) - 1e-6
+            && px <= Math.max(x1, x2) + 1e-6
+            && py >= Math.min(y1, y2) - 1e-6
+            && py <= Math.max(y1, y2) + 1e-6;
+        if (onSegment) {
+            return true;
+        }
+
+        const intersects = ((y1 > py) !== (y2 > py))
+            && (px < (x2 - x1) * (py - y1) / ((y2 - y1) || 1e-12) + x1);
+        if (intersects) {
+            inside = !inside;
+        }
+    }
+
+    return inside;
+}
+
+function polygonInsidePolygon(innerPoints, outerPoints, innerBounds, outerBounds) {
+    if (!boundsContained(innerBounds, outerBounds)) {
+        return false;
+    }
+
+    const sampleCount = Math.min(24, innerPoints.length);
+    const step = Math.max(1, Math.floor(innerPoints.length / sampleCount));
+    for (let i = 0; i < innerPoints.length; i += step) {
+        if (!pointInPolygonOrOnEdge(innerPoints[i], outerPoints)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function orderPolygonsForLayering(polygons) {
+    const count = polygons.length;
+    if (count < 2) {
+        return polygons;
+    }
+
+    const bounds = polygons.map((poly) => boundsOf(poly.points));
+    const edges = Array.from({ length: count }, () => []);
+    const indegree = Array.from({ length: count }, () => 0);
+
+    for (let innerIndex = 0; innerIndex < count; innerIndex += 1) {
+        for (let outerIndex = 0; outerIndex < count; outerIndex += 1) {
+            if (innerIndex === outerIndex) {
+                continue;
+            }
+
+            if (!polygonInsidePolygon(polygons[innerIndex].points, polygons[outerIndex].points, bounds[innerIndex], bounds[outerIndex])) {
+                continue;
+            }
+
+            edges[outerIndex].push(innerIndex);
+            indegree[innerIndex] += 1;
+        }
+    }
+
+    const queue = [];
+    for (let index = 0; index < count; index += 1) {
+        if (indegree[index] === 0) {
+            queue.push(index);
+        }
+    }
+    queue.sort((a, b) => a - b);
+
+    const orderedIndices = [];
+    while (queue.length > 0) {
+        const current = queue.shift();
+        orderedIndices.push(current);
+        for (const next of edges[current]) {
+            indegree[next] -= 1;
+            if (indegree[next] === 0) {
+                queue.push(next);
+            }
+        }
+        queue.sort((a, b) => a - b);
+    }
+
+    if (orderedIndices.length !== count) {
+        return polygons;
+    }
+
+    return orderedIndices.map((index) => polygons[index]);
+}
+
 function cubicPoint(p0, p1, p2, p3, t) {
     const oneMinusT = 1 - t;
     const x = oneMinusT ** 3 * p0[0]
@@ -305,7 +423,7 @@ pathsData.forEach(pathData => {
     console.log('Path conversion complete. Original length:', pathData.length, 'New length:', newPathData.length);
 
     let points = convertPathToPolygonsWithFallback(newPathData);
-    const jsonOutput = points
+    const jsonOutput = orderPolygonsForLayering(points
         .map((poly) => {
             const normalizedPoints = cleanAndNormalizePolygon(poly, true);
             return {
@@ -314,7 +432,7 @@ pathsData.forEach(pathData => {
                 winding: 'CW',
             };
         })
-        .filter((poly) => poly.points.length >= 3);
+        .filter((poly) => poly.points.length >= 3));
 
     index += 1;
 

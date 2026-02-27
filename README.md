@@ -77,6 +77,10 @@ SVG=../resources/assets/$MID/$MID.svg
 # 1) SVG -> polygones
 node svg_to_polygons.js "$SVG" ../resources/assets/$MID/mandala_
 
+# 1b) (Optionnel) Preview SVG des polygones générés
+python3 polygons_to_svg.py ../resources/assets/$MID/mandala_1.json \
+  ../resources/assets/$MID/mandala_1_polygons.svg
+
 # 2) Polygones -> regions runtime
 python3 json_to_mandala_code.py ../resources/assets/$MID/mandala_1.json \
   --name "Mandala $MID" --id $MID \
@@ -95,6 +99,10 @@ Winding (`json_to_mandala_code.py`):
 - défaut: clockwise
 - `--counter-clockwise`: force anti-horaire
 - `--no-normalize`: garde l'ordre source
+
+Preview SVG (`polygons_to_svg.py`):
+- accepte `mandala_1.json` (polygones bruts) et `mandala_<id>_regions.json` (runtime)
+- génère un SVG de contrôle visuel (tracé uniquement, sans remplissage)
 
 Scale (`json_to_mandala_code.py`):
 - défaut: largeur cible `10000` (pour garder une épaisseur de contour visuellement cohérente entre mandalas)
