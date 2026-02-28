@@ -1,19 +1,19 @@
 [
   {
     "id": 1,
-    "name": "Real",
+    "name": "Mandala 449",
     "regions": "1/mandala_1_regions.json",
     "adjacency": "1/mandala_1_adjacency.json"
   },
   {
     "id": 2,
-    "name": "Mandala 623",
+    "name": "Mandala 565",
     "regions": "2/mandala_2_regions.json",
     "adjacency": "2/mandala_2_adjacency.json"
   },
   {
     "id": 4,
-    "name": "Mandala 1093",
+    "name": "Mandala 900",
     "regions": "4/mandala_4_regions.json",
     "adjacency": "4/mandala_4_adjacency.json"
   }
