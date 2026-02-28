@@ -1,6 +1,34 @@
 #include <raylib.h>
 #include "game/game.h"
 
+namespace {
+void DrawInitialLoadingScreen() {
+    ClearBackground(RAYWHITE);
+
+    const char* title = "Color Mandala";
+    const int titleFontSize = 52;
+    const int titleWidth = MeasureText(title, titleFontSize);
+    DrawText(
+        title,
+        (GetScreenWidth() - titleWidth) / 2,
+        (GetScreenHeight() / 2) - 64,
+        titleFontSize,
+        BLACK
+    );
+
+    const char* loadingLabel = "Loading...";
+    const int loadingFontSize = 30;
+    const int loadingWidth = MeasureText(loadingLabel, loadingFontSize);
+    DrawText(
+        loadingLabel,
+        (GetScreenWidth() - loadingWidth) / 2,
+        (GetScreenHeight() / 2) + 8,
+        loadingFontSize,
+        DARKGRAY
+    );
+}
+}
+
 int main() {
 #if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
     const int screenWidth = 0;
@@ -17,6 +45,10 @@ int main() {
     SetWindowMinSize(screenWidth, screenHeight);
 #endif
     SetTargetFPS(60);
+
+    BeginDrawing();
+    DrawInitialLoadingScreen();
+    EndDrawing();
 
     Game game;
     game.initialize();
