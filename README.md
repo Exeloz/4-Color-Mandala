@@ -88,7 +88,7 @@ python3 json_to_mandala_code.py ../resources/assets/$MID/mandala_1.json \
 
 # 3) Regions -> adjacency
 python3 generate_adjacency.py --json ../resources/assets/$MID/mandala_${MID}_regions.json \
-  --mandala-id $MID \
+  --mandala-id $MID --min-overlap 2 --min-shared-len 2 --eps-edge 40
   -o ../resources/assets/$MID/mandala_${MID}_adjacency.json
 
 # 4) (Optionnel) MiniZinc
