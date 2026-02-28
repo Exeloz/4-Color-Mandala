@@ -25,8 +25,12 @@ public:
                        FillPattern pattern = FillPattern()) const;
 
 private:
+    void buildTriangleCache();
+    void drawCachedSolidFill(Color fillColor) const;
+
     int id;
     std::vector<Vector2> vertices;
+    std::vector<Vector2> triangleVertices;
     int colorIndex;
     bool colored;
     Color defaultColor;
