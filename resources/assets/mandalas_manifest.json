@@ -7,8 +7,14 @@
   },
   {
     "id": 2,
-    "name": "Mandala 2",
+    "name": "Mandala 623",
     "regions": "2/mandala_2_regions.json",
     "adjacency": "2/mandala_2_adjacency.json"
+  },
+  {
+    "id": 4,
+    "name": "Mandala 1093",
+    "regions": "4/mandala_4_regions.json",
+    "adjacency": "4/mandala_4_adjacency.json"
   }
 ]

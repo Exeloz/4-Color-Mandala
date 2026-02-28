@@ -442,7 +442,9 @@ std::vector<int> ColoringInspector::collectSortedRegionIds(const std::vector<Reg
     std::vector<int> ids;
     ids.reserve(regions.size());
     for (const auto& region : regions) {
-        ids.push_back(region.getId());
+        if (region.isColorable()) {
+            ids.push_back(region.getId());
+        }
     }
 
     std::sort(ids.begin(), ids.end());
