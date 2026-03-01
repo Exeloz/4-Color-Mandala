@@ -28,6 +28,12 @@
     "min_colors": 4
   },
   {
+    "id": 3,
+    "name": "Mandala ?",
+    "regions": "3/mandala_3_regions.json",
+    "adjacency": "3/mandala_3_adjacency.json"
+  },
+  {
     "id": 4,
     "name": "Mandala 900",
     "available_from": 20260101,
