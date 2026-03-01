@@ -330,7 +330,7 @@ function convertPathToPolygonsWithFallback(pathData) {
 // Parse command line arguments
 const args = process.argv.slice(2);
 let inputFile = args[0] || "test.svg";
-let outputPrefix = args[1] || null;
+let outputFile = args[1] || null;
 
 // Resolve input file path
 const inputPath = path.resolve(inputFile);
@@ -373,7 +373,7 @@ function convertQuadraticToCubic(pathData) {
 	
 	const conversions = matches.map(match => {
 		const x1 = parseFloat(match[1]); 		const y1 = parseFloat(match[2]); 		const x = parseFloat(match[3]);  		const y = parseFloat(match[4]);  		
-														const cx1 = (2/3) * x1;
+		const cx1 = (2/3) * x1;
 		const cy1 = (2/3) * y1;
 		const cx2 = x + (1/3) * x1;
 		const cy2 = y + (1/3) * y1;
@@ -389,7 +389,7 @@ function convertQuadraticToCubic(pathData) {
 }
 
 function replaceQuadraticWithCubic(pathData) {
-		const quadraticPattern = /q([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)/gi;
+	const quadraticPattern = /q([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)/gi;
 	
 	const replacedPath = pathData.replace(quadraticPattern, (match, x1, y1, x, y) => {
 		const x1_num = parseFloat(x1);
@@ -397,7 +397,7 @@ function replaceQuadraticWithCubic(pathData) {
 		const x_num = parseFloat(x);
 		const y_num = parseFloat(y);
 		
-				const cx1 = (2/3) * x1_num;
+		const cx1 = (2/3) * x1_num;
 		const cy1 = (2/3) * y1_num;
 		const cx2 = x_num + (1/3) * x1_num;
 		const cy2 = y_num + (1/3) * y1_num;
@@ -408,22 +408,20 @@ function replaceQuadraticWithCubic(pathData) {
 	return replacedPath;
 }
 
-let index = 0 ;
+// Collect all polygons from all paths into a single array
+const allPolygons = [];
 
-pathsData.forEach(pathData => {
-    pathData = pathData["properties"]['d']
+pathsData.forEach((pathData, index) => {
+    pathData = pathData["properties"]['d'];
 
     const conversions = convertQuadraticToCubic(pathData);
-    console.log('Found', conversions.length, 'quadratic curves to convert');
-    if (conversions.length > 0) {
-        console.log('First conversion:', conversions[0]);
-    }
+    console.log(`Path ${index + 1}: Found ${conversions.length} quadratic curves to convert`);
 
     const newPathData = replaceQuadraticWithCubic(pathData);
-    console.log('Path conversion complete. Original length:', pathData.length, 'New length:', newPathData.length);
+    console.log(`Path ${index + 1}: Conversion complete. Original length: ${pathData.length}, New length: ${newPathData.length}`);
 
     let points = convertPathToPolygonsWithFallback(newPathData);
-    const jsonOutput = orderPolygonsForLayering(points
+    const polygons = points
         .map((poly) => {
             const normalizedPoints = cleanAndNormalizePolygon(poly, true);
             return {
@@ -432,17 +430,20 @@ pathsData.forEach(pathData => {
                 winding: 'CW',
             };
         })
-        .filter((poly) => poly.points.length >= 3));
+        .filter((poly) => poly.points.length >= 3);
 
-    index += 1;
-
-    // Generate output filename
-    const outFile = outputPrefix 
-        ? `${outputPrefix}${index}.json`
-        : `test${index}.json`;
-
-    fs.writeFileSync(outFile, JSON.stringify(jsonOutput, null, 2), 'utf8');
-    console.log(`Wrote: ${outFile}`);
+    console.log(`Path ${index + 1}: Generated ${polygons.length} polygon(s)`);
+    allPolygons.push(...polygons);
 });
 
-console.log(`\nConversion complete! Generated ${index} JSON file(s).`);
+// Apply layering order to the merged set of polygons
+const jsonOutput = orderPolygonsForLayering(allPolygons);
+
+// Generate output filename
+const outFile = outputFile
+    ? outputFile
+    : 'output.json';
+
+fs.writeFileSync(outFile, JSON.stringify(jsonOutput, null, 2), 'utf8');
+console.log(`\nConversion complete! Merged ${pathsData.length} path(s) into ${jsonOutput.length} polygon(s).`);
+console.log(`Wrote: ${outFile}`);

@@ -12,6 +12,12 @@
     "adjacency": "2/mandala_2_adjacency.json"
   },
   {
+    "id": 3,
+    "name": "Mandala ?",
+    "regions": "3/mandala_3_regions.json",
+    "adjacency": "3/mandala_3_adjacency.json"
+  },
+  {
     "id": 4,
     "name": "Mandala 900",
     "regions": "4/mandala_4_regions.json",

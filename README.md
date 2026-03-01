@@ -75,14 +75,14 @@ MID=1
 SVG=../resources/assets/$MID/$MID.svg
 
 # 1) SVG -> polygones
-node svg_to_polygons.js "$SVG" ../resources/assets/$MID/mandala_
+node svg_to_polygons.js "$SVG" ../resources/assets/$MID/mandala.json
 
 # 1b) (Optionnel) Preview SVG des polygones générés
-python3 polygons_to_svg.py ../resources/assets/$MID/mandala_1.json \
-  ../resources/assets/$MID/mandala_1_polygons.svg
+python3 polygons_to_svg.py ../resources/assets/$MID/mandala.json \
+  ../resources/assets/$MID/$MID_polygons.svg
 
 # 2) Polygones -> regions runtime
-python3 json_to_mandala_code.py ../resources/assets/$MID/mandala_1.json \
+python3 json_to_mandala_code.py ../resources/assets/$MID/mandala.json \
   --name "Mandala $MID" --id $MID \
   -o ../resources/assets/$MID/mandala_${MID}_regions.json
 
