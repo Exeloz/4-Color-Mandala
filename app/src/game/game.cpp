@@ -81,7 +81,6 @@ void Game::update(float deltaTime) {
 
             if (coloringScreen->isGameWon() && !suppressWinTransition) {
                 saveSelectedMandalaProgress();
-                coloringScreen->saveWinImage();
                 winScreen = std::make_shared<WinScreen>();
                 transitionToState(GameScreenState::WIN);
             }

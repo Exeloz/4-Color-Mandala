@@ -20,7 +20,6 @@ public:
     bool isGameWon() const;
     bool shouldReturnToSelection() const;
     bool consumeSaveRequested();
-    void saveWinImage();
 
 private:
     std::shared_ptr<Mandala> mandala;
@@ -32,7 +31,6 @@ private:
     Button analysisButton;
     Button analysisCloseButton;
     Button analysisClearButton;
-    bool winImageSaved;
     bool gameWon;
     bool returnRequested;
     ColoringInspector inspector;

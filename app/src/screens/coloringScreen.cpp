@@ -5,8 +5,6 @@
 #include "raymath.h"
 #include <algorithm>
 #include <utility>
-#include <sstream>
-#include <ctime>
 #include <cfloat>
 
 namespace {
@@ -56,10 +54,13 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
             analysisButton(0, 0, 1, 1, "ANALYSIS"),
             analysisCloseButton(0, 0, 1, 1, "EXIT ANALYSIS"),
             analysisClearButton(0, 0, 1, 1, "CLEAR"),
-            winImageSaved(false), gameWon(false), returnRequested(false),
-            pendingColorChangesForSave(0), saveRequested(false),
+            gameWon(false), returnRequested(false),
+            inspector(),
             cameraInputManager(MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, TOUCH_PAN_START_THRESHOLD, TOUCH_PINCH_SENSITIVITY),
-            camera{}, zoom(1.0f) {
+            actionManager(),
+            interactionManager(),
+            camera{}, zoom(1.0f),
+            pendingColorChangesForSave(0), saveRequested(false) {
 
         camera.target = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
@@ -204,69 +205,6 @@ bool ColoringScreen::consumeSaveRequested() {
     saveRequested = false;
     pendingColorChangesForSave = 0;
     return true;
-}
-
-void ColoringScreen::saveWinImage() {
-    if (winImageSaved) {
-        return;
-    }
-
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
-
-    RenderTexture2D renderTexture = LoadRenderTexture(screenWidth, screenHeight);
-
-    BeginTextureMode(renderTexture);
-    ClearBackground(Colors::White);
-    BeginMode2D(camera);
-    mandala->draw(colorPalette.getColors());
-    EndMode2D();
-    EndTextureMode();
-
-    Image image = LoadImageFromTexture(renderTexture.texture);
-    ImageFlipVertical(&image);
-
-    std::time_t now = std::time(nullptr);
-    std::tm* localTime = std::localtime(&now);
-    char timestamp[32] = {0};
-    std::strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", localTime);
-
-    std::string fileName = "mandala_win_" + std::string(timestamp) + ".png";
-
-#if defined(PLATFORM_ANDROID)
-    const std::string downloadPath1 = "/storage/emulated/0/Download/" + fileName;
-    const std::string downloadPath2 = "/sdcard/Download/" + fileName;
-
-    bool exportOk = ExportImage(image, downloadPath1.c_str());
-    std::string exportedPath = downloadPath1;
-
-    if (!exportOk) {
-        exportOk = ExportImage(image, downloadPath2.c_str());
-        exportedPath = downloadPath2;
-    }
-
-    if (!exportOk) {
-        exportOk = ExportImage(image, fileName.c_str());
-        exportedPath = fileName;
-    }
-
-    if (exportOk) {
-        TraceLog(LOG_INFO, "[WIN] Mandala image exported: %s", exportedPath.c_str());
-    } else {
-        TraceLog(LOG_WARNING, "[WIN] Failed to export mandala image.");
-    }
-#else
-    bool exportOk = ExportImage(image, fileName.c_str());
-    if (exportOk) {
-        TraceLog(LOG_INFO, "[WIN] Mandala image exported: %s", fileName.c_str());
-    } else {
-        TraceLog(LOG_WARNING, "[WIN] Failed to export mandala image.");
-    }
-#endif
-
-    UnloadImage(image);
-    UnloadRenderTexture(renderTexture);
-    winImageSaved = true;
 }
 
 void ColoringScreen::updateAnalysisInteractions() {
