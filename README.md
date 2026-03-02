@@ -79,7 +79,7 @@ node svg_to_polygons.js "$SVG" ../resources/assets/$MID/mandala.json
 
 # 1b) (Optionnel) Preview SVG des polygones générés
 python3 polygons_to_svg.py ../resources/assets/$MID/mandala.json \
-  ../resources/assets/$MID/$MID_polygons.svg
+  ../resources/assets/$MID/"$MID"_polygons.svg
 
 # 2) Polygones -> regions runtime
 python3 json_to_mandala_code.py ../resources/assets/$MID/mandala.json \
