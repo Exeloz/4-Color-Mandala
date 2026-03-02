@@ -8,7 +8,7 @@ TEST_CASE(color_palette_defaults_are_stable) {
     EXPECT_EQ(palette.getColorCount(), 5);
     EXPECT_EQ(palette.getSelectedColorIndex(), 0);
     EXPECT_TRUE(colorsEqual(palette.getColor(0), Colors::None));
-    EXPECT_TRUE(colorsEqual(palette.getColor(1), Colors::Red));
+    EXPECT_TRUE(colorsEqual(palette.getColor(1), Colors::DarkBlue));
 }
 
 TEST_CASE(color_palette_validates_indexes) {

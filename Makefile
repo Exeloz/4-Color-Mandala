@@ -418,6 +418,7 @@ TEST_APP_SRC = \
     app/src/mandala/mandala.cpp \
     app/src/mandala/regionFillStyle.cpp \
     app/src/rendering/fillPatternRenderer.cpp \
+    app/src/game/progressPersistence.cpp \
     app/src/ui/button.cpp \
     app/src/ui/colorPalette.cpp \
     app/src/ui/colorCatalog.cpp \

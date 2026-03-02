@@ -74,6 +74,7 @@ TEST_CASE(database_adjacency_is_symmetric_and_in_bounds) {
 
 TEST_CASE(database_real_mandala_contains_edges) {
     MandalaDatabase database;
+    database.loadMandala(1);
     auto real = database.getMandalaById(1);
     EXPECT_NOT_NULL(real);
 
