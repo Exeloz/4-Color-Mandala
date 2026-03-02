@@ -14,9 +14,11 @@ float getUiScale() {
 }
 }
 
-SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database)
+SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database,
+                                 const std::unordered_set<int>& completedMandalaIds)
         : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), transitionRequested(false),
-            paletteRequested(false), paletteButton(620, 20, 160, 50, "PALETTE") {
+            paletteRequested(false), paletteButton(620, 20, 160, 50, "PALETTE"),
+            completedMandalaIds(completedMandalaIds) {
     
     const auto& mandalaList = database->getAllMandala();
     for (size_t i = 0; i < mandalaList.size(); i++) {
@@ -60,11 +62,30 @@ void SelectionScreen::draw() {
 
     paletteButton.draw();
 
-    for (size_t i = 0; i < mandalaButtons.size(); i++) {
+    const auto& mandalaList = database->getAllMandala();
+    for (size_t i = 0; i < mandalaButtons.size() && i < mandalaList.size(); i++) {
         mandalaButtons[i].draw();
 
         if (static_cast<int>(i) == selectedMandalaButtonIndex) {
             DrawRectangleLinesEx(mandalaButtons[i].getBounds(), 5.0f, Colors::DarkBlue);
+        }
+
+        if (completedMandalaIds.count(mandalaList[i]->getId()) > 0) {
+            Rectangle bounds = mandalaButtons[i].getBounds();
+            float badgeWidth = 72.0f * uiScale;
+            float badgeHeight = 24.0f * uiScale;
+            float badgeX = bounds.x + bounds.width - badgeWidth - (10.0f * uiScale);
+            float badgeY = bounds.y + (8.0f * uiScale);
+
+            DrawRectangleRec({badgeX, badgeY, badgeWidth, badgeHeight}, Colors::Gold);
+            DrawRectangleLinesEx({badgeX, badgeY, badgeWidth, badgeHeight}, 2.0f, Colors::Black);
+
+            int doneTextSize = std::max(12, static_cast<int>(12.0f * uiScale));
+            const char* doneLabel = "DONE";
+            int doneTextWidth = MeasureText(doneLabel, doneTextSize);
+            int doneTextX = static_cast<int>(badgeX + (badgeWidth - doneTextWidth) * 0.5f);
+            int doneTextY = static_cast<int>(badgeY + (badgeHeight - doneTextSize) * 0.5f);
+            DrawText(doneLabel, doneTextX, doneTextY, doneTextSize, Colors::Black);
         }
     }
 }

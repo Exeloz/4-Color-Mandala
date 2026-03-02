@@ -66,7 +66,7 @@ PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
     : paletteColors(), availableColors(), activeSlotIndex(1),
       backButton(20, 20, 100, 50, "BACK"), continueButton(640, 20, 140, 50, "COLOR"),
       prevPageButton(560, 200, 100, 40, "PREV"), nextPageButton(680, 200, 100, 40, "NEXT"),
-    transitionRequested(false), returnRequested(false), tilePage(0) {
+        transitionRequested(false), returnRequested(false), paletteChanged(false), tilePage(0) {
 
     ColorPalette defaultPalette;
     paletteColors = initialPaletteColors.empty() ? defaultPalette.getColors() : initialPaletteColors;
@@ -124,7 +124,15 @@ void PaletteScreen::update(float deltaTime) {
     for (int colorIndex = getTileStartIndex(); colorIndex < getTileEndIndex(); colorIndex++) {
         if (CheckCollisionPointRec(pointer, getAvailableColorBounds(colorIndex))) {
             if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
-                paletteColors[activeSlotIndex] = availableColors[colorIndex];
+                const Color selectedColor = availableColors[colorIndex];
+                Color& slotColor = paletteColors[activeSlotIndex];
+                if (slotColor.r != selectedColor.r
+                    || slotColor.g != selectedColor.g
+                    || slotColor.b != selectedColor.b
+                    || slotColor.a != selectedColor.a) {
+                    slotColor = selectedColor;
+                    paletteChanged = true;
+                }
             }
             return;
         }
@@ -231,6 +239,15 @@ bool PaletteScreen::shouldTransitionToColoring() const {
 
 bool PaletteScreen::shouldReturnToSelection() const {
     return returnRequested;
+}
+
+bool PaletteScreen::consumePaletteChanged() {
+    if (!paletteChanged) {
+        return false;
+    }
+
+    paletteChanged = false;
+    return true;
 }
 
 const std::vector<Color>& PaletteScreen::getCustomizedColors() const {

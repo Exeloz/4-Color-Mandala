@@ -3,11 +3,13 @@
 #include "../database/mandalaDatabase.h"
 #include "../ui/button.h"
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 class SelectionScreen : public GameState {
 public:
-    SelectionScreen(std::shared_ptr<MandalaDatabase> database);
+    SelectionScreen(std::shared_ptr<MandalaDatabase> database,
+                    const std::unordered_set<int>& completedMandalaIds = {});
 
     void update(float deltaTime) override;
     void draw() override;
@@ -24,6 +26,7 @@ private:
     bool transitionRequested;
     bool paletteRequested;
     Button paletteButton;
+    std::unordered_set<int> completedMandalaIds;
 
     void layoutControls();
 };

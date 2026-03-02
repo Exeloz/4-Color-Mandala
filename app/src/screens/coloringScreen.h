@@ -19,6 +19,7 @@ public:
     void draw() override;
     bool isGameWon() const;
     bool shouldReturnToSelection() const;
+    bool consumeSaveRequested();
     void saveWinImage();
 
 private:
@@ -43,6 +44,8 @@ private:
     FillPattern selectedPattern = FillPattern();
     int selectedAccentColorIndex = 0;
     float selectedPatternSize = 1.0f;
+    int pendingColorChangesForSave;
+    bool saveRequested;
 
     void drawColorPalette();
     void updatePatternControls();

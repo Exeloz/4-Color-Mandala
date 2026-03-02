@@ -13,6 +13,7 @@ public:
 
     bool shouldTransitionToColoring() const;
     bool shouldReturnToSelection() const;
+    bool consumePaletteChanged();
     const std::vector<Color>& getCustomizedColors() const;
 
 private:
@@ -27,6 +28,7 @@ private:
 
     bool transitionRequested;
     bool returnRequested;
+    bool paletteChanged;
     int tilePage;
 
     void layoutControls();

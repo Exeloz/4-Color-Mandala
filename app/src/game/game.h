@@ -7,6 +7,7 @@
 #include "../screens/coloringScreen.h"
 #include "../screens/winScreen.h"
 #include "../ui/colorPalette.h"
+#include "progressPersistence.h"
 #include <memory>
 
 enum class GameScreenState {
@@ -41,8 +42,12 @@ private:
     std::shared_ptr<Mandala> selectedMandala;
     std::vector<Color> appPaletteColors;
     bool suppressWinTransition;
+    ProgressPersistence progressPersistence;
 
     void transitionToState(GameScreenState newState);
     void updateCurrentState(float deltaTime);
     void drawCurrentState();
+    std::shared_ptr<SelectionScreen> createSelectionScreen() const;
+    void savePaletteProgress();
+    void saveSelectedMandalaProgress();
 };

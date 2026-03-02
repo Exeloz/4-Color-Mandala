@@ -57,6 +57,7 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
             analysisCloseButton(0, 0, 1, 1, "EXIT ANALYSIS"),
             analysisClearButton(0, 0, 1, 1, "CLEAR"),
             winImageSaved(false), gameWon(false), returnRequested(false),
+            pendingColorChangesForSave(0), saveRequested(false),
             cameraInputManager(MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, TOUCH_PAN_START_THRESHOLD, TOUCH_PINCH_SENSITIVITY),
             camera{}, zoom(1.0f) {
 
@@ -87,6 +88,7 @@ void ColoringScreen::update(float deltaTime) {
 
     if (interactionManager.updateBackNavigation(backButton)) {
         returnRequested = true;
+        saveRequested = true;
         return;
     }
 
@@ -111,8 +113,12 @@ void ColoringScreen::update(float deltaTime) {
         cameraInputManager.isDraggingCamera(),
         inspector.isAnalysisMode());
 
-    if (regionId >= 0) {
-        actionManager.applyColorChange(*mandala, regionId, colorPalette.getSelectedColorIndex());
+    if (regionId >= 0 && actionManager.applyColorChange(*mandala, regionId, colorPalette.getSelectedColorIndex())) {
+        pendingColorChangesForSave++;
+        if (pendingColorChangesForSave >= 5) {
+            saveRequested = true;
+            pendingColorChangesForSave = 0;
+        }
     }
 
     if (mandala->isValidColoring()) {
@@ -188,6 +194,16 @@ bool ColoringScreen::isGameWon() const {
 
 bool ColoringScreen::shouldReturnToSelection() const {
     return returnRequested;
+}
+
+bool ColoringScreen::consumeSaveRequested() {
+    if (!saveRequested) {
+        return false;
+    }
+
+    saveRequested = false;
+    pendingColorChangesForSave = 0;
+    return true;
 }
 
 void ColoringScreen::saveWinImage() {

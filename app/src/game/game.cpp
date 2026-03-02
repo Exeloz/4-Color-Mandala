@@ -7,13 +7,26 @@ Game::Game()
             appPaletteColors(ColorPalette().getColors()),
             suppressWinTransition(false) {}
 
-Game::~Game() = default;
+Game::~Game() {
+    savePaletteProgress();
+    if (database) {
+        progressPersistence.captureAllMandalas(database->getAllMandala());
+        progressPersistence.save();
+    }
+}
 
 void Game::initialize() {
     database = std::make_shared<MandalaDatabase>();
     startScreen = std::make_shared<StartScreen>();
-    selectionScreen = std::make_shared<SelectionScreen>(database);
     appPaletteColors = ColorPalette().getColors();
+
+    progressPersistence.load();
+    if (progressPersistence.hasPalette()) {
+        appPaletteColors = progressPersistence.getPalette();
+    }
+    progressPersistence.applyToMandalas(database->getAllMandala());
+
+    selectionScreen = createSelectionScreen();
 }
 
 void Game::update(float deltaTime) {
@@ -22,7 +35,7 @@ void Game::update(float deltaTime) {
     switch (currentState) {
         case GameScreenState::START:
             if (startScreen->shouldTransitionToSelection()) {
-                selectionScreen = std::make_shared<SelectionScreen>(database);
+                selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             }
             break;
@@ -44,25 +57,36 @@ void Game::update(float deltaTime) {
             break;
 
         case GameScreenState::PALETTE:
+            if (paletteScreen->consumePaletteChanged()) {
+                appPaletteColors = paletteScreen->getCustomizedColors();
+                savePaletteProgress();
+            }
+
             if (paletteScreen->shouldTransitionToColoring()) {
                 appPaletteColors = paletteScreen->getCustomizedColors();
-                selectionScreen = std::make_shared<SelectionScreen>(database);
+                savePaletteProgress();
+                selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             }
             if (paletteScreen->shouldReturnToSelection()) {
-                selectionScreen = std::make_shared<SelectionScreen>(database);
+                selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             }
             break;
 
         case GameScreenState::COLORING:
+            if (coloringScreen->consumeSaveRequested()) {
+                saveSelectedMandalaProgress();
+            }
+
             if (coloringScreen->isGameWon() && !suppressWinTransition) {
+                saveSelectedMandalaProgress();
                 coloringScreen->saveWinImage();
                 winScreen = std::make_shared<WinScreen>();
                 transitionToState(GameScreenState::WIN);
             }
             if (coloringScreen->shouldReturnToSelection()) {
-                selectionScreen = std::make_shared<SelectionScreen>(database);
+                selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             }
             break;
@@ -74,7 +98,8 @@ void Game::update(float deltaTime) {
             }
             if (winScreen->shouldReturnToSelection()) {
                 suppressWinTransition = false;
-                selectionScreen = std::make_shared<SelectionScreen>(database);
+                saveSelectedMandalaProgress();
+                selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             }
             break;
@@ -131,4 +156,22 @@ void Game::drawCurrentState() {
             if (winScreen) winScreen->draw();
             break;
     }
+}
+
+std::shared_ptr<SelectionScreen> Game::createSelectionScreen() const {
+    return std::make_shared<SelectionScreen>(database, progressPersistence.getCompletedMandalaIds());
+}
+
+void Game::savePaletteProgress() {
+    progressPersistence.setPalette(appPaletteColors);
+    progressPersistence.save();
+}
+
+void Game::saveSelectedMandalaProgress() {
+    if (selectedMandala == nullptr) {
+        return;
+    }
+
+    progressPersistence.captureMandalaState(*selectedMandala);
+    progressPersistence.save();
 }
