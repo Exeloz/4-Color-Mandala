@@ -20,9 +20,9 @@ SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database,
             paletteRequested(false), paletteButton(620, 20, 160, 50, "PALETTE"),
             completedMandalaIds(completedMandalaIds) {
     
-    const auto& mandalaList = database->getAllMandala();
-    for (size_t i = 0; i < mandalaList.size(); i++) {
-        mandalaButtons.emplace_back(0.0f, 0.0f, 300.0f, 150.0f, mandalaList[i]->getName());
+    const auto& mandalaItems = database->getMandalaListItems();
+    for (size_t i = 0; i < mandalaItems.size(); i++) {
+        mandalaButtons.emplace_back(0.0f, 0.0f, 300.0f, 150.0f, mandalaItems[i].name);
         mandalaButtons.back().setTextScale(1.45f);
     }
 }
@@ -37,13 +37,17 @@ void SelectionScreen::update(float deltaTime) {
         return;
     }
 
-    const auto& mandalaList = database->getAllMandala();
-    for (size_t i = 0; i < mandalaButtons.size() && i < mandalaList.size(); i++) {
+    const auto& mandalaItems = database->getMandalaListItems();
+    for (size_t i = 0; i < mandalaButtons.size() && i < mandalaItems.size(); i++) {
         mandalaButtons[i].update();
         if (mandalaButtons[i].isClicked()) {
-            selectedMandala = mandalaList[i];
-            selectedMandalaButtonIndex = static_cast<int>(i);
-            transitionRequested = true;
+            const int selectedId = mandalaItems[i].id;
+            database->loadMandala(selectedId);
+            selectedMandala = database->getMandalaById(selectedId);
+            if (selectedMandala != nullptr) {
+                selectedMandalaButtonIndex = static_cast<int>(i);
+                transitionRequested = true;
+            }
             return;
         }
     }
@@ -62,15 +66,15 @@ void SelectionScreen::draw() {
 
     paletteButton.draw();
 
-    const auto& mandalaList = database->getAllMandala();
-    for (size_t i = 0; i < mandalaButtons.size() && i < mandalaList.size(); i++) {
+    const auto& mandalaItems = database->getMandalaListItems();
+    for (size_t i = 0; i < mandalaButtons.size() && i < mandalaItems.size(); i++) {
         mandalaButtons[i].draw();
 
         if (static_cast<int>(i) == selectedMandalaButtonIndex) {
             DrawRectangleLinesEx(mandalaButtons[i].getBounds(), 5.0f, Colors::DarkBlue);
         }
 
-        if (completedMandalaIds.count(mandalaList[i]->getId()) > 0) {
+        if (completedMandalaIds.count(mandalaItems[i].id) > 0) {
             Rectangle bounds = mandalaButtons[i].getBounds();
             float badgeWidth = 72.0f * uiScale;
             float badgeHeight = 24.0f * uiScale;

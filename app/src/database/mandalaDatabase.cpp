@@ -584,6 +584,7 @@ void MandalaDatabase::createHexagonMandala() {
 
     auto mandala = std::make_shared<Mandala>(0, "Tutorial", regions, adjacencyGraph);
     mandalaList.push_back(mandala);
+    mandalaListItems.push_back({0, "Tutorial"});
 }
 
 bool MandalaDatabase::loadManifest() {
@@ -629,13 +630,14 @@ bool MandalaDatabase::loadManifest() {
         }
 
         mandalaDescriptors.push_back(descriptor);
-    }
-
-    for (const MandalaAssetDescriptor& descriptor : mandalaDescriptors) {
-        loadMandala(descriptor.id);
+        mandalaListItems.push_back({descriptor.id, descriptor.name});
     }
 
     return true;
+}
+
+const std::vector<MandalaDatabase::MandalaListItem>& MandalaDatabase::getMandalaListItems() const {
+    return mandalaListItems;
 }
 
 bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descriptor) {

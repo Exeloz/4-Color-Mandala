@@ -43,6 +43,9 @@ void Game::update(float deltaTime) {
         case GameScreenState::SELECTION:
             if (selectionScreen->shouldTransitionToColoring()) {
                 selectedMandala = selectionScreen->getSelectedMandala();
+                if (selectedMandala != nullptr) {
+                    progressPersistence.applyToMandalas({selectedMandala});
+                }
                 coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, appPaletteColors);
                 suppressWinTransition = false;
                 transitionToState(GameScreenState::COLORING);
