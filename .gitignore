@@ -5,6 +5,7 @@ obj/
 /test.png
 **/__pycache__/**
 *.o
+**/*.dat
 
 # Gradle files
 .gradle/
