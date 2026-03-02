@@ -22,5 +22,11 @@
     "name": "Mandala 900",
     "regions": "4/mandala_4_regions.json",
     "adjacency": "4/mandala_4_adjacency.json"
+  },
+  {
+    "id": 6,
+    "name": "Mandala ??",
+    "regions": "6/mandala_6_regions.json",
+    "adjacency": "6/mandala_6_adjacency.json"
   }
 ]

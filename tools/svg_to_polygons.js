@@ -191,6 +191,103 @@ function cubicPoint(p0, p1, p2, p3, t) {
     return [x, y];
 }
 
+function quadraticPoint(p0, p1, p2, t) {
+    const oneMinusT = 1 - t;
+    const x = oneMinusT ** 2 * p0[0]
+        + 2 * oneMinusT * t * p1[0]
+        + t ** 2 * p2[0];
+    const y = oneMinusT ** 2 * p0[1]
+        + 2 * oneMinusT * t * p1[1]
+        + t ** 2 * p2[1];
+    return [x, y];
+}
+
+function vectorAngle(ux, uy, vx, vy) {
+    const dot = ux * vx + uy * vy;
+    const len = Math.sqrt((ux ** 2 + uy ** 2) * (vx ** 2 + vy ** 2));
+    if (len === 0) {
+        return 0;
+    }
+
+    const clamped = Math.max(-1, Math.min(1, dot / len));
+    const sign = (ux * vy - uy * vx) >= 0 ? 1 : -1;
+    return sign * Math.acos(clamped);
+}
+
+function sampleArcPoints(x1, y1, rxInput, ryInput, axisRotationDegrees, largeArcFlag, sweepFlag, x2, y2, samplesPerTurn = 96) {
+    const rxAbs = Math.abs(rxInput);
+    const ryAbs = Math.abs(ryInput);
+
+    if (rxAbs <= 1e-12 || ryAbs <= 1e-12) {
+        return [[x2, y2]];
+    }
+
+    if (Math.abs(x1 - x2) <= 1e-12 && Math.abs(y1 - y2) <= 1e-12) {
+        return [];
+    }
+
+    const phi = axisRotationDegrees * (Math.PI / 180);
+    const cosPhi = Math.cos(phi);
+    const sinPhi = Math.sin(phi);
+
+    const dx2 = (x1 - x2) / 2;
+    const dy2 = (y1 - y2) / 2;
+
+    const x1Prime = cosPhi * dx2 + sinPhi * dy2;
+    const y1Prime = -sinPhi * dx2 + cosPhi * dy2;
+
+    let rx = rxAbs;
+    let ry = ryAbs;
+    const lambda = (x1Prime ** 2) / (rx ** 2) + (y1Prime ** 2) / (ry ** 2);
+    if (lambda > 1) {
+        const scale = Math.sqrt(lambda);
+        rx *= scale;
+        ry *= scale;
+    }
+
+    const sign = (largeArcFlag === sweepFlag) ? -1 : 1;
+    const numerator = (rx ** 2) * (ry ** 2) - (rx ** 2) * (y1Prime ** 2) - (ry ** 2) * (x1Prime ** 2);
+    const denominator = (rx ** 2) * (y1Prime ** 2) + (ry ** 2) * (x1Prime ** 2);
+    const ratio = denominator === 0 ? 0 : Math.max(0, numerator / denominator);
+    const coefficient = sign * Math.sqrt(ratio);
+
+    const cxPrime = coefficient * ((rx * y1Prime) / ry);
+    const cyPrime = coefficient * (-(ry * x1Prime) / rx);
+
+    const cx = cosPhi * cxPrime - sinPhi * cyPrime + (x1 + x2) / 2;
+    const cy = sinPhi * cxPrime + cosPhi * cyPrime + (y1 + y2) / 2;
+
+    const ux = (x1Prime - cxPrime) / rx;
+    const uy = (y1Prime - cyPrime) / ry;
+    const vx = (-x1Prime - cxPrime) / rx;
+    const vy = (-y1Prime - cyPrime) / ry;
+
+    const theta1 = vectorAngle(1, 0, ux, uy);
+    let deltaTheta = vectorAngle(ux, uy, vx, vy);
+
+    const shouldSweep = !!sweepFlag;
+    if (!shouldSweep && deltaTheta > 0) {
+        deltaTheta -= 2 * Math.PI;
+    } else if (shouldSweep && deltaTheta < 0) {
+        deltaTheta += 2 * Math.PI;
+    }
+
+    const segments = Math.max(1, Math.ceil((Math.abs(deltaTheta) / (2 * Math.PI)) * samplesPerTurn));
+    const points = [];
+
+    for (let i = 1; i <= segments; i += 1) {
+        const t = theta1 + (deltaTheta * i) / segments;
+        const cosT = Math.cos(t);
+        const sinT = Math.sin(t);
+
+        const x = cx + rx * cosPhi * cosT - ry * sinPhi * sinT;
+        const y = cy + rx * sinPhi * cosT + ry * cosPhi * sinT;
+        points.push([x, y]);
+    }
+
+    return points;
+}
+
 function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
     const commands = makeAbsolute(parseSVG(pathData));
     const polygons = [];
@@ -202,8 +299,10 @@ function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
     let startX = 0;
     let startY = 0;
     let previousCommand = '';
-    let previousControlX = 0;
-    let previousControlY = 0;
+    let previousCubicControlX = 0;
+    let previousCubicControlY = 0;
+    let previousQuadraticControlX = 0;
+    let previousQuadraticControlY = 0;
 
     const roundPoint = (pt) => [
         Number(pt[0].toFixed(decimals)),
@@ -231,6 +330,10 @@ function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
             startY = currentY;
             current.push(roundPoint([currentX, currentY]));
             previousCommand = 'M';
+            previousCubicControlX = currentX;
+            previousCubicControlY = currentY;
+            previousQuadraticControlX = currentX;
+            previousQuadraticControlY = currentY;
             continue;
         }
 
@@ -239,6 +342,10 @@ function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
             currentY = command.y;
             current.push(roundPoint([currentX, currentY]));
             previousCommand = 'L';
+            previousCubicControlX = currentX;
+            previousCubicControlY = currentY;
+            previousQuadraticControlX = currentX;
+            previousQuadraticControlY = currentY;
             continue;
         }
 
@@ -255,18 +362,20 @@ function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
 
             currentX = command.x;
             currentY = command.y;
-            previousControlX = command.x2;
-            previousControlY = command.y2;
+            previousCubicControlX = command.x2;
+            previousCubicControlY = command.y2;
+            previousQuadraticControlX = currentX;
+            previousQuadraticControlY = currentY;
             previousCommand = 'C';
             continue;
         }
 
         if (code === 'S') {
             const reflectedControlX = (previousCommand === 'C' || previousCommand === 'S')
-                ? (2 * currentX - previousControlX)
+                ? (2 * currentX - previousCubicControlX)
                 : currentX;
             const reflectedControlY = (previousCommand === 'C' || previousCommand === 'S')
-                ? (2 * currentY - previousControlY)
+                ? (2 * currentY - previousCubicControlY)
                 : currentY;
 
             const p0 = [currentX, currentY];
@@ -281,9 +390,86 @@ function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
 
             currentX = command.x;
             currentY = command.y;
-            previousControlX = command.x2;
-            previousControlY = command.y2;
+            previousCubicControlX = command.x2;
+            previousCubicControlY = command.y2;
+            previousQuadraticControlX = currentX;
+            previousQuadraticControlY = currentY;
             previousCommand = 'S';
+            continue;
+        }
+
+        if (code === 'Q') {
+            const p0 = [currentX, currentY];
+            const p1 = [command.x1, command.y1];
+            const p2 = [command.x, command.y];
+
+            for (let sampleIndex = 1; sampleIndex <= curveSamples; sampleIndex += 1) {
+                const t = sampleIndex / curveSamples;
+                current.push(roundPoint(quadraticPoint(p0, p1, p2, t)));
+            }
+
+            currentX = command.x;
+            currentY = command.y;
+            previousQuadraticControlX = command.x1;
+            previousQuadraticControlY = command.y1;
+            previousCubicControlX = currentX;
+            previousCubicControlY = currentY;
+            previousCommand = 'Q';
+            continue;
+        }
+
+        if (code === 'T') {
+            const reflectedControlX = (previousCommand === 'Q' || previousCommand === 'T')
+                ? (2 * currentX - previousQuadraticControlX)
+                : currentX;
+            const reflectedControlY = (previousCommand === 'Q' || previousCommand === 'T')
+                ? (2 * currentY - previousQuadraticControlY)
+                : currentY;
+
+            const p0 = [currentX, currentY];
+            const p1 = [reflectedControlX, reflectedControlY];
+            const p2 = [command.x, command.y];
+
+            for (let sampleIndex = 1; sampleIndex <= curveSamples; sampleIndex += 1) {
+                const t = sampleIndex / curveSamples;
+                current.push(roundPoint(quadraticPoint(p0, p1, p2, t)));
+            }
+
+            currentX = command.x;
+            currentY = command.y;
+            previousQuadraticControlX = reflectedControlX;
+            previousQuadraticControlY = reflectedControlY;
+            previousCubicControlX = currentX;
+            previousCubicControlY = currentY;
+            previousCommand = 'T';
+            continue;
+        }
+
+        if (code === 'A') {
+            const arcPoints = sampleArcPoints(
+                currentX,
+                currentY,
+                command.rx,
+                command.ry,
+                command.xAxisRotation || 0,
+                command.largeArc || 0,
+                command.sweep || 0,
+                command.x,
+                command.y,
+                120,
+            );
+
+            for (const point of arcPoints) {
+                current.push(roundPoint(point));
+            }
+
+            currentX = command.x;
+            currentY = command.y;
+            previousCubicControlX = currentX;
+            previousCubicControlY = currentY;
+            previousQuadraticControlX = currentX;
+            previousQuadraticControlY = currentY;
+            previousCommand = 'A';
             continue;
         }
 
@@ -293,6 +479,10 @@ function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
                 current.push(roundPoint([startX, startY]));
             }
             previousCommand = 'Z';
+            previousCubicControlX = currentX;
+            previousCubicControlY = currentY;
+            previousQuadraticControlX = currentX;
+            previousQuadraticControlY = currentY;
             continue;
         }
     }
@@ -302,6 +492,18 @@ function manualPathToPolygons(pathData, decimals = 3, curveSamples = 20) {
 }
 
 function convertPathToPolygonsWithFallback(pathData) {
+    let hasArcCommands = false;
+    try {
+        hasArcCommands = parseSVG(pathData).some((command) => String(command.code || '').toUpperCase() === 'A');
+    } catch (error) {
+        hasArcCommands = /(^|[\s,])(?:[Aa])(?=[\s,\-+\d\.])/.test(pathData);
+    }
+
+    if (hasArcCommands) {
+        console.warn('Path contains arc commands (A/a); using manual converter.');
+        return manualPathToPolygons(pathData);
+    }
+
     const tolerances = [1, 2, 4, 8, 12, 16];
     let lastError = null;
 
@@ -316,6 +518,15 @@ function convertPathToPolygonsWithFallback(pathData) {
             lastError = error;
             const message = String(error && error.message ? error.message : error);
             const isStackOverflow = message.includes('Maximum call stack size exceeded');
+            const hasUnsupportedArc = message.toLowerCase().includes('elliptical arc commands')
+                || message.includes('commands (A) are not yet supported')
+                || message.includes('commands (a) are not yet supported');
+
+            if (hasUnsupportedArc) {
+                console.warn('Conversion library does not support arc commands; using manual converter.');
+                break;
+            }
+
             if (!isStackOverflow) {
                 throw error;
             }
@@ -325,6 +536,34 @@ function convertPathToPolygonsWithFallback(pathData) {
 
     console.warn('Falling back to manual non-recursive path sampling...');
     return manualPathToPolygons(pathData);
+}
+
+function ellipseElementToPolygon(element, samples = 120) {
+    const properties = (element && element.properties) || {};
+
+    const cx = Number(properties.cx || 0);
+    const cy = Number(properties.cy || 0);
+    const rxRaw = properties.rx !== undefined ? properties.rx : properties.r;
+    const ryRaw = properties.ry !== undefined ? properties.ry : properties.r;
+    const rx = Number(rxRaw);
+    const ry = Number(ryRaw);
+
+    if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(rx) || !Number.isFinite(ry)) {
+        return [];
+    }
+
+    if (rx <= 0 || ry <= 0) {
+        return [];
+    }
+
+    const points = [];
+    for (let i = 0; i < samples; i += 1) {
+        const angle = (2 * Math.PI * i) / samples;
+        points.push([cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)]);
+    }
+
+    points.closed = true;
+    return [points];
 }
 
 // Parse command line arguments
@@ -345,12 +584,16 @@ let svg = fs.readFileSync(inputPath, 'utf8')
 
 const parsed_svg = parse(svg);
 
-function findPathFromSVGString(svg_string) {
-    const paths = [];
+function findConvertibleElementsFromSVGString(svg_string) {
+    const elements = [];
 
     function traverse(node) {
-        if (node && node.type === "element" && node.tagName === "path") {
-            paths.push(node);
+        if (node && node.type === "element") {
+            if (node.tagName === "path" && node.properties && typeof node.properties.d === 'string') {
+                elements.push({ type: 'path', node });
+            } else if (node.tagName === "ellipse" || node.tagName === "circle") {
+                elements.push({ type: 'ellipse', node });
+            }
         }
 
         if (node && node.children && Array.isArray(node.children)) {
@@ -361,66 +604,26 @@ function findPathFromSVGString(svg_string) {
     }
 
     traverse(svg_string);
-    return paths;
+    return elements;
 }
 
-let pathsData = findPathFromSVGString(parsed_svg);
-
-function convertQuadraticToCubic(pathData) {
-    const quadraticPattern = /q([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)/gi;
-	
-    const matches = [...pathData.matchAll(quadraticPattern)];
-	
-	const conversions = matches.map(match => {
-		const x1 = parseFloat(match[1]); 		const y1 = parseFloat(match[2]); 		const x = parseFloat(match[3]);  		const y = parseFloat(match[4]);  		
-		const cx1 = (2/3) * x1;
-		const cy1 = (2/3) * y1;
-		const cx2 = x + (1/3) * x1;
-		const cy2 = y + (1/3) * y1;
-		
-		return {
-			original: match[0],
-			cubic: `c${cx1.toFixed(2)},${cy1.toFixed(2)} ${cx2.toFixed(2)},${cy2.toFixed(2)} ${x},${y}`,
-			params: { x1, y1, x, y, cx1, cy1, cx2, cy2 }
-		};
-	});
-	
-	return conversions;
-}
-
-function replaceQuadraticWithCubic(pathData) {
-	const quadraticPattern = /q([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)[,\s]*([-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?)/gi;
-	
-	const replacedPath = pathData.replace(quadraticPattern, (match, x1, y1, x, y) => {
-		const x1_num = parseFloat(x1);
-		const y1_num = parseFloat(y1);
-		const x_num = parseFloat(x);
-		const y_num = parseFloat(y);
-		
-		const cx1 = (2/3) * x1_num;
-		const cy1 = (2/3) * y1_num;
-		const cx2 = x_num + (1/3) * x1_num;
-		const cy2 = y_num + (1/3) * y1_num;
-		
-		return `c${cx1.toFixed(2)},${cy1.toFixed(2)} ${cx2.toFixed(2)},${cy2.toFixed(2)} ${x_num},${y_num}`;
-	});
-	
-	return replacedPath;
-}
+const convertibleElements = findConvertibleElementsFromSVGString(parsed_svg);
 
 // Collect all polygons from all paths into a single array
 const allPolygons = [];
 
-pathsData.forEach((pathData, index) => {
-    pathData = pathData["properties"]['d'];
+convertibleElements.forEach((entry, index) => {
+    let points = [];
 
-    const conversions = convertQuadraticToCubic(pathData);
-    console.log(`Path ${index + 1}: Found ${conversions.length} quadratic curves to convert`);
+    if (entry.type === 'path') {
+        const pathData = entry.node.properties.d;
+        points = convertPathToPolygonsWithFallback(pathData);
+        console.log(`Element ${index + 1}: path generated ${points.length} polygon(s)`);
+    } else if (entry.type === 'ellipse') {
+        points = ellipseElementToPolygon(entry.node);
+        console.log(`Element ${index + 1}: ${entry.node.tagName} generated ${points.length} polygon(s)`);
+    }
 
-    const newPathData = replaceQuadraticWithCubic(pathData);
-    console.log(`Path ${index + 1}: Conversion complete. Original length: ${pathData.length}, New length: ${newPathData.length}`);
-
-    let points = convertPathToPolygonsWithFallback(newPathData);
     const polygons = points
         .map((poly) => {
             const normalizedPoints = cleanAndNormalizePolygon(poly, true);
@@ -432,7 +635,7 @@ pathsData.forEach((pathData, index) => {
         })
         .filter((poly) => poly.points.length >= 3);
 
-    console.log(`Path ${index + 1}: Generated ${polygons.length} polygon(s)`);
+    console.log(`Element ${index + 1}: kept ${polygons.length} normalized polygon(s)`);
     allPolygons.push(...polygons);
 });
 
@@ -445,5 +648,6 @@ const outFile = outputFile
     : 'output.json';
 
 fs.writeFileSync(outFile, JSON.stringify(jsonOutput, null, 2), 'utf8');
-console.log(`\nConversion complete! Merged ${pathsData.length} path(s) into ${jsonOutput.length} polygon(s).`);
+console.log(`\nConversion complete! Produced ${jsonOutput.length} polygon(s).`);
+console.log(`Processed ${convertibleElements.length} convertible element(s) (path/ellipse/circle).`);
 console.log(`Wrote: ${outFile}`);
