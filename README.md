@@ -58,6 +58,25 @@ $ADB connect <IP_TEL>:<PORT_CONNECT>
 $HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+Version Release:
+```bash
+./gradlew assembleRelease
+BT_VER=$(ls -1 $HOME/Android/Sdk/build-tools | sort -V | tail -n1)
+APKSIGNER=$HOME/Android/Sdk/build-tools/$BT_VER/apksigner
+
+$APKSIGNER sign \
+  --ks $HOME/.android/debug.keystore \
+  --ks-key-alias androiddebugkey \
+  --ks-pass pass:android \
+  --key-pass pass:android \
+  --out app/build/outputs/apk/release/app-release-signed.apk \
+  app/build/outputs/apk/release/app-release-unsigned.apk
+
+$HOME/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/release/app-release-signed.apk
+```
+
+Note: `app-release-unsigned.apk` ne peut pas etre installe tel quel. Pour distribution, utiliser un keystore dedie (pas `debug.keystore`).
+
 ## Outils mandala (JSON runtime)
 
 Pipeline recommande:
