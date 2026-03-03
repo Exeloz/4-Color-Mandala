@@ -120,3 +120,25 @@ TEST_CASE(progress_persistence_completed_flag_stays_set_after_subsequent_saves) 
     std::unordered_set<int> completed = reader.getCompletedMandalaIds();
     EXPECT_TRUE(completed.count(777) > 0);
 }
+
+TEST_CASE(progress_persistence_clear_mandala_state_removes_saved_colors_and_completion) {
+    SaveFileScope saveFileScope;
+
+    auto mandala = makePersistenceMandala(909);
+    mandala->getRegionById(0)->setColor(1);
+    mandala->getRegionById(1)->setColor(2);
+
+    ProgressPersistence writer;
+    writer.captureMandalaState(*mandala);
+    writer.clearMandalaState(909);
+    EXPECT_TRUE(writer.save());
+
+    auto target = makePersistenceMandala(909);
+    ProgressPersistence reader;
+    EXPECT_TRUE(reader.load());
+    reader.applyToMandalas({target});
+
+    EXPECT_EQ(target->getRegionById(0)->getColor(), -1);
+    EXPECT_EQ(target->getRegionById(1)->getColor(), -1);
+    EXPECT_FALSE(reader.isMandalaCompleted(909));
+}

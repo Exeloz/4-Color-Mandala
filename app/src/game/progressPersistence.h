@@ -27,6 +27,7 @@ public:
     void captureMandalaState(const Mandala& mandala);
     void captureAllMandalas(const std::vector<std::shared_ptr<Mandala>>& mandalas);
     void applyToMandalas(const std::vector<std::shared_ptr<Mandala>>& mandalas) const;
+    void clearMandalaState(int mandalaId);
 
     bool isMandalaCompleted(int mandalaId) const;
     std::unordered_set<int> getCompletedMandalaIds() const;

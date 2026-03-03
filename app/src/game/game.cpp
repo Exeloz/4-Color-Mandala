@@ -41,6 +41,15 @@ void Game::update(float deltaTime) {
             break;
 
         case GameScreenState::SELECTION:
+            {
+                const int resetMandalaId = selectionScreen->consumeResetMandalaId();
+                if (resetMandalaId >= 0) {
+                    resetMandalaProgress(resetMandalaId);
+                    selectionScreen = createSelectionScreen();
+                    break;
+                }
+            }
+
             if (selectionScreen->shouldTransitionToColoring()) {
                 selectedMandala = selectionScreen->getSelectedMandala();
                 if (selectedMandala != nullptr) {
@@ -176,4 +185,27 @@ void Game::saveSelectedMandalaProgress() {
 
     progressPersistence.captureMandalaState(*selectedMandala);
     progressPersistence.save();
+}
+
+void Game::resetMandalaProgress(int mandalaId) {
+    progressPersistence.clearMandalaState(mandalaId);
+    progressPersistence.save();
+
+    std::shared_ptr<Mandala> mandala = database->getMandalaById(mandalaId);
+    if (mandala != nullptr) {
+        for (const Region& regionView : mandala->getRegions()) {
+            if (!regionView.isColorable()) {
+                continue;
+            }
+
+            Region* mutableRegion = mandala->getRegionById(regionView.getId());
+            if (mutableRegion != nullptr) {
+                mutableRegion->setColor(-1);
+            }
+        }
+    }
+
+    if (selectedMandala != nullptr && selectedMandala->getId() == mandalaId) {
+        selectedMandala = nullptr;
+    }
 }

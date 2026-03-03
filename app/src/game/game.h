@@ -50,4 +50,5 @@ private:
     std::shared_ptr<SelectionScreen> createSelectionScreen() const;
     void savePaletteProgress();
     void saveSelectedMandalaProgress();
+    void resetMandalaProgress(int mandalaId);
 };

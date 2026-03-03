@@ -16,19 +16,41 @@ float getUiScale() {
 
 SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database,
                                  const std::unordered_set<int>& completedMandalaIds)
-        : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), transitionRequested(false),
-            paletteRequested(false), paletteButton(620, 20, 160, 50, "PALETTE"),
+        : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), pendingResetMandalaId(-1),
+            resetRequestedMandalaId(-1), transitionRequested(false), paletteRequested(false),
+            paletteButton(620, 20, 160, 50, "PALETTE"),
             completedMandalaIds(completedMandalaIds) {
     
     const auto& mandalaItems = database->getMandalaListItems();
     for (size_t i = 0; i < mandalaItems.size(); i++) {
         mandalaButtons.emplace_back(0.0f, 0.0f, 300.0f, 150.0f, mandalaItems[i].name);
         mandalaButtons.back().setTextScale(1.45f);
+        resetButtons.emplace_back(0.0f, 0.0f, 96.0f, 40.0f, "RESET");
+        resetButtons.back().setTextScale(0.85f);
     }
 }
 
 void SelectionScreen::update(float deltaTime) {
     layoutControls();
+
+    if (resetConfirmationDialog.isVisible()) {
+        resetConfirmationDialog.update();
+
+        if (resetConfirmationDialog.consumeConfirmed()) {
+            if (pendingResetMandalaId >= 0) {
+                resetRequestedMandalaId = pendingResetMandalaId;
+                completedMandalaIds.erase(pendingResetMandalaId);
+            }
+            pendingResetMandalaId = -1;
+            resetConfirmationDialog.hide();
+        }
+
+        if (resetConfirmationDialog.consumeCancelled()) {
+            pendingResetMandalaId = -1;
+            resetConfirmationDialog.hide();
+        }
+        return;
+    }
 
     paletteButton.update();
 
@@ -39,6 +61,18 @@ void SelectionScreen::update(float deltaTime) {
 
     const auto& mandalaItems = database->getMandalaListItems();
     for (size_t i = 0; i < mandalaButtons.size() && i < mandalaItems.size(); i++) {
+        resetButtons[i].update();
+        if (resetButtons[i].isClicked()) {
+            pendingResetMandalaId = mandalaItems[i].id;
+            resetConfirmationDialog.configure(
+                "Reset Mandala",
+                "Reset all progress for '" + mandalaItems[i].name + "'?",
+                "Yes, Reset",
+                "Cancel");
+            resetConfirmationDialog.show();
+            return;
+        }
+
         mandalaButtons[i].update();
         if (mandalaButtons[i].isClicked()) {
             const int selectedId = mandalaItems[i].id;
@@ -91,7 +125,11 @@ void SelectionScreen::draw() {
             int doneTextY = static_cast<int>(badgeY + (badgeHeight - doneTextSize) * 0.5f);
             DrawText(doneLabel, doneTextX, doneTextY, doneTextSize, Colors::Black);
         }
+
+        resetButtons[i].draw();
     }
+
+    resetConfirmationDialog.draw();
 }
 
 void SelectionScreen::layoutControls() {
@@ -133,6 +171,13 @@ void SelectionScreen::layoutControls() {
                 float y = contentTop + row * (cardHeight + rowGap);
                 mandalaButtons[i].setPosition(x, y);
                 mandalaButtons[i].setSize(cardWidth, cardHeight);
+
+                float resetWidth = std::max(92.0f, cardWidth * 0.23f);
+                float resetHeight = std::max(34.0f, cardHeight * 0.30f);
+                resetButtons[i].setPosition(
+                    x + cardWidth - resetWidth - (10.0f * uiScale),
+                    y + cardHeight - resetHeight - (8.0f * uiScale));
+                resetButtons[i].setSize(resetWidth, resetHeight);
             }
             return;
         }
@@ -146,6 +191,13 @@ void SelectionScreen::layoutControls() {
             float y = contentTop + i * (cardHeight + gap);
             mandalaButtons[i].setPosition(sideMargin, y);
             mandalaButtons[i].setSize(availableWidth, cardHeight);
+
+            float resetWidth = std::max(96.0f, availableWidth * 0.22f);
+            float resetHeight = std::max(34.0f, cardHeight * 0.28f);
+            resetButtons[i].setPosition(
+                sideMargin + availableWidth - resetWidth - (10.0f * uiScale),
+                y + cardHeight - resetHeight - (8.0f * uiScale));
+            resetButtons[i].setSize(resetWidth, resetHeight);
         }
         return;
     }
@@ -162,11 +214,24 @@ void SelectionScreen::layoutControls() {
         float y = contentTop + row * (cardHeight + rowGap);
         mandalaButtons[i].setPosition(x, y);
         mandalaButtons[i].setSize(cardWidth, cardHeight);
+
+        float resetWidth = std::max(92.0f, cardWidth * 0.23f);
+        float resetHeight = std::max(34.0f, cardHeight * 0.28f);
+        resetButtons[i].setPosition(
+            x + cardWidth - resetWidth - 10.0f,
+            y + cardHeight - resetHeight - 8.0f);
+        resetButtons[i].setSize(resetWidth, resetHeight);
     }
 }
 
 std::shared_ptr<Mandala> SelectionScreen::getSelectedMandala() const {
     return selectedMandala;
+}
+
+int SelectionScreen::consumeResetMandalaId() {
+    const int id = resetRequestedMandalaId;
+    resetRequestedMandalaId = -1;
+    return id;
 }
 
 bool SelectionScreen::shouldTransitionToColoring() const {

@@ -212,6 +212,10 @@ void ProgressPersistence::applyToMandalas(const std::vector<std::shared_ptr<Mand
     }
 }
 
+void ProgressPersistence::clearMandalaState(int mandalaId) {
+    mandalaStates.erase(mandalaId);
+}
+
 bool ProgressPersistence::isMandalaCompleted(int mandalaId) const {
     auto iterator = mandalaStates.find(mandalaId);
     if (iterator == mandalaStates.end()) {

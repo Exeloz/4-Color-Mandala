@@ -4,7 +4,7 @@
 #include "raylib.h"
 
 namespace Colors {
-    constexpr Color None = {200, 200, 200, 255};
+    constexpr Color None = {255, 255, 255, 255};
     constexpr Color Transparent = {0, 0, 0, 0};
     
     constexpr Color Red = {255, 0, 0, 255};
