@@ -1,6 +1,7 @@
 #pragma once
 #include "../game/gameState.h"
 #include "../ui/button.h"
+#include "../ui/colorWheelPicker.h"
 #include "raylib.h"
 #include <vector>
 
@@ -20,20 +21,18 @@ private:
     std::vector<Color> paletteColors;
     std::vector<Color> availableColors;
     int activeSlotIndex;
+    ColorWheelPicker colorWheelPicker;
 
     Button backButton;
     Button continueButton;
-    Button prevPageButton;
-    Button nextPageButton;
 
     bool transitionRequested;
     bool returnRequested;
     bool paletteChanged;
-    int tilePage;
 
     void layoutControls();
     Rectangle getPaletteSlotBounds(int slotIndex) const;
-    Rectangle getAvailableColorBounds(int colorIndex) const;
-    int getTileStartIndex() const;
-    int getTileEndIndex() const;
+    Rectangle getColorWheelBounds() const;
+    Rectangle getPreviewBounds() const;
+    Color findClosestCatalogColor(const Color& color) const;
 };

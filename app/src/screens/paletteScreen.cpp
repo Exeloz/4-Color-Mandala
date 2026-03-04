@@ -6,6 +6,7 @@
 #include "../ui/input.h"
 #include "raymath.h"
 #include <algorithm>
+#include <limits>
 #include <string>
 
 namespace {
@@ -15,14 +16,10 @@ namespace {
     constexpr float SLOT_HEIGHT = 38.0f;
     constexpr float SLOT_GAP = 8.0f;
 
-    constexpr float TILE_START_X = 90.0f;
-    constexpr float TILE_START_Y = 184.0f;
-    constexpr float TILE_WIDTH = 78.0f;
-    constexpr float TILE_HEIGHT = 30.0f;
-    constexpr float TILE_GAP_X = 12.0f;
-    constexpr float TILE_GAP_Y = 8.0f;
-    constexpr float NAV_BOTTOM_MARGIN = 20.0f;
-    constexpr float NAV_RESERVED_HEIGHT = 96.0f;
+    constexpr float WHEEL_TOP_Y = 184.0f;
+    constexpr float WHEEL_BOTTOM_MARGIN = 24.0f;
+    constexpr float PREVIEW_WIDTH = 200.0f;
+    constexpr float PREVIEW_HEIGHT = 70.0f;
 
     bool isMobileLayout() {
         return true;
@@ -34,59 +31,27 @@ namespace {
         return Clamp(std::min(widthScale, heightScale), 0.75f, 2.4f);
     }
 
-    int getTileColumns(float uiScale) {
-        float tileWidth = TILE_WIDTH * uiScale;
-        float gapX = TILE_GAP_X * uiScale;
-        float startX = TILE_START_X * uiScale;
-        float rightMargin = 20.0f * uiScale;
-
-        float availableWidth = std::max(1.0f, static_cast<float>(GetScreenWidth()) - startX - rightMargin);
-        int columns = static_cast<int>((availableWidth + gapX) / (tileWidth + gapX));
-        return std::max(1, columns);
-    }
-
-    int getTileRows(float uiScale) {
-        float tileHeight = TILE_HEIGHT * uiScale;
-        float gapY = TILE_GAP_Y * uiScale;
-        float startY = TILE_START_Y * uiScale;
-        float bottomMargin = NAV_RESERVED_HEIGHT * uiScale;
-
-        float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - startY - bottomMargin);
-        int rows = static_cast<int>((availableHeight + gapY) / (tileHeight + gapY));
-        return std::max(1, rows);
-    }
-
-    int getTilesPerPage(float uiScale) {
-        return getTileColumns(uiScale) * getTileRows(uiScale);
-    }
-
 }
 
 PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
     : paletteColors(), availableColors(), activeSlotIndex(1),
       backButton(20, 20, 100, 50, "BACK"), continueButton(640, 20, 140, 50, "COLOR"),
-      prevPageButton(560, 200, 100, 40, "PREV"), nextPageButton(680, 200, 100, 40, "NEXT"),
-        transitionRequested(false), returnRequested(false), paletteChanged(false), tilePage(0) {
+      transitionRequested(false), returnRequested(false), paletteChanged(false) {
 
     ColorPalette defaultPalette;
     paletteColors = initialPaletteColors.empty() ? defaultPalette.getColors() : initialPaletteColors;
     availableColors = ColorCatalog::getAvailableColors();
+    if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
+        colorWheelPicker.setColor(paletteColors[activeSlotIndex]);
+    }
 }
 
 void PaletteScreen::update(float deltaTime) {
+    (void)deltaTime;
     layoutControls();
-
-    float uiScale = getUiScale();
-    int tilesPerPage = std::max(1, getTilesPerPage(uiScale));
-    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / tilesPerPage);
-    if (tilePage > maxPage) {
-        tilePage = maxPage;
-    }
 
     backButton.update();
     continueButton.update();
-    prevPageButton.update();
-    nextPageButton.update();
 
     if (backButton.isClicked()) {
         returnRequested = true;
@@ -98,43 +63,29 @@ void PaletteScreen::update(float deltaTime) {
         return;
     }
 
-    if (prevPageButton.isClicked() && tilePage > 0) {
-        tilePage--;
-        return;
-    }
+    if (Input::IsPointerPressed()) {
+        Vector2 pointer = Input::GetPointerPosition();
 
-    if (nextPageButton.isClicked() && tilePage < maxPage) {
-        tilePage++;
-        return;
-    }
-
-    if (!Input::IsPointerPressed()) {
-        return;
-    }
-
-    Vector2 pointer = Input::GetPointerPosition();
-
-    for (int slotIndex = 1; slotIndex < static_cast<int>(paletteColors.size()); slotIndex++) {
-        if (CheckCollisionPointRec(pointer, getPaletteSlotBounds(slotIndex))) {
-            activeSlotIndex = slotIndex;
-            return;
+        for (int slotIndex = 1; slotIndex < static_cast<int>(paletteColors.size()); slotIndex++) {
+            if (CheckCollisionPointRec(pointer, getPaletteSlotBounds(slotIndex))) {
+                activeSlotIndex = slotIndex;
+                colorWheelPicker.setColor(paletteColors[activeSlotIndex]);
+                return;
+            }
         }
     }
 
-    for (int colorIndex = getTileStartIndex(); colorIndex < getTileEndIndex(); colorIndex++) {
-        if (CheckCollisionPointRec(pointer, getAvailableColorBounds(colorIndex))) {
-            if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
-                const Color selectedColor = availableColors[colorIndex];
-                Color& slotColor = paletteColors[activeSlotIndex];
-                if (slotColor.r != selectedColor.r
-                    || slotColor.g != selectedColor.g
-                    || slotColor.b != selectedColor.b
-                    || slotColor.a != selectedColor.a) {
-                    slotColor = selectedColor;
-                    paletteChanged = true;
-                }
-            }
-            return;
+    colorWheelPicker.update();
+
+    if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
+        Color snappedColor = findClosestCatalogColor(colorWheelPicker.getSelectedColor());
+        Color& slotColor = paletteColors[activeSlotIndex];
+        if (slotColor.r != snappedColor.r
+            || slotColor.g != snappedColor.g
+            || slotColor.b != snappedColor.b
+            || slotColor.a != snappedColor.a) {
+            slotColor = snappedColor;
+            paletteChanged = true;
         }
     }
 }
@@ -145,34 +96,21 @@ void PaletteScreen::draw() {
     float uiScale = getUiScale();
     int titleSize = static_cast<int>(42.0f * uiScale);
     int subtitleSize = static_cast<int>(24.0f * uiScale);
-    int pageSize = static_cast<int>(24.0f * uiScale);
+    int infoSize = static_cast<int>(22.0f * uiScale);
 
     int titleY = static_cast<int>(25.0f * uiScale);
-    const char* title = "Customize Palette";
+    const char* title = "Color Wheel";
     int titleWidth = MeasureText(title, titleSize);
     int titleX = (GetScreenWidth() - titleWidth) / 2;
     DrawText(title, titleX, titleY, titleSize, Colors::Black);
 
-    const char* subtitle = "Tap a palette slot, then choose a color";
+    const char* subtitle = "Tap a palette slot, then pick from the wheel";
     int subtitleWidth = MeasureText(subtitle, subtitleSize);
     int subtitleX = (GetScreenWidth() - subtitleWidth) / 2;
     DrawText(subtitle, subtitleX, static_cast<int>(78.0f * uiScale), subtitleSize, Colors::DarkSlateGray);
 
     backButton.draw();
     continueButton.draw();
-    prevPageButton.draw();
-    nextPageButton.draw();
-
-    int tilesPerPage = std::max(1, getTilesPerPage(uiScale));
-    int maxPage = std::max(0, (static_cast<int>(availableColors.size()) - 1) / tilesPerPage);
-    std::string pageText = "Page " + std::to_string(tilePage + 1) + " / " + std::to_string(maxPage + 1);
-    Rectangle prevBounds = prevPageButton.getBounds();
-    Rectangle nextBounds = nextPageButton.getBounds();
-    int pageTextWidth = MeasureText(pageText.c_str(), pageSize);
-    float pageCenterX = (prevBounds.x + nextBounds.x + nextBounds.width) * 0.5f;
-    int pageX = static_cast<int>(pageCenterX - (pageTextWidth * 0.5f));
-    int pageY = static_cast<int>(prevBounds.y - pageSize - (6.0f * uiScale));
-    DrawText(pageText.c_str(), pageX, pageY, pageSize, Colors::Black);
 
     for (int i = 0; i < static_cast<int>(paletteColors.size()); i++) {
         Rectangle slot = getPaletteSlotBounds(i);
@@ -191,22 +129,34 @@ void PaletteScreen::draw() {
         }
     }
 
-    for (int i = getTileStartIndex(); i < getTileEndIndex(); i++) {
-        Rectangle tile = getAvailableColorBounds(i);
-        ColorTileRenderer::drawColorTile(availableColors[i], tile, uiScale);
-        DrawRectangleLinesEx(tile, 2.0f, Colors::DarkGray);
+    colorWheelPicker.draw(Colors::Gainsboro);
 
-        bool isSelectedColor = (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size()) &&
-                                paletteColors[activeSlotIndex].r == availableColors[i].r &&
-                                paletteColors[activeSlotIndex].g == availableColors[i].g &&
-                                paletteColors[activeSlotIndex].b == availableColors[i].b &&
-                                paletteColors[activeSlotIndex].a == availableColors[i].a);
+    Rectangle previewBounds = getPreviewBounds();
+    DrawRectangleRounded(previewBounds, 0.18f, 12, Colors::WhiteSmoke);
+    DrawRectangleLinesEx(previewBounds, 2.0f, Colors::DarkGray);
 
-        if (isSelectedColor) {
-            DrawRectangleLinesEx(tile, 4.0f, Colors::White);
-            DrawRectangleLinesEx({tile.x + 2, tile.y + 2, tile.width - 4, tile.height - 4}, 2.0f, Colors::Black);
-        }
-    }
+    Color activeCatalogColor = findClosestCatalogColor(colorWheelPicker.getSelectedColor());
+    Rectangle swatch = {
+        previewBounds.x + 12.0f * uiScale,
+        previewBounds.y + 12.0f * uiScale,
+        previewBounds.height - 24.0f * uiScale,
+        previewBounds.height - 24.0f * uiScale
+    };
+    DrawRectangleRec(swatch, activeCatalogColor);
+    DrawRectangleLinesEx(swatch, 2.0f, Colors::Black);
+
+    std::string slotText = "Slot " + std::to_string(activeSlotIndex);
+    DrawText(slotText.c_str(),
+             static_cast<int>(swatch.x + swatch.width + (12.0f * uiScale)),
+             static_cast<int>(previewBounds.y + 14.0f * uiScale),
+             infoSize,
+             Colors::Black);
+
+    DrawText("Selected catalog color",
+             static_cast<int>(swatch.x + swatch.width + (12.0f * uiScale)),
+             static_cast<int>(previewBounds.y + 14.0f * uiScale + infoSize + (8.0f * uiScale)),
+             static_cast<int>(18.0f * uiScale),
+             Colors::DarkSlateGray);
 }
 
 void PaletteScreen::layoutControls() {
@@ -224,13 +174,7 @@ void PaletteScreen::layoutControls() {
     continueButton.setPosition(GetScreenWidth() - sideMargin - continueWidth, topMargin);
     continueButton.setSize(continueWidth, topButtonHeight);
 
-    float navWidth = mobileLayout ? (120.0f * uiScale) : 100.0f;
-    float navHeight = mobileLayout ? (52.0f * uiScale) : 40.0f;
-    float navY = static_cast<float>(GetScreenHeight()) - navHeight - (NAV_BOTTOM_MARGIN * uiScale);
-    nextPageButton.setPosition(GetScreenWidth() - sideMargin - navWidth, navY);
-    nextPageButton.setSize(navWidth, navHeight);
-    prevPageButton.setPosition(nextPageButton.getBounds().x - navWidth - (12.0f * uiScale), navY);
-    prevPageButton.setSize(navWidth, navHeight);
+    colorWheelPicker.setBounds(getColorWheelBounds());
 }
 
 bool PaletteScreen::shouldTransitionToColoring() const {
@@ -274,32 +218,53 @@ Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
     return {x, y, width, height};
 }
 
-Rectangle PaletteScreen::getAvailableColorBounds(int colorIndex) const {
+Rectangle PaletteScreen::getColorWheelBounds() const {
     float uiScale = getUiScale();
-    int tileColumns = std::max(1, getTileColumns(uiScale));
-    int pageLocalIndex = colorIndex - getTileStartIndex();
-    int col = pageLocalIndex % tileColumns;
-    int row = pageLocalIndex / tileColumns;
+    float top = WHEEL_TOP_Y * uiScale;
+    float bottomMargin = WHEEL_BOTTOM_MARGIN * uiScale;
 
-    float width = TILE_WIDTH * uiScale;
-    float height = TILE_HEIGHT * uiScale;
-    float gapX = TILE_GAP_X * uiScale;
-    float gapY = TILE_GAP_Y * uiScale;
-    float startX = TILE_START_X * uiScale;
-    float startY = TILE_START_Y * uiScale;
+    float maxDiameter = std::min(
+        static_cast<float>(GetScreenWidth()) - (80.0f * uiScale),
+        static_cast<float>(GetScreenHeight()) - top - bottomMargin - (PREVIEW_HEIGHT * uiScale) - (12.0f * uiScale)
+    );
+    float diameter = std::max(140.0f * uiScale, maxDiameter);
 
-    float x = startX + col * (width + gapX);
-    float y = startY + row * (height + gapY);
+    float x = (GetScreenWidth() - diameter) * 0.5f;
+    return {x, top, diameter, diameter};
+}
+
+Rectangle PaletteScreen::getPreviewBounds() const {
+    float uiScale = getUiScale();
+    Rectangle wheel = getColorWheelBounds();
+    float width = PREVIEW_WIDTH * uiScale;
+    float height = PREVIEW_HEIGHT * uiScale;
+    float x = (GetScreenWidth() - width) * 0.5f;
+    float y = wheel.y + wheel.height + (12.0f * uiScale);
     return {x, y, width, height};
 }
 
-int PaletteScreen::getTileStartIndex() const {
-    int tilesPerPage = std::max(1, getTilesPerPage(getUiScale()));
-    return tilePage * tilesPerPage;
-}
+Color PaletteScreen::findClosestCatalogColor(const Color& color) const {
+    if (availableColors.empty()) {
+        return color;
+    }
 
-int PaletteScreen::getTileEndIndex() const {
-    int tilesPerPage = std::max(1, getTilesPerPage(getUiScale()));
-    int endIndex = getTileStartIndex() + tilesPerPage;
-    return std::min(static_cast<int>(availableColors.size()), endIndex);
+    const auto squaredDistance = [&](const Color& candidate) {
+        int dr = static_cast<int>(candidate.r) - static_cast<int>(color.r);
+        int dg = static_cast<int>(candidate.g) - static_cast<int>(color.g);
+        int db = static_cast<int>(candidate.b) - static_cast<int>(color.b);
+        return (dr * dr) + (dg * dg) + (db * db);
+    };
+
+    const Color* best = &availableColors.front();
+    int bestDistance = std::numeric_limits<int>::max();
+
+    for (const Color& candidate : availableColors) {
+        int distance = squaredDistance(candidate);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = &candidate;
+        }
+    }
+
+    return *best;
 }
