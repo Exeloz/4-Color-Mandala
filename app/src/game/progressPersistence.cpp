@@ -1,27 +1,11 @@
 #include "progressPersistence.h"
 
 #include <algorithm>
-#include <fstream>
 #include <sstream>
 
 namespace {
     constexpr const char* SAVE_FILE_NAME = "mandala_progress.dat";
     constexpr const char* SAVE_MAGIC = "MANDALA_PROGRESS_V1";
-
-    std::string getSaveFilePath() {
-#if defined(PLATFORM_ANDROID)
-        const char* appDir = GetApplicationDirectory();
-        if (appDir != nullptr && appDir[0] != '\0') {
-            std::string resolvedPath = appDir;
-            if (!resolvedPath.empty() && resolvedPath.back() != '/' && resolvedPath.back() != '\\') {
-                resolvedPath += '/';
-            }
-            resolvedPath += SAVE_FILE_NAME;
-            return resolvedPath;
-        }
-#endif
-        return SAVE_FILE_NAME;
-    }
 
     Color clampColorChannels(int red, int green, int blue, int alpha) {
         Color color{};
@@ -34,16 +18,19 @@ namespace {
 }
 
 ProgressPersistence::ProgressPersistence()
-    : saveFilePath(getSaveFilePath()),
+    : saveFilePath(SAVE_FILE_NAME),
       savedPalette(),
       paletteAvailable(false),
       mandalaStates() {}
 
 bool ProgressPersistence::load() {
-    std::ifstream stream(saveFilePath);
-    if (!stream.is_open()) {
+    char* loadedText = LoadFileText(saveFilePath.c_str());
+    if (loadedText == nullptr) {
         return false;
     }
+
+    std::istringstream stream(loadedText);
+    UnloadFileText(loadedText);
 
     std::vector<Color> loadedPalette;
     std::unordered_map<int, PersistedMandalaState> loadedStates;
@@ -116,10 +103,7 @@ bool ProgressPersistence::load() {
 }
 
 bool ProgressPersistence::save() const {
-    std::ofstream stream(saveFilePath, std::ios::trunc);
-    if (!stream.is_open()) {
-        return false;
-    }
+    std::ostringstream stream;
 
     stream << SAVE_MAGIC << "\n";
     stream << "PALETTE " << savedPalette.size() << "\n";
@@ -144,7 +128,8 @@ bool ProgressPersistence::save() const {
         }
     }
 
-    return stream.good();
+    const std::string serializedData = stream.str();
+    return SaveFileText(saveFilePath.c_str(), serializedData.c_str());
 }
 
 void ProgressPersistence::setPalette(const std::vector<Color>& palette) {
