@@ -14,7 +14,7 @@ public:
     bool isAnalysisMode() const;
 
     void validateAdjacency(const Mandala& mandala);
-    void drawValidationOverlay(const Mandala& mandala) const;
+    void drawValidationOverlay(const Mandala& mandala, float cameraZoom) const;
 
     void updateAnalysis(const Mandala& mandala, const Camera2D& camera, bool pointerOverUi, bool isDraggingCamera);
     void updateDebug(Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera);

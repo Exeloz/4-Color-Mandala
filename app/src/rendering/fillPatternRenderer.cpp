@@ -3,7 +3,9 @@
 #include "raymath.h"
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cmath>
+#include <unordered_map>
 
 namespace {
 constexpr float STRIPE_ANGLE_DEGREES = 45.0f;
@@ -24,6 +26,37 @@ struct Bounds {
     float maxX;
     float maxY;
 };
+
+struct PatternAdaptation {
+    float sizeMultiplier;
+};
+
+PatternAdaptation getPatternAdaptation(const std::vector<Vector2>& vertices);
+
+PatternAdaptation getPatternAdaptationCached(const std::vector<Vector2>& vertices) {
+    if (vertices.size() <= 8 || vertices.data() == nullptr) {
+        return getPatternAdaptation(vertices);
+    }
+
+    static std::unordered_map<std::uint64_t, PatternAdaptation> cache;
+    constexpr std::size_t MAX_CACHE_ENTRIES = 4096;
+
+    const std::uint64_t pointerKey = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(vertices.data()));
+    const std::uint64_t sizeKey = static_cast<std::uint64_t>(vertices.size()) * 1099511628211ULL;
+    const std::uint64_t key = pointerKey ^ sizeKey;
+
+    auto iterator = cache.find(key);
+    if (iterator != cache.end()) {
+        return iterator->second;
+    }
+
+    PatternAdaptation computed = getPatternAdaptation(vertices);
+    if (cache.size() >= MAX_CACHE_ENTRIES) {
+        cache.clear();
+    }
+    cache.emplace(key, computed);
+    return computed;
+}
 
 Bounds getBounds(const std::vector<Vector2>& vertices) {
     Bounds bounds{0.0f, 0.0f, 0.0f, 0.0f};
@@ -59,6 +92,27 @@ float getSignedPolygonArea(const std::vector<Vector2>& vertices) {
     }
 
     return areaTimesTwo * 0.5f;
+}
+
+PatternAdaptation getPatternAdaptation(const std::vector<Vector2>& vertices) {
+    PatternAdaptation adaptation{1.0f};
+    if (vertices.size() < 3) {
+        return adaptation;
+    }
+
+    Bounds bounds = getBounds(vertices);
+    float width = std::max(1.0f, bounds.maxX - bounds.minX);
+    float height = std::max(1.0f, bounds.maxY - bounds.minY);
+    float minDimension = std::min(width, height);
+
+    float area = std::fabs(getSignedPolygonArea(vertices));
+    float areaLengthScale = std::sqrt(std::max(area, 1.0f));
+
+    float dimensionFactor = Clamp(minDimension / 120.0f, 0.38f, 1.0f);
+    float areaFactor = Clamp(areaLengthScale / 95.0f, 0.38f, 1.0f);
+
+    adaptation.sizeMultiplier = std::min(dimensionFactor, areaFactor);
+    return adaptation;
 }
 
 bool isPointInPolygon(const std::vector<Vector2>& vertices, Vector2 point) {
@@ -126,7 +180,8 @@ void drawSolidFill(const std::vector<Vector2>& vertices, Color fillColor) {
 void drawStripedFill(const std::vector<Vector2>& vertices, Color fillColor, Color stripeColor, float patternSize) {
     drawSolidFill(vertices, Fade(fillColor, 0.35f));
 
-    float sizeScale = clampPatternSize(patternSize);
+    PatternAdaptation adaptation = getPatternAdaptationCached(vertices);
+    float sizeScale = clampPatternSize(patternSize) * adaptation.sizeMultiplier;
     float stripeSpacing = STRIPE_SPACING * sizeScale;
     float stripeThickness = std::max(1.0f, STRIPE_THICKNESS * sizeScale);
     float stripeStep = std::max(1.0f, STRIPE_STEP * sizeScale);
@@ -193,7 +248,8 @@ void drawStripedFill(const std::vector<Vector2>& vertices, Color fillColor, Colo
 void drawDottedFill(const std::vector<Vector2>& vertices, Color fillColor, Color dotColor, float patternSize) {
     drawSolidFill(vertices, Fade(fillColor, 0.25f));
 
-    float sizeScale = clampPatternSize(patternSize);
+    PatternAdaptation adaptation = getPatternAdaptationCached(vertices);
+    float sizeScale = clampPatternSize(patternSize) * adaptation.sizeMultiplier;
     float dotSpacing = DOT_SPACING * sizeScale;
     float dotRadius = std::max(1.0f, DOT_RADIUS * sizeScale);
 
@@ -243,7 +299,8 @@ void drawInsetBorder(const std::vector<Vector2>& vertices, Color borderColor, fl
 void drawBorderedFill(const std::vector<Vector2>& vertices, Color fillColor, Color borderColor, float patternSize) {
     drawSolidFill(vertices, fillColor);
 
-    const float sizeScale = clampPatternSize(patternSize);
+    PatternAdaptation adaptation = getPatternAdaptationCached(vertices);
+    const float sizeScale = clampPatternSize(patternSize) * adaptation.sizeMultiplier;
     const float borderThickness = std::max(1.0f, 3.0f * sizeScale);
     drawInsetBorder(vertices, borderColor, borderThickness);
 }

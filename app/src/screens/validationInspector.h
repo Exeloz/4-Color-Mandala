@@ -10,7 +10,7 @@
 class ValidationInspector {
 public:
     void validateAdjacency(const Mandala& mandala);
-    void drawValidationOverlay(const Mandala& mandala) const;
+    void drawValidationOverlay(const Mandala& mandala, float cameraZoom) const;
 
 private:
     std::vector<int> verifyWrongRegions(const Mandala& mandala) const;

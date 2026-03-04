@@ -176,8 +176,8 @@ void ColoringInspector::validateAdjacency(const Mandala& mandala) {
     validationInspector.validateAdjacency(mandala);
 }
 
-void ColoringInspector::drawValidationOverlay(const Mandala& mandala) const {
-    validationInspector.drawValidationOverlay(mandala);
+void ColoringInspector::drawValidationOverlay(const Mandala& mandala, float cameraZoom) const {
+    validationInspector.drawValidationOverlay(mandala, cameraZoom);
 }
 
 void ColoringInspector::enterAnalysisMode() {

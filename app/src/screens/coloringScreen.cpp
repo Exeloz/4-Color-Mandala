@@ -171,7 +171,7 @@ void ColoringScreen::draw() {
 
     BeginMode2D(camera);
     mandala->draw(colorPalette.getColors(), false);
-    inspector.drawValidationOverlay(*mandala);
+    inspector.drawValidationOverlay(*mandala, camera.zoom);
     drawAnalysisOverlay();
     drawDebugOverlay();
     EndMode2D();

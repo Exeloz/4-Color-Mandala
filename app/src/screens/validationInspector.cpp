@@ -1,11 +1,12 @@
 #include "validationInspector.h"
 #include "../ui/colors.h"
+#include "raymath.h"
 
 namespace {
-FillPattern makeBorderStyle() {
+FillPattern makeBorderStyle(float patternSize) {
     FillPattern style;
     style.type = FillPatternType::Bordered;
-    style.size = 5.0f;
+    style.size = patternSize;
     style.useAccentColor = true;
     style.accentColor = Colors::Black;
     return style;
@@ -29,10 +30,14 @@ void ValidationInspector::validateAdjacency(const Mandala& mandala) {
     validationOverlayEnabled = true;
 }
 
-void ValidationInspector::drawValidationOverlay(const Mandala& mandala) const {
+void ValidationInspector::drawValidationOverlay(const Mandala& mandala, float cameraZoom) const {
     if (!validationOverlayEnabled) {
         return;
     }
+
+    float effectiveZoom = std::max(cameraZoom, 0.001f);
+    float worldBorderWidth = Clamp(8.0f / effectiveZoom, 2.5f, 20.0f);
+    float borderPatternSize = Clamp(2.2f / effectiveZoom, 0.6f, 5.0f);
 
     const std::vector<Region>& regions = mandala.getRegions();
     const AdjacencyGraph& adjacencyGraph = mandala.getAdjacencyGraph();
@@ -82,7 +87,7 @@ void ValidationInspector::drawValidationOverlay(const Mandala& mandala) const {
             continue;
         }
 
-        regions[regionId].drawWithColor(Colors::Transparent, Colors::Red, 20.0f, makeBorderStyle());
+        regions[regionId].drawWithColor(Colors::Transparent, Colors::Red, worldBorderWidth, makeBorderStyle(borderPatternSize));
     }
 }
 

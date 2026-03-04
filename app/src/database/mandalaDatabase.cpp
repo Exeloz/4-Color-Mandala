@@ -15,7 +15,7 @@ namespace {
     constexpr float SCREEN_CENTER_Y = 300.0f;
     constexpr float DEGREES_TO_RADIANS = 3.14159f / 180.0f;
     
-    constexpr float HEXAGON_RADIUS = 100.0f;
+    constexpr float HEXAGON_RADIUS = 3000.0f;
     constexpr float HEXAGON_INNER_RATIO = 0.5f;
     constexpr int HEXAGON_SEGMENTS = 6;
     constexpr float HEXAGON_DEGREES_PER_SEGMENT = 360.0f / HEXAGON_SEGMENTS;
