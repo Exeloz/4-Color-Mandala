@@ -11,6 +11,7 @@
 struct PersistedMandalaState {
     std::unordered_map<int, int> regionColors;
     bool completed = false;
+    std::vector<Color> frozenPalette;
 };
 
 class ProgressPersistence {
@@ -24,12 +25,14 @@ public:
     const std::vector<Color>& getPalette() const;
     bool hasPalette() const;
 
-    void captureMandalaState(const Mandala& mandala);
-    void captureAllMandalas(const std::vector<std::shared_ptr<Mandala>>& mandalas);
+    void captureMandalaState(const Mandala& mandala, const std::vector<Color>& activePalette);
+    void captureAllMandalas(const std::vector<std::shared_ptr<Mandala>>& mandalas,
+                            const std::vector<Color>& activePalette);
     void applyToMandalas(const std::vector<std::shared_ptr<Mandala>>& mandalas) const;
     void clearMandalaState(int mandalaId);
 
     bool isMandalaCompleted(int mandalaId) const;
+    bool tryGetMandalaFrozenPalette(int mandalaId, std::vector<Color>& outPalette) const;
     std::unordered_set<int> getCompletedMandalaIds() const;
 
 private:

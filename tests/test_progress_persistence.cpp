@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "../app/src/game/progressPersistence.h"
+#include "../app/src/ui/colorPalette.h"
 #include "../app/src/ui/colors.h"
 
 #include <cstdio>
@@ -84,7 +85,7 @@ TEST_CASE(progress_persistence_region_colors_roundtrip) {
     sourceMandala->getRegionById(1)->setColor(3);
 
     ProgressPersistence writer;
-    writer.captureMandalaState(*sourceMandala);
+    writer.captureMandalaState(*sourceMandala, ColorPalette().getColors());
     EXPECT_TRUE(writer.save());
 
     auto targetMandala = makePersistenceMandala(321);
@@ -107,10 +108,22 @@ TEST_CASE(progress_persistence_completed_flag_stays_set_after_subsequent_saves) 
     mandala->getRegionById(1)->setColor(2);
 
     ProgressPersistence writer;
-    writer.captureMandalaState(*mandala);
+    std::vector<Color> paletteA = {
+        Colors::None,
+        Colors::DarkBlue,
+        Colors::Gold,
+        Colors::PaleTurquoise,
+    };
+    writer.captureMandalaState(*mandala, paletteA);
 
     mandala->getRegionById(1)->setColor(-1);
-    writer.captureMandalaState(*mandala);
+    std::vector<Color> paletteB = {
+        Colors::None,
+        Colors::Red,
+        Colors::DarkRed,
+        Colors::Coral,
+    };
+    writer.captureMandalaState(*mandala, paletteB);
     EXPECT_TRUE(writer.save());
 
     ProgressPersistence reader;
@@ -119,6 +132,13 @@ TEST_CASE(progress_persistence_completed_flag_stays_set_after_subsequent_saves) 
 
     std::unordered_set<int> completed = reader.getCompletedMandalaIds();
     EXPECT_TRUE(completed.count(777) > 0);
+
+    std::vector<Color> frozenPalette;
+    EXPECT_TRUE(reader.tryGetMandalaFrozenPalette(777, frozenPalette));
+    EXPECT_EQ(frozenPalette.size(), paletteA.size());
+    EXPECT_EQ(frozenPalette[1].r, paletteA[1].r);
+    EXPECT_EQ(frozenPalette[1].g, paletteA[1].g);
+    EXPECT_EQ(frozenPalette[1].b, paletteA[1].b);
 }
 
 TEST_CASE(progress_persistence_clear_mandala_state_removes_saved_colors_and_completion) {
@@ -129,7 +149,7 @@ TEST_CASE(progress_persistence_clear_mandala_state_removes_saved_colors_and_comp
     mandala->getRegionById(1)->setColor(2);
 
     ProgressPersistence writer;
-    writer.captureMandalaState(*mandala);
+    writer.captureMandalaState(*mandala, ColorPalette().getColors());
     writer.clearMandalaState(909);
     EXPECT_TRUE(writer.save());
 

@@ -46,7 +46,9 @@ namespace {
     }
 }
 
-ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vector<Color>& customPaletteColors)
+ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala,
+                               const std::vector<Color>& customPaletteColors,
+                               bool readOnlyMode)
         : mandala(mandala), colorPalette(), colorButtons(), 
             backButton(0, 0, 1, 1, "BACK"),
             undoButton(0, 0, 1, 1, "UNDO"),
@@ -60,7 +62,7 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
             actionManager(),
             interactionManager(),
             camera{}, zoom(1.0f),
-            pendingColorChangesForSave(0), saveRequested(false) {
+            pendingColorChangesForSave(0), saveRequested(false), readOnlyMode(readOnlyMode) {
 
         camera.target = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
@@ -82,6 +84,7 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vect
 }
 
 void ColoringScreen::update(float deltaTime) {
+    (void)deltaTime;
     layoutTopButtons();
     cameraInputManager.update(camera, zoom, [this](Vector2 pointerPos) {
         return isPointerOverUi(pointerPos);
@@ -89,7 +92,13 @@ void ColoringScreen::update(float deltaTime) {
 
     if (interactionManager.updateBackNavigation(backButton)) {
         returnRequested = true;
-        saveRequested = true;
+        saveRequested = !readOnlyMode;
+        return;
+    }
+
+    if (readOnlyMode) {
+        updateAnalysisInteractions();
+        updateDebugInteractions();
         return;
     }
 
@@ -143,6 +152,23 @@ void ColoringScreen::draw() {
     std::string titleText = fitTextWithEllipsis(mandala->getName(), titleFont, titleMaxWidth);
     DrawText(titleText.c_str(), titleX, titleY, titleFont, Colors::Black);
 
+    if (readOnlyMode) {
+        float badgeWidth = 72.0f * uiScale;
+        float badgeHeight = 24.0f * uiScale;
+        float badgeX = static_cast<float>(titleX + MeasureText(titleText.c_str(), titleFont) + static_cast<int>(10.0f * uiScale));
+        float badgeY = static_cast<float>(titleY + static_cast<int>(6.0f * uiScale));
+
+        DrawRectangleRec({badgeX, badgeY, badgeWidth, badgeHeight}, Colors::Gold);
+        DrawRectangleLinesEx({badgeX, badgeY, badgeWidth, badgeHeight}, 2.0f, Colors::Black);
+
+        int doneTextSize = std::max(12, static_cast<int>(12.0f * uiScale));
+        const char* doneLabel = "DONE";
+        int doneTextWidth = MeasureText(doneLabel, doneTextSize);
+        int doneTextX = static_cast<int>(badgeX + (badgeWidth - doneTextWidth) * 0.5f);
+        int doneTextY = static_cast<int>(badgeY + (badgeHeight - doneTextSize) * 0.5f);
+        DrawText(doneLabel, doneTextX, doneTextY, doneTextSize, Colors::Black);
+    }
+
     BeginMode2D(camera);
     mandala->draw(colorPalette.getColors(), false);
     inspector.drawValidationOverlay(*mandala);
@@ -152,10 +178,14 @@ void ColoringScreen::draw() {
 
     inspector.drawDebugInfoPanel(*mandala, uiScale);
 
-    drawColorPalette();
+    if (!readOnlyMode) {
+        drawColorPalette();
+    }
     backButton.draw();
     undoButton.draw();
-    validateButton.draw();
+    if (!readOnlyMode) {
+        validateButton.draw();
+    }
     if (inspector.isAnalysisMode()) {
         analysisCloseButton.draw();
         analysisClearButton.draw();
@@ -312,8 +342,13 @@ void ColoringScreen::layoutTopButtons() {
     undoButton.setSize(undoButtonWidth, undoButtonHeight);
 
     float validateButtonX = GetScreenWidth() - 2*mainButtonWidth - rightMargin;
-    validateButton.setPosition(validateButtonX, topMargin);
-    validateButton.setSize(mainButtonWidth, topButtonHeight);
+    if (readOnlyMode) {
+        validateButton.setPosition(0.0f, 0.0f);
+        validateButton.setSize(0.0f, 0.0f);
+    } else {
+        validateButton.setPosition(validateButtonX, topMargin);
+        validateButton.setSize(mainButtonWidth, topButtonHeight);
+    }
     
     float controlsY = topMargin + topButtonHeight + (10.0f * uiScale);
 
@@ -331,6 +366,14 @@ void ColoringScreen::layoutTopButtons() {
     }
 
     int colorCount = static_cast<int>(colorButtons.size());
+
+    if (readOnlyMode) {
+        for (int i = 0; i < colorCount; i++) {
+            colorButtons[i].setPosition(0.0f, 0.0f);
+            colorButtons[i].setSize(0.0f, 0.0f);
+        }
+        return;
+    }
 
     float paletteX = leftMargin;
     float paletteTop = controlsY;

@@ -10,7 +10,7 @@ Game::Game()
 Game::~Game() {
     savePaletteProgress();
     if (database) {
-        progressPersistence.captureAllMandalas(database->getAllMandala());
+        progressPersistence.captureAllMandalas(database->getAllMandala(), appPaletteColors);
         progressPersistence.save();
     }
 }
@@ -52,10 +52,25 @@ void Game::update(float deltaTime) {
 
             if (selectionScreen->shouldTransitionToColoring()) {
                 selectedMandala = selectionScreen->getSelectedMandala();
+                bool openReadOnly = false;
+                std::vector<Color> activeColorsForMandala = appPaletteColors;
+
                 if (selectedMandala != nullptr) {
+                    const int selectedMandalaId = selectedMandala->getId();
+                    openReadOnly = progressPersistence.isMandalaCompleted(selectedMandalaId);
+                    if (openReadOnly) {
+                        std::vector<Color> frozenPalette;
+                        if (progressPersistence.tryGetMandalaFrozenPalette(selectedMandalaId, frozenPalette)
+                            && !frozenPalette.empty()) {
+                            activeColorsForMandala = frozenPalette;
+                        }
+                    }
                     progressPersistence.applyToMandalas({selectedMandala});
                 }
-                coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, appPaletteColors);
+
+                coloringScreen = std::make_shared<ColoringScreen>(selectedMandala,
+                                                                  activeColorsForMandala,
+                                                                  openReadOnly);
                 suppressWinTransition = false;
                 transitionToState(GameScreenState::COLORING);
             }
@@ -104,6 +119,12 @@ void Game::update(float deltaTime) {
 
         case GameScreenState::WIN:
             if (winScreen->shouldReturnToColoring()) {
+                if (selectedMandala != nullptr && progressPersistence.isMandalaCompleted(selectedMandala->getId())) {
+                    suppressWinTransition = false;
+                    selectionScreen = createSelectionScreen();
+                    transitionToState(GameScreenState::SELECTION);
+                    break;
+                }
                 suppressWinTransition = true;
                 transitionToState(GameScreenState::COLORING);
             }
@@ -183,7 +204,16 @@ void Game::saveSelectedMandalaProgress() {
         return;
     }
 
-    progressPersistence.captureMandalaState(*selectedMandala);
+    std::vector<Color> paletteForCapture = appPaletteColors;
+    if (progressPersistence.isMandalaCompleted(selectedMandala->getId())) {
+        std::vector<Color> frozenPalette;
+        if (progressPersistence.tryGetMandalaFrozenPalette(selectedMandala->getId(), frozenPalette)
+            && !frozenPalette.empty()) {
+            paletteForCapture = frozenPalette;
+        }
+    }
+
+    progressPersistence.captureMandalaState(*selectedMandala, paletteForCapture);
     progressPersistence.save();
 }
 

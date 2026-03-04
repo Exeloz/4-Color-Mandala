@@ -13,7 +13,9 @@
 
 class ColoringScreen : public GameState {
 public:
-    ColoringScreen(std::shared_ptr<Mandala> mandala, const std::vector<Color>& customPaletteColors = {});
+    ColoringScreen(std::shared_ptr<Mandala> mandala,
+                  const std::vector<Color>& customPaletteColors = {},
+                  bool readOnlyMode = false);
 
     void update(float deltaTime) override;
     void draw() override;
@@ -44,6 +46,7 @@ private:
     float selectedPatternSize = 1.0f;
     int pendingColorChangesForSave;
     bool saveRequested;
+    bool readOnlyMode;
 
     void drawColorPalette();
     void updatePatternControls();
