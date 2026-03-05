@@ -99,6 +99,102 @@ bool findMatchingClosingBrace(const std::string& content, size_t openingBraceInd
     return false;
 }
 
+bool findMatchingClosingBracket(const std::string& content, size_t openingBracketIndex, size_t& closingBracketIndex) {
+    if (openingBracketIndex >= content.size() || content[openingBracketIndex] != '[') {
+        return false;
+    }
+
+    int depth = 0;
+    bool inString = false;
+    bool escaped = false;
+
+    for (size_t i = openingBracketIndex; i < content.size(); ++i) {
+        const char ch = content[i];
+
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+            } else if (ch == '\\') {
+                escaped = true;
+            } else if (ch == '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (ch == '"') {
+            inString = true;
+            continue;
+        }
+
+        if (ch == '[') {
+            ++depth;
+            continue;
+        }
+
+        if (ch == ']') {
+            --depth;
+            if (depth == 0) {
+                closingBracketIndex = i;
+                return true;
+            }
+            if (depth < 0) {
+                return false;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool findRegionObjectRangeById(const std::string& content,
+                               int regionId,
+                               size_t& outObjectStart,
+                               size_t& outObjectEnd) {
+    const std::regex regionsKeyRegex(R"("regions"\s*:)" );
+    std::smatch regionsKeyMatch;
+    if (!std::regex_search(content, regionsKeyMatch, regionsKeyRegex)) {
+        return false;
+    }
+
+    const size_t regionsKeyPos = static_cast<size_t>(regionsKeyMatch.position(0));
+    const size_t arrayStart = content.find('[', regionsKeyPos);
+    if (arrayStart == std::string::npos) {
+        return false;
+    }
+
+    size_t arrayEnd = std::string::npos;
+    if (!findMatchingClosingBracket(content, arrayStart, arrayEnd)) {
+        return false;
+    }
+
+    const std::regex idRegex(std::string("\\\"id\\\"\\s*:\\s*") + std::to_string(regionId) + "(?!\\d)");
+
+    size_t cursor = arrayStart + 1;
+    while (cursor < arrayEnd) {
+        const size_t objectStart = content.find('{', cursor);
+        if (objectStart == std::string::npos || objectStart >= arrayEnd) {
+            break;
+        }
+
+        size_t objectEnd = std::string::npos;
+        if (!findMatchingClosingBrace(content, objectStart, objectEnd) || objectEnd > arrayEnd) {
+            return false;
+        }
+
+        const std::string objectText = content.substr(objectStart, objectEnd - objectStart + 1);
+        if (objectText.find("\"points\"") != std::string::npos && std::regex_search(objectText, idRegex)) {
+            outObjectStart = objectStart;
+            outObjectEnd = objectEnd;
+            return true;
+        }
+
+        cursor = objectEnd + 1;
+    }
+
+    return false;
+}
+
 bool applyRegionBlackoutToObjectText(std::string& regionObjectText) {
     if (regionObjectText.empty() || regionObjectText.front() != '{' || regionObjectText.back() != '}') {
         return false;
@@ -641,20 +737,9 @@ bool ColoringInspector::applyRegionBlackoutJsonEdit(const Mandala& mandala, int 
         return false;
     }
 
-    const std::regex idRegex(std::string("\\\"id\\\"\\s*:\\s*") + std::to_string(regionId) + "(?!\\d)");
-    std::smatch idMatch;
-    if (!std::regex_search(content, idMatch, idRegex)) {
-        return false;
-    }
-
-    const size_t idPos = static_cast<size_t>(idMatch.position(0));
-    size_t objectStart = content.rfind('{', idPos);
-    if (objectStart == std::string::npos) {
-        return false;
-    }
-
+    size_t objectStart = std::string::npos;
     size_t objectEnd = std::string::npos;
-    if (!findMatchingClosingBrace(content, objectStart, objectEnd)) {
+    if (!findRegionObjectRangeById(content, regionId, objectStart, objectEnd)) {
         return false;
     }
 

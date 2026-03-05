@@ -13,12 +13,6 @@
 namespace {
     constexpr float SCREEN_CENTER_X = 400.0f;
     constexpr float SCREEN_CENTER_Y = 300.0f;
-    constexpr float DEGREES_TO_RADIANS = 3.14159f / 180.0f;
-    
-    constexpr float HEXAGON_RADIUS = 3000.0f;
-    constexpr float HEXAGON_INNER_RATIO = 0.5f;
-    constexpr int HEXAGON_SEGMENTS = 6;
-    constexpr float HEXAGON_DEGREES_PER_SEGMENT = 360.0f / HEXAGON_SEGMENTS;
 
     struct JsonValue {
         enum class Type {
@@ -512,23 +506,13 @@ namespace {
 
 MandalaDatabase::MandalaDatabase()
     : hardModeEnabled(false) {
-    createSampleMandala();
-}
-
-void MandalaDatabase::createSampleMandala() {
-    createHexagonMandala();
     if (!loadManifest()) {
-        TraceLog(LOG_WARNING, "Mandala manifest not loaded; only tutorial mandala is available.");
+        TraceLog(LOG_WARNING, "Mandala manifest not loaded; no mandalas are available.");
     }
 }
 
 void MandalaDatabase::loadMandala(int id, bool hardMode) {
     if (hasMandala(id, hardMode)) {
-        return;
-    }
-
-    if (id == 0) {
-        createHexagonMandala(hardMode);
         return;
     }
 
@@ -570,49 +554,6 @@ std::shared_ptr<Mandala> MandalaDatabase::getMandalaById(int id, bool hardMode) 
     return nullptr;
 }
 
-void MandalaDatabase::createHexagonMandala(bool hardMode) {
-    if (hasMandala(0, hardMode)) {
-        return;
-    }
-
-    std::vector<Region> regions;
-    AdjacencyGraph adjacencyGraph(HEXAGON_SEGMENTS);
-    
-    Vector2 center = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
-
-    for (int i = 0; i < HEXAGON_SEGMENTS; i++) {
-        float angle1 = (i * HEXAGON_DEGREES_PER_SEGMENT) * DEGREES_TO_RADIANS;
-        float angle2 = ((i + 1) * HEXAGON_DEGREES_PER_SEGMENT) * DEGREES_TO_RADIANS;
-
-        std::vector<Vector2> vertices = {
-            {center.x + HEXAGON_RADIUS * std::cos(angle1), center.y + HEXAGON_RADIUS * std::sin(angle1)},
-            {center.x + HEXAGON_RADIUS * HEXAGON_INNER_RATIO * std::cos(angle1), center.y + HEXAGON_RADIUS * HEXAGON_INNER_RATIO * std::sin(angle1)},
-            {center.x, center.y},
-            {center.x + HEXAGON_RADIUS * HEXAGON_INNER_RATIO * std::cos(angle2), center.y + HEXAGON_RADIUS * HEXAGON_INNER_RATIO * std::sin(angle2)},
-            {center.x + HEXAGON_RADIUS * std::cos(angle2), center.y + HEXAGON_RADIUS * std::sin(angle2)},
-        };
-
-        regions.emplace_back(i, vertices);
-    }
-
-    for (int i = 0; i < HEXAGON_SEGMENTS; i++) {
-        adjacencyGraph.addAdjacency(i, (i + 1) % HEXAGON_SEGMENTS);
-        if (hardMode) {
-            for (int j = i; j < HEXAGON_SEGMENTS; i++) {
-                adjacencyGraph.addAdjacency(i, j);
-            }
-        }
-    }
-
-    auto mandala = std::make_shared<Mandala>(0, "Tutorial", regions, adjacencyGraph, "", "", hardMode);
-    loadedMandalas.push_back({0, hardMode, mandala});
-
-    if (!hardMode) {
-        mandalaListItems.push_back({0, "Tutorial", true});
-        hardModeEnabled = true;
-    }
-}
-
 bool MandalaDatabase::loadManifest() {
     std::string manifestText;
     std::string loadedPath;
@@ -636,12 +577,8 @@ bool MandalaDatabase::loadManifest() {
     }
 
     mandalaDescriptors.clear();
-    hardModeEnabled = std::any_of(
-        mandalaListItems.begin(),
-        mandalaListItems.end(),
-        [](const MandalaListItem& item) {
-            return item.hasHardMode;
-        });
+    mandalaListItems.clear();
+    hardModeEnabled = false;
     for (const JsonValue& entry : root.arrayValue) {
         if (!entry.isObject()) {
             continue;

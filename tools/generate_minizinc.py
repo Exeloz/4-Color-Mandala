@@ -5,6 +5,7 @@ Generate MiniZinc graph-coloring models from mandala regions/adjacency JSON file
 Expected assets under resources/assets/<id>/:
 - mandala_<id>_regions.json (or legacy mandala_1.json)
 - mandala_<id>_adjacency.json
+- (optional hard) mandala_<id>_adjacency-hard.json / mandala_<id>_adjacency_hard.json
 """
 
 from __future__ import annotations
@@ -90,20 +91,47 @@ def find_regions_file(asset_dir: Path, mandala_id: int) -> Path:
     return legacy[0]
 
 
-def find_adjacency_file(asset_dir: Path, mandala_id: int) -> Path:
+def find_adjacency_file(asset_dir: Path, mandala_id: int, hard_mode: bool = False) -> Path:
+    if hard_mode:
+        preferred_candidates = [
+            asset_dir / f"mandala_{mandala_id}_adjacency-hard.json",
+            asset_dir / f"mandala_{mandala_id}_adjacency_hard.json",
+        ]
+        for preferred in preferred_candidates:
+            if preferred.exists():
+                return preferred
+
+        candidates = sorted(
+            path for path in asset_dir.glob("*adjacency*.json") if "hard" in path.stem.lower()
+        )
+        if not candidates:
+            raise FileNotFoundError(f"No hard adjacency JSON found in {asset_dir}")
+        return candidates[0]
+
     preferred = asset_dir / f"mandala_{mandala_id}_adjacency.json"
     if preferred.exists():
         return preferred
 
-    candidates = sorted(asset_dir.glob("*adjacency*.json"))
+    candidates = sorted(
+        path for path in asset_dir.glob("*adjacency*.json") if "hard" not in path.stem.lower()
+    )
     if not candidates:
         raise FileNotFoundError(f"No adjacency JSON found in {asset_dir}")
     return candidates[0]
 
 
-def infer_output_filename(asset_dir: Path, mandala_id: int) -> str:
+def infer_output_filename(asset_dir: Path, mandala_id: int, hard_mode: bool = False) -> str:
     regions_path = find_regions_file(asset_dir, mandala_id)
-    return regions_path.stem + ".mzn"
+    suffix = "_hard" if hard_mode else ""
+    return regions_path.stem + suffix + ".mzn"
+
+
+def has_hard_adjacency_file(asset_dir: Path, mandala_id: int) -> bool:
+    try:
+        find_adjacency_file(asset_dir, mandala_id, hard_mode=True)
+        return True
+    except FileNotFoundError:
+        return False
 
 
 def format_int_set(values: Sequence[int]) -> str:
@@ -153,12 +181,12 @@ def build_minizinc_model(region_ids: Sequence[int], edges: Sequence[Edge], sourc
     return "\n".join(lines) + "\n"
 
 
-def process_mandala(assets_root: Path, mandala_id: int, output_name: str | None) -> Path:
+def process_mandala(assets_root: Path, mandala_id: int, output_name: str | None, hard_mode: bool = False) -> Path:
     asset_dir = assets_root / str(mandala_id)
     asset_dir.mkdir(parents=True, exist_ok=True)
 
     regions_json = find_regions_file(asset_dir, mandala_id)
-    adjacency_json = find_adjacency_file(asset_dir, mandala_id)
+    adjacency_json = find_adjacency_file(asset_dir, mandala_id, hard_mode=hard_mode)
 
     region_ids = parse_region_ids(regions_json)
     edges = parse_adjacency_edges(adjacency_json)
@@ -167,7 +195,7 @@ def process_mandala(assets_root: Path, mandala_id: int, output_name: str | None)
     all_ids = sorted(region_ids | ids_from_edges)
     sorted_edges = sorted(edges)
 
-    output_filename = output_name if output_name else infer_output_filename(asset_dir, mandala_id)
+    output_filename = output_name if output_name else infer_output_filename(asset_dir, mandala_id, hard_mode)
     output_path = asset_dir / output_filename
 
     source_note = f"{regions_json} and {adjacency_json}"
@@ -201,6 +229,16 @@ def parse_args() -> argparse.Namespace:
         type=str,
         help="Optional output filename for single-id generation (example: mandala_1.mzn)",
     )
+    parser.add_argument(
+        "--include-hard",
+        action="store_true",
+        help="Also generate *_hard.mzn when a hard adjacency JSON exists.",
+    )
+    parser.add_argument(
+        "--hard-only",
+        action="store_true",
+        help="Generate only hard-mode MiniZinc files (requires hard adjacency JSON).",
+    )
 
     return parser.parse_args()
 
@@ -226,10 +264,27 @@ def main() -> None:
     if args.output_name and len(selected_ids) != 1:
         raise ValueError("--output-name can only be used with a single --mandala-id")
 
+    if args.output_name and (args.include_hard or args.hard_only):
+        raise ValueError("--output-name cannot be combined with --include-hard or --hard-only")
+
+    if args.hard_only and not args.include_hard:
+        args.include_hard = True
+
     generated_paths: List[Path] = []
     for mandala_id in selected_ids:
-        output_path = process_mandala(assets_root, mandala_id, args.output_name)
-        generated_paths.append(output_path)
+        if not args.hard_only:
+            output_path = process_mandala(assets_root, mandala_id, args.output_name, hard_mode=False)
+            generated_paths.append(output_path)
+
+        if args.include_hard:
+            asset_dir = assets_root / str(mandala_id)
+            if has_hard_adjacency_file(asset_dir, mandala_id):
+                output_path = process_mandala(assets_root, mandala_id, None, hard_mode=True)
+                generated_paths.append(output_path)
+            elif args.hard_only:
+                raise FileNotFoundError(
+                    f"Mandala {mandala_id} has no hard adjacency JSON, cannot use --hard-only"
+                )
 
     print(f"Generated {len(generated_paths)} MiniZinc file(s):")
     for path in generated_paths:

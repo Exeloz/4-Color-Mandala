@@ -98,20 +98,20 @@ node svg_to_polygons.js "$SVG" ../resources/assets/$MID/mandala_
 
 # 1b) (Optionnel) Preview SVG des polygones générés
 python3 polygons_to_svg.py ../resources/assets/$MID/mandala_1.json \
-  ../resources/assets/$MID/mandala_1_polygons.svg
+  ../resources/assets/$MID/mandala_polygons.svg
 
 # 2) Polygones -> regions runtime
 python3 json_to_mandala_code.py ../resources/assets/$MID/mandala_1.json \
   --name "Mandala $MID" --id $MID \
-  -o ../resources/assets/$MID/mandala_${MID}_regions.json
+  -o ../resources/assets/$MID/mandala_regions.json
 
 # 3) Regions -> adjacency
-python3 generate_adjacency.py --json ../resources/assets/$MID/mandala_${MID}_regions.json \
+python3 generate_adjacency.py --json ../resources/assets/$MID/mandala_regions.json \
   --mandala-id $MID --min-overlap 2 --min-shared-len 2 --eps-edge 40 \
-  -o ../resources/assets/$MID/mandala_${MID}_adjacency.json
+  -o ../resources/assets/$MID/mandala_adjacency.json
 
 # 4) (Optionnel) MiniZinc
-python3 generate_minizinc.py --mandala-id $MID
+python3 generate_minizinc.py --mandala-id $MID --include-hard
 ```
 
 Winding (`json_to_mandala_code.py`):

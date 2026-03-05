@@ -40,9 +40,6 @@ private:
     std::vector<MandalaAssetDescriptor> mandalaDescriptors;
     bool hardModeEnabled;
 
-    void createSampleMandala();
-    void createHexagonMandala(bool hardMode = false);
-
     bool loadManifest();
     bool loadMandalaFromAssets(const MandalaAssetDescriptor& descriptor, bool hardMode);
     bool hasMandala(int id, bool hardMode) const;

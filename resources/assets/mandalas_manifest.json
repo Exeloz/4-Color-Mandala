@@ -1,5 +1,12 @@
 [
   {
+    "id": 0,
+    "name": "Tutoriel",
+    "regions": "0/mandala_regions.json",
+    "adjacency": "0/mandala_adjacency.json",
+    "adjacency_hard": "0/mandala_adjacency-hard.json"
+  },
+  {
     "id": 1,
     "name": "Mandala 449",
     "regions": "1/mandala_1_regions.json",
