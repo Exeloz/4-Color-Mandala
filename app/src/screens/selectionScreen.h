@@ -12,7 +12,8 @@ class SelectionScreen : public GameState {
 public:
     SelectionScreen(std::shared_ptr<MandalaDatabase> database,
                     const std::unordered_set<int>& completedMandalaIdsNormal = {},
-                    const std::unordered_set<int>& completedMandalaIdsHard = {});
+                    const std::unordered_set<int>& completedMandalaIdsHard = {},
+                    const std::unordered_map<int, bool>& initialHardModeByMandalaId = {});
 
     void update(float deltaTime) override;
     void draw() override;
@@ -23,6 +24,7 @@ public:
     bool shouldTransitionToPalette() const;
     bool shouldReturnToStart() const;
     bool isSelectedMandalaHardMode() const;
+    const std::unordered_map<int, bool>& getHardModeSelections() const;
 
 private:
     std::shared_ptr<MandalaDatabase> database;

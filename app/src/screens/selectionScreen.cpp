@@ -16,7 +16,8 @@ float getUiScale() {
 
 SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database,
                                  const std::unordered_set<int>& completedMandalaIdsNormal,
-                                 const std::unordered_set<int>& completedMandalaIdsHard)
+                                 const std::unordered_set<int>& completedMandalaIdsHard,
+                                 const std::unordered_map<int, bool>& initialHardModeByMandalaId)
         : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), pendingResetMandalaId(-1),
             selectedMandalaHardMode(false), pendingResetMandalaHardMode(false), resetRequestedMandalaHardMode(false),
             resetRequestedMandalaId(-1), transitionRequested(false), paletteRequested(false),
@@ -35,7 +36,13 @@ SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database,
         modeButtons.emplace_back(0.0f, 0.0f, 96.0f, 40.0f, "MODE: N");
         modeButtons.back().setTextScale(0.75f);
 
-        hardModeByMandalaId[mandalaItems[i].id] = false;
+        bool initialHardMode = false;
+        auto it = initialHardModeByMandalaId.find(mandalaItems[i].id);
+        if (it != initialHardModeByMandalaId.end()) {
+            initialHardMode = it->second;
+        }
+
+        hardModeByMandalaId[mandalaItems[i].id] = mandalaItems[i].hasHardMode && initialHardMode;
         refreshModeButtonLabel(i, mandalaItems[i].id);
     }
 }
@@ -317,6 +324,10 @@ bool SelectionScreen::shouldReturnToStart() const {
 
 bool SelectionScreen::isSelectedMandalaHardMode() const {
     return selectedMandalaHardMode;
+}
+
+const std::unordered_map<int, bool>& SelectionScreen::getHardModeSelections() const {
+    return hardModeByMandalaId;
 }
 
 void SelectionScreen::refreshModeButtonLabel(size_t index, int mandalaId) {

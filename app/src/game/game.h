@@ -9,6 +9,7 @@
 #include "../ui/colorPalette.h"
 #include "progressPersistence.h"
 #include <memory>
+#include <unordered_map>
 
 enum class GameScreenState {
     START,
@@ -41,6 +42,7 @@ private:
 
     std::shared_ptr<Mandala> selectedMandala;
     std::vector<Color> appPaletteColors;
+    std::unordered_map<int, bool> hardModeSelectionByMandalaId;
     bool hardModeEnabled;
     bool suppressWinTransition;
     ProgressPersistence progressPersistence;
@@ -49,6 +51,7 @@ private:
     void updateCurrentState(float deltaTime);
     void drawCurrentState();
     std::shared_ptr<SelectionScreen> createSelectionScreen() const;
+    void syncHardModeSelectionState();
     void savePaletteProgress();
     void saveSelectedMandalaProgress();
     void resetMandalaProgress(int mandalaId);
