@@ -44,6 +44,21 @@ namespace {
 
         return ellipsis;
     }
+
+    int getAvailableEditableColorCount(const Mandala& mandala, int totalCount) {
+        const int editableCount = std::max(0, totalCount - ColorPalette::LockedColorSlots);
+
+        const int minimumRequired = mandala.getMinimumColorCount();
+        if (minimumRequired > 0) {
+            return std::min(editableCount, minimumRequired);
+        }
+
+        if (mandala.isHardMode()) {
+            return editableCount;
+        }
+
+        return std::min(editableCount, ColorPalette::NormalEditableColorCount);
+    }
 }
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala,
@@ -72,6 +87,14 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala,
 
     if (!customPaletteColors.empty()) {
         colorPalette.setColors(customPaletteColors);
+    }
+
+    int availableEditableColorCount = getAvailableEditableColorCount(*mandala, colorPalette.getColorCount());
+    const int maxAllowedColorIndex = availableEditableColorCount;
+    if (availableEditableColorCount > 0) {
+        if (colorPalette.getSelectedColorIndex() < 0 || colorPalette.getSelectedColorIndex() > maxAllowedColorIndex) {
+            colorPalette.setSelectedColorIndex(0);
+        }
     }
     
     for (int i = 0; i < colorPalette.getColorCount(); i++) {
@@ -112,7 +135,14 @@ void ColoringScreen::update(float deltaTime) {
         inspector.validateAdjacency(*mandala);
     }  
 
-    interactionManager.updateColorButtons(colorButtons, colorPalette);
+    int availableEditableColorCount = getAvailableEditableColorCount(*mandala, static_cast<int>(colorButtons.size()));
+    const int maxAllowedColorIndex = availableEditableColorCount;
+    for (int colorIndex = 0; colorIndex <= maxAllowedColorIndex; colorIndex++) {
+        colorButtons[colorIndex].update();
+        if (colorButtons[colorIndex].isClicked()) {
+            colorPalette.setSelectedColorIndex(colorIndex);
+        }
+    }
 
     updateAnalysisInteractions();
     updateDebugInteractions();
@@ -169,6 +199,22 @@ void ColoringScreen::draw() {
         DrawText(hardLabel, hardTextX, hardTextY, hardTextSize, Colors::White);
 
         statusBadgeX += hardBadgeWidth + (8.0f * uiScale);
+
+        if (mandala->getMinimumColorCount() > 0) {
+            const std::string minLabel = "MIN " + std::to_string(mandala->getMinimumColorCount());
+            int minTextSize = std::max(12, static_cast<int>(12.0f * uiScale));
+            float minBadgeWidth = static_cast<float>(MeasureText(minLabel.c_str(), minTextSize)) + (18.0f * uiScale);
+            float minBadgeHeight = 24.0f * uiScale;
+
+            DrawRectangleRec({statusBadgeX, statusBadgeY, minBadgeWidth, minBadgeHeight}, Colors::DarkBlue);
+            DrawRectangleLinesEx({statusBadgeX, statusBadgeY, minBadgeWidth, minBadgeHeight}, 2.0f, Colors::Black);
+
+            int minTextX = static_cast<int>(statusBadgeX + (minBadgeWidth - MeasureText(minLabel.c_str(), minTextSize)) * 0.5f);
+            int minTextY = static_cast<int>(statusBadgeY + (minBadgeHeight - minTextSize) * 0.5f);
+            DrawText(minLabel.c_str(), minTextX, minTextY, minTextSize, Colors::White);
+
+            statusBadgeX += minBadgeWidth + (8.0f * uiScale);
+        }
     }
 
     if (readOnlyMode) {
@@ -220,19 +266,24 @@ void ColoringScreen::drawColorPalette() {
         return;
     }
 
+    int availableEditableColorCount = getAvailableEditableColorCount(*mandala, colorPalette.getColorCount());
+    if (availableEditableColorCount <= 0) {
+        return;
+    }
+
     float uiScale = getUiScale();
-    Rectangle firstButton = colorButtons.front().getBounds();
+    Rectangle firstButton = colorButtons[0].getBounds();
     int labelSize = static_cast<int>(16.0f * uiScale);
     int labelX = static_cast<int>(firstButton.x);
     int labelY = static_cast<int>(firstButton.y - labelSize - (10.0f * uiScale));
     DrawText("Colors:", labelX, labelY, labelSize, Colors::Black);
     
-    for (int i = 0; i < colorPalette.getColorCount(); i++) {
-        Color color = colorPalette.getColor(i);
-        Rectangle bounds = colorButtons[i].getBounds();
+    for (int colorIndex = 0; colorIndex <= availableEditableColorCount; colorIndex++) {
+        Color color = colorPalette.getColor(colorIndex);
+        Rectangle bounds = colorButtons[colorIndex].getBounds();
         ColorTileRenderer::drawColorTile(color, bounds, uiScale);
         
-        if (i == colorPalette.getSelectedColorIndex()) {
+        if (colorIndex == colorPalette.getSelectedColorIndex()) {
             DrawRectangleLinesEx(bounds, 7.0f, Colors::Black);
         } else {
             DrawRectangleLinesEx(bounds, 2.0f, Colors::Gray);
@@ -392,6 +443,7 @@ void ColoringScreen::layoutTopButtons() {
     }
 
     int colorCount = static_cast<int>(colorButtons.size());
+    int availableEditableColorCount = getAvailableEditableColorCount(*mandala, colorCount);
 
     if (readOnlyMode) {
         for (int i = 0; i < colorCount; i++) {
@@ -401,13 +453,24 @@ void ColoringScreen::layoutTopButtons() {
         return;
     }
 
+    const bool useTwoColumns = availableEditableColorCount >= 8;
+
     float paletteX = leftMargin;
     float paletteTop = controlsY;
     float paletteBottomMargin = 20.0f * uiScale;
     float availableHeight = std::max(1.0f, static_cast<float>(GetScreenHeight()) - paletteTop - paletteBottomMargin);
     float verticalGap = mobileLayout ? (8.0f * uiScale) : 10.0f;
-    int rows = colorCount;
+    int columns = useTwoColumns ? 2 : 1;
+    int visibleColorCount = availableEditableColorCount + 1;
+    int rows = std::max(1, (visibleColorCount + columns - 1) / columns);
     float buttonWidth = mobileLayout ? (88.0f * uiScale) : 90.0f;
+    float horizontalGap = std::max(10.0f * uiScale, 12.0f);
+
+    if (useTwoColumns) {
+        float maxWidthForTwoCols = (GetScreenWidth() * 0.42f) - leftMargin;
+        float twoColWidth = (maxWidthForTwoCols - horizontalGap) * 0.5f;
+        buttonWidth = Clamp(twoColWidth, 64.0f * uiScale, buttonWidth);
+    }
 
     float buttonHeightBySpace = (availableHeight - ((rows - 1) * verticalGap)) / std::max(1, rows);
     float minButtonHeight = mobileLayout ? (24.0f * uiScale) : 36.0f;
@@ -415,8 +478,16 @@ void ColoringScreen::layoutTopButtons() {
     float buttonHeight = Clamp(buttonHeightBySpace, minButtonHeight, preferredButtonHeight);
 
     for (int i = 0; i < colorCount; i++) {
-        int row = i;
-        float buttonX = paletteX;
+        if (i > availableEditableColorCount) {
+            colorButtons[i].setPosition(0.0f, 0.0f);
+            colorButtons[i].setSize(0.0f, 0.0f);
+            continue;
+        }
+
+        int visibleIndex = i;
+        int row = visibleIndex / columns;
+        int col = visibleIndex % columns;
+        float buttonX = paletteX + col * (buttonWidth + horizontalGap);
         float buttonY = paletteTop + row * (buttonHeight + verticalGap);
         colorButtons[i].setPosition(buttonX, buttonY);
         colorButtons[i].setSize(buttonWidth, buttonHeight);

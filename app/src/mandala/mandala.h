@@ -10,7 +10,8 @@ public:
             const AdjacencyGraph& adjacencyGraph,
             const std::string& regionsSourcePath = "",
             const std::string& adjacencySourcePath = "",
-            bool hardMode = false);
+            bool hardMode = false,
+            int minimumColorCount = 0);
 
     int getId() const;
     const std::string& getName() const;
@@ -23,6 +24,7 @@ public:
     const std::string& getRegionsSourcePath() const;
     const std::string& getAdjacencySourcePath() const;
     bool isHardMode() const;
+    int getMinimumColorCount() const;
     bool isFullyColored() const;
     bool isValidColoring() const;
     void draw(const std::vector<Color>& colorPalette, bool ignoreColoring = false) const;
@@ -35,4 +37,5 @@ private:
     std::string regionsSourcePath;
     std::string adjacencySourcePath;
     bool hardMode;
+    int minimumColorCount;
 };

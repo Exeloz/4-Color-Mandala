@@ -27,6 +27,8 @@ private:
         std::string regionsPath;
         std::string adjacencyPath;
         std::string hardAdjacencyPath;
+        int minimumColors = 0;
+        int minimumColorsHard = 0;
     };
 
     struct LoadedMandalaEntry {

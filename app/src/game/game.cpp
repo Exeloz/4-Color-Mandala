@@ -1,5 +1,37 @@
 #include "game.h"
 
+#include <algorithm>
+
+namespace {
+std::vector<Color> normalizePaletteSize(const std::vector<Color>& palette) {
+    const std::vector<Color> defaults = ColorPalette().getColors();
+    std::vector<Color> normalized = palette.empty() ? defaults : palette;
+
+    if (normalized.size() < defaults.size()) {
+        normalized.insert(normalized.end(), defaults.begin() + normalized.size(), defaults.end());
+    }
+
+    if (normalized.size() > defaults.size()) {
+        normalized.resize(defaults.size());
+    }
+
+    return normalized;
+}
+
+std::vector<Color> buildPaletteForMode(const std::vector<Color>& fullPalette, bool hardMode) {
+    if (hardMode) {
+        return fullPalette;
+    }
+
+    const size_t normalSize = static_cast<size_t>(ColorPalette::LockedColorSlots + ColorPalette::NormalEditableColorCount);
+    std::vector<Color> limited = fullPalette;
+    if (limited.size() > normalSize) {
+        limited.resize(normalSize);
+    }
+    return limited;
+}
+}
+
 Game::Game() 
     : database(std::make_shared<MandalaDatabase>()), 
       currentState(GameScreenState::START),
@@ -20,7 +52,9 @@ void Game::initialize() {
 
     progressPersistence.load();
     if (progressPersistence.hasPalette()) {
-        appPaletteColors = progressPersistence.getPalette();
+        appPaletteColors = normalizePaletteSize(progressPersistence.getPalette());
+    } else {
+        appPaletteColors = normalizePaletteSize(appPaletteColors);
     }
 
     selectionScreen = createSelectionScreen();
@@ -52,7 +86,7 @@ void Game::update(float deltaTime) {
                 hardModeEnabled = selectionScreen->isSelectedMandalaHardMode();
                 selectedMandala = selectionScreen->getSelectedMandala();
                 bool openReadOnly = false;
-                std::vector<Color> activeColorsForMandala = appPaletteColors;
+                std::vector<Color> activeColorsForMandala = buildPaletteForMode(appPaletteColors, hardModeEnabled);
 
                 if (selectedMandala != nullptr) {
                     const int selectedMandalaId = selectedMandala->getId();

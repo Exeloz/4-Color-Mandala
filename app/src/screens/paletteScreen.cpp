@@ -7,9 +7,9 @@
 #include <algorithm>
 
 namespace {
-    constexpr float SLOT_START_X = 86.0f;
+    constexpr float SLOT_START_X = 48.0f;
     constexpr float SLOT_Y = 112.0f;
-    constexpr float SLOT_WIDTH = 76.0f;
+    constexpr float SLOT_WIDTH = 68.0f;
     constexpr float SLOT_HEIGHT = 38.0f;
     constexpr float SLOT_GAP = 8.0f;
 
@@ -31,7 +31,14 @@ PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
     transitionRequested(false), returnRequested(false), paletteChanged(false) {
 
     ColorPalette defaultPalette;
-    paletteColors = initialPaletteColors.empty() ? defaultPalette.getColors() : initialPaletteColors;
+    const std::vector<Color> defaultColors = defaultPalette.getColors();
+    paletteColors = initialPaletteColors.empty() ? defaultColors : initialPaletteColors;
+
+    if (paletteColors.size() < defaultColors.size()) {
+        paletteColors.insert(paletteColors.end(),
+                             defaultColors.begin() + paletteColors.size(),
+                             defaultColors.end());
+    }
 }
 
 void PaletteScreen::update(float deltaTime) {
@@ -106,7 +113,7 @@ void PaletteScreen::draw() {
     int titleX = (GetScreenWidth() - titleWidth) / 2;
     DrawText(title, titleX, titleY, titleSize, Colors::Black);
 
-    const char* subtitle = "Tap a palette slot, then pick from the wheel";
+    const char* subtitle = "Slots 1-4: normal + hard  |  Slots 5-10: hard only";
     int subtitleWidth = MeasureText(subtitle, subtitleSize);
     int subtitleX = (GetScreenWidth() - subtitleWidth) / 2;
     DrawText(subtitle, subtitleX, static_cast<int>(78.0f * uiScale), subtitleSize, Colors::DarkSlateGray);
@@ -114,7 +121,7 @@ void PaletteScreen::draw() {
     backButton.draw();
     continueButton.draw();
 
-    for (int i = 0; i < static_cast<int>(paletteColors.size()); i++) {
+    for (int i = 1; i < static_cast<int>(paletteColors.size()); i++) {
         Rectangle slot = getPaletteSlotBounds(i);
         ColorTileRenderer::drawColorTile(paletteColors[i], slot, uiScale);
 
@@ -122,12 +129,13 @@ void PaletteScreen::draw() {
         float borderWidth = (i == activeSlotIndex) ? 4.0f : 2.0f;
         DrawRectangleLinesEx(slot, borderWidth, borderColor);
 
-        if (i == 0) {
-            int lockSize = std::min(static_cast<int>(16.0f * uiScale), static_cast<int>(slot.height * 0.45f));
-            int lockWidth = MeasureText("LOCK", lockSize);
-            int lockX = static_cast<int>(slot.x + (slot.width - lockWidth) * 0.5f);
-            int lockY = static_cast<int>(slot.y + (slot.height - lockSize) * 0.5f);
-            DrawText("LOCK", lockX, lockY, lockSize, Colors::Black);
+        if (i > ColorPalette::NormalEditableColorCount) {
+            int hardSize = std::max(10, static_cast<int>(10.0f * uiScale));
+            const char* hardTag = "H";
+            int hardWidth = MeasureText(hardTag, hardSize);
+            int hardX = static_cast<int>(slot.x + slot.width - hardWidth - (6.0f * uiScale));
+            int hardY = static_cast<int>(slot.y + (3.0f * uiScale));
+            DrawText(hardTag, hardX, hardY, hardSize, Colors::Crimson);
         }
     }
 
@@ -172,6 +180,10 @@ const std::vector<Color>& PaletteScreen::getCustomizedColors() const {
 }
 
 Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
+    if (slotIndex <= 0) {
+        return {0.0f, 0.0f, 0.0f, 0.0f};
+    }
+
     float uiScale = getUiScale();
     float width = SLOT_WIDTH * uiScale;
     float height = SLOT_HEIGHT * uiScale;
@@ -179,14 +191,24 @@ Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
     float startX = SLOT_START_X * uiScale;
     float y = SLOT_Y * uiScale;
 
-    float totalWidth = (static_cast<float>(paletteColors.size()) * width) +
-                       (static_cast<float>(paletteColors.size() - 1) * gap);
-    if (totalWidth > GetScreenWidth() - (2.0f * startX)) {
-        width = ((GetScreenWidth() - (2.0f * startX)) - (static_cast<float>(paletteColors.size() - 1) * gap)) /
-                static_cast<float>(paletteColors.size());
-        width = std::max(width, 60.0f * uiScale);
+    const int columns = 6;
+    const int totalSlots = std::max(0, static_cast<int>(paletteColors.size()) - 1);
+    int rows = std::max(1, (totalSlots + columns - 1) / columns);
+
+    float availableWidth = static_cast<float>(GetScreenWidth()) - (2.0f * startX);
+    float rowWidthSlots = static_cast<float>(columns) * width + static_cast<float>(columns - 1) * gap;
+    if (rowWidthSlots > availableWidth) {
+        width = (availableWidth - static_cast<float>(columns - 1) * gap) / static_cast<float>(columns);
+        width = std::max(width, 48.0f * uiScale);
     }
 
-    float x = startX + slotIndex * (width + gap);
-    return {x, y, width, height};
+    float rowGap = std::max(10.0f * uiScale, SLOT_GAP * uiScale);
+    int visibleIndex = slotIndex - 1;
+    int row = visibleIndex / columns;
+    int col = visibleIndex % columns;
+
+    float x = startX + static_cast<float>(col) * (width + gap);
+    float slotY = y + static_cast<float>(row) * (height + rowGap);
+    (void)rows;
+    return {x, slotY, width, height};
 }

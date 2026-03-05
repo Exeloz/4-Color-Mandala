@@ -1,28 +1,34 @@
 [
   {
     "id": 0,
-    "name": "Tutoriel",
+    "name": "Tutorial",
     "regions": "0/mandala_regions.json",
     "adjacency": "0/mandala_adjacency.json",
-    "adjacency_hard": "0/mandala_adjacency-hard.json"
+    "adjacency_hard": "0/mandala_adjacency-hard.json",
+    "min_colors": 4,
+    "min_colors_hard": 6
   },
   {
     "id": 1,
     "name": "Mandala 449",
     "regions": "1/mandala_1_regions.json",
     "adjacency": "1/mandala_1_adjacency.json",
-    "adjacency_hard": "1/mandala_1_adjacency-hard.json"
+    "adjacency_hard": "1/mandala_1_adjacency-hard.json",
+    "min_colors": 4,
+    "min_colors_hard": 9
   },
   {
     "id": 2,
     "name": "Mandala 565",
     "regions": "2/mandala_2_regions.json",
-    "adjacency": "2/mandala_2_adjacency.json"
+    "adjacency": "2/mandala_2_adjacency.json",
+    "min_colors": 4
   },
   {
     "id": 4,
     "name": "Mandala 900",
     "regions": "4/mandala_4_regions.json",
-    "adjacency": "4/mandala_4_adjacency.json"
+    "adjacency": "4/mandala_4_adjacency.json",
+    "min_colors": 4
   }
 ]

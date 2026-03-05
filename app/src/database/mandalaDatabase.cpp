@@ -599,6 +599,10 @@ bool MandalaDatabase::loadManifest() {
         }
 
         readStringField(entry, "adjacency_hard", descriptor.hardAdjacencyPath);
+        readIntField(entry, "min_colors", descriptor.minimumColors);
+        if (!readIntField(entry, "min_colors_hard", descriptor.minimumColorsHard)) {
+            descriptor.minimumColorsHard = descriptor.minimumColors;
+        }
         if (!descriptor.hardAdjacencyPath.empty()) {
             hardModeEnabled = true;
         }
@@ -813,7 +817,8 @@ bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descri
                                   adjacencyGraph,
                                   loadedRegionsPath,
                                   loadedAdjacencyPath,
-                                  hardMode)
+                                  hardMode,
+                                  hardMode ? descriptor.minimumColorsHard : descriptor.minimumColors)
     });
     return true;
 }

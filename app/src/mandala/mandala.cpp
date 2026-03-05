@@ -5,14 +5,16 @@ Mandala::Mandala(int id, const std::string& name, const std::vector<Region>& reg
                                  const AdjacencyGraph& adjacencyGraph,
                                  const std::string& regionsSourcePath,
                                  const std::string& adjacencySourcePath,
-                                 bool hardMode)
+                                 bool hardMode,
+                                 int minimumColorCount)
         : id(id),
             name(name),
             regions(regions),
             adjacencyGraph(adjacencyGraph),
             regionsSourcePath(regionsSourcePath),
             adjacencySourcePath(adjacencySourcePath),
-            hardMode(hardMode) {}
+            hardMode(hardMode),
+            minimumColorCount(minimumColorCount) {}
 
 int Mandala::getId() const {
     return id;
@@ -71,6 +73,10 @@ const std::string& Mandala::getAdjacencySourcePath() const {
 
 bool Mandala::isHardMode() const {
     return hardMode;
+}
+
+int Mandala::getMinimumColorCount() const {
+    return minimumColorCount;
 }
 
 bool Mandala::isFullyColored() const {

@@ -4,6 +4,10 @@
 
 class ColorPalette {
 public:
+    static constexpr int LockedColorSlots = 1;
+    static constexpr int NormalEditableColorCount = 4;
+    static constexpr int MaxEditableColorCount = 10;
+
     ColorPalette();
 
     Color getColor(int index) const;
