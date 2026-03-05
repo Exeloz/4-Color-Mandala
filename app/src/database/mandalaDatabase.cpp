@@ -527,6 +527,11 @@ void MandalaDatabase::loadMandala(int id, bool hardMode) {
         return;
     }
 
+    if (id == 0) {
+        createHexagonMandala(hardMode);
+        return;
+    }
+
     auto iterator = std::find_if(
         mandalaDescriptors.begin(),
         mandalaDescriptors.end(),
@@ -565,7 +570,11 @@ std::shared_ptr<Mandala> MandalaDatabase::getMandalaById(int id, bool hardMode) 
     return nullptr;
 }
 
-void MandalaDatabase::createHexagonMandala() {
+void MandalaDatabase::createHexagonMandala(bool hardMode) {
+    if (hasMandala(0, hardMode)) {
+        return;
+    }
+
     std::vector<Region> regions;
     AdjacencyGraph adjacencyGraph(HEXAGON_SEGMENTS);
     
@@ -588,11 +597,20 @@ void MandalaDatabase::createHexagonMandala() {
 
     for (int i = 0; i < HEXAGON_SEGMENTS; i++) {
         adjacencyGraph.addAdjacency(i, (i + 1) % HEXAGON_SEGMENTS);
+        if (hardMode) {
+            for (int j = i; j < HEXAGON_SEGMENTS; i++) {
+                adjacencyGraph.addAdjacency(i, j);
+            }
+        }
     }
 
     auto mandala = std::make_shared<Mandala>(0, "Tutorial", regions, adjacencyGraph);
-    loadedMandalas.push_back({0, false, mandala});
-    mandalaListItems.push_back({0, "Tutorial", false});
+    loadedMandalas.push_back({0, hardMode, mandala});
+
+    if (!hardMode) {
+        mandalaListItems.push_back({0, "Tutorial", true});
+        hardModeEnabled = true;
+    }
 }
 
 bool MandalaDatabase::loadManifest() {
@@ -618,7 +636,12 @@ bool MandalaDatabase::loadManifest() {
     }
 
     mandalaDescriptors.clear();
-    hardModeEnabled = false;
+    hardModeEnabled = std::any_of(
+        mandalaListItems.begin(),
+        mandalaListItems.end(),
+        [](const MandalaListItem& item) {
+            return item.hasHardMode;
+        });
     for (const JsonValue& entry : root.arrayValue) {
         if (!entry.isObject()) {
             continue;

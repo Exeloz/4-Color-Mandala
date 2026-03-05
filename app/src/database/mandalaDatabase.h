@@ -41,7 +41,7 @@ private:
     bool hardModeEnabled;
 
     void createSampleMandala();
-    void createHexagonMandala();
+    void createHexagonMandala(bool hardMode = false);
 
     bool loadManifest();
     bool loadMandalaFromAssets(const MandalaAssetDescriptor& descriptor, bool hardMode);
