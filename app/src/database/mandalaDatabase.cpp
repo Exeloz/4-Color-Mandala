@@ -604,7 +604,7 @@ void MandalaDatabase::createHexagonMandala(bool hardMode) {
         }
     }
 
-    auto mandala = std::make_shared<Mandala>(0, "Tutorial", regions, adjacencyGraph);
+    auto mandala = std::make_shared<Mandala>(0, "Tutorial", regions, adjacencyGraph, "", "", hardMode);
     loadedMandalas.push_back({0, hardMode, mandala});
 
     if (!hardMode) {
@@ -875,7 +875,8 @@ bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descri
                                   regions,
                                   adjacencyGraph,
                                   loadedRegionsPath,
-                                  loadedAdjacencyPath)
+                                  loadedAdjacencyPath,
+                                  hardMode)
     });
     return true;
 }

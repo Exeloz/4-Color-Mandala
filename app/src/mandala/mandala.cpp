@@ -4,13 +4,15 @@
 Mandala::Mandala(int id, const std::string& name, const std::vector<Region>& regions, 
                                  const AdjacencyGraph& adjacencyGraph,
                                  const std::string& regionsSourcePath,
-                                 const std::string& adjacencySourcePath)
+                                 const std::string& adjacencySourcePath,
+                                 bool hardMode)
         : id(id),
             name(name),
             regions(regions),
             adjacencyGraph(adjacencyGraph),
             regionsSourcePath(regionsSourcePath),
-            adjacencySourcePath(adjacencySourcePath) {}
+            adjacencySourcePath(adjacencySourcePath),
+            hardMode(hardMode) {}
 
 int Mandala::getId() const {
     return id;
@@ -65,6 +67,10 @@ const std::string& Mandala::getRegionsSourcePath() const {
 
 const std::string& Mandala::getAdjacencySourcePath() const {
     return adjacencySourcePath;
+}
+
+bool Mandala::isHardMode() const {
+    return hardMode;
 }
 
 bool Mandala::isFullyColored() const {

@@ -152,11 +152,30 @@ void ColoringScreen::draw() {
     std::string titleText = fitTextWithEllipsis(mandala->getName(), titleFont, titleMaxWidth);
     DrawText(titleText.c_str(), titleX, titleY, titleFont, Colors::Black);
 
+    float statusBadgeX = static_cast<float>(titleX + MeasureText(titleText.c_str(), titleFont) + static_cast<int>(10.0f * uiScale));
+    float statusBadgeY = static_cast<float>(titleY + static_cast<int>(6.0f * uiScale));
+
+    if (mandala->isHardMode()) {
+        float hardBadgeWidth = 72.0f * uiScale;
+        float hardBadgeHeight = 24.0f * uiScale;
+        DrawRectangleRec({statusBadgeX, statusBadgeY, hardBadgeWidth, hardBadgeHeight}, Colors::Crimson);
+        DrawRectangleLinesEx({statusBadgeX, statusBadgeY, hardBadgeWidth, hardBadgeHeight}, 2.0f, Colors::Black);
+
+        int hardTextSize = std::max(12, static_cast<int>(12.0f * uiScale));
+        const char* hardLabel = "HARD";
+        int hardTextWidth = MeasureText(hardLabel, hardTextSize);
+        int hardTextX = static_cast<int>(statusBadgeX + (hardBadgeWidth - hardTextWidth) * 0.5f);
+        int hardTextY = static_cast<int>(statusBadgeY + (hardBadgeHeight - hardTextSize) * 0.5f);
+        DrawText(hardLabel, hardTextX, hardTextY, hardTextSize, Colors::White);
+
+        statusBadgeX += hardBadgeWidth + (8.0f * uiScale);
+    }
+
     if (readOnlyMode) {
         float badgeWidth = 72.0f * uiScale;
         float badgeHeight = 24.0f * uiScale;
-        float badgeX = static_cast<float>(titleX + MeasureText(titleText.c_str(), titleFont) + static_cast<int>(10.0f * uiScale));
-        float badgeY = static_cast<float>(titleY + static_cast<int>(6.0f * uiScale));
+        float badgeX = statusBadgeX;
+        float badgeY = statusBadgeY;
 
         DrawRectangleRec({badgeX, badgeY, badgeWidth, badgeHeight}, Colors::Gold);
         DrawRectangleLinesEx({badgeX, badgeY, badgeWidth, badgeHeight}, 2.0f, Colors::Black);
