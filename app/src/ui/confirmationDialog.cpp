@@ -81,83 +81,47 @@ std::vector<std::string> wrapText(const std::string& text, int textSize, float m
 }
 
 ConfirmationDialog::ConfirmationDialog()
-    : visible(false),
-      confirmed(false),
-      cancelled(false),
-      title("Confirm"),
-      message("Are you sure?"),
-      panelBounds{0.0f, 0.0f, 0.0f, 0.0f},
-      confirmButton(0.0f, 0.0f, 120.0f, 52.0f, "Confirm"),
-      cancelButton(0.0f, 0.0f, 120.0f, 52.0f, "Cancel") {
-    confirmButton.setTextScale(1.0f);
-    cancelButton.setTextScale(1.0f);
+        : message("Are you sure?"), popup() {
+        popup.configure("Confirm", "Confirm", "Cancel");
+        popup.setSizeRatios(0.86f, 0.62f);
 }
 
 void ConfirmationDialog::configure(const std::string& newTitle,
                                    const std::string& newMessage,
                                    const std::string& confirmLabel,
                                    const std::string& cancelLabel) {
-    title = newTitle;
     message = newMessage;
-    confirmButton = Button(0.0f, 0.0f, 120.0f, 52.0f, confirmLabel);
-    cancelButton = Button(0.0f, 0.0f, 120.0f, 52.0f, cancelLabel);
+    popup.configure(newTitle, confirmLabel, cancelLabel);
 }
 
 void ConfirmationDialog::show() {
-    visible = true;
-    confirmed = false;
-    cancelled = false;
+    popup.show();
 }
 
 void ConfirmationDialog::hide() {
-    visible = false;
-    confirmed = false;
-    cancelled = false;
+    popup.hide();
 }
 
 bool ConfirmationDialog::isVisible() const {
-    return visible;
+    return popup.isVisible();
 }
 
 void ConfirmationDialog::update() {
-    if (!visible) {
-        return;
-    }
-
-    updateLayout();
-    cancelButton.update();
-    confirmButton.update();
-
-    if (cancelButton.isClicked()) {
-        cancelled = true;
-    }
-
-    if (confirmButton.isClicked()) {
-        confirmed = true;
-    }
+    popup.update();
 }
 
 void ConfirmationDialog::draw() {
-    if (!visible) {
+    if (!popup.isVisible()) {
         return;
     }
 
-    updateLayout();
+    popup.drawShell();
 
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(Colors::Black, 0.55f));
-
-    DrawRectangleRounded(panelBounds, 0.08f, 14, Colors::WhiteSmoke);
-    DrawRectangleRoundedLinesEx(panelBounds, 0.08f, 14, 3.0f, Colors::DarkBlue);
+    Rectangle panelBounds = popup.getBounds();
 
     int titleSize = std::max(24, static_cast<int>(panelBounds.height * 0.10f));
     int bodySize = std::max(18, static_cast<int>(panelBounds.height * 0.075f));
 
-    int titleWidth = MeasureText(title.c_str(), titleSize);
-    int titleX = static_cast<int>(panelBounds.x + (panelBounds.width - titleWidth) * 0.5f);
-    int titleY = static_cast<int>(panelBounds.y + panelBounds.height * 0.12f);
-    DrawText(title.c_str(), titleX, titleY, titleSize, Colors::Black);
-
-    float messageLeft = panelBounds.x + panelBounds.width * 0.08f;
     float messageTop = panelBounds.y + panelBounds.height * 0.32f;
     float messageWidth = panelBounds.width * 0.84f;
     std::vector<std::string> lines = wrapText(message, bodySize, messageWidth, 4);
@@ -169,41 +133,13 @@ void ConfirmationDialog::draw() {
         DrawText(lines[i].c_str(), lineX, lineY, bodySize, Colors::DarkSlateGray);
     }
 
-    cancelButton.draw();
-    confirmButton.draw();
+    popup.drawButtons();
 }
 
 bool ConfirmationDialog::consumeConfirmed() {
-    const bool value = confirmed;
-    confirmed = false;
-    return value;
+    return popup.consumeConfirmed();
 }
 
 bool ConfirmationDialog::consumeCancelled() {
-    const bool value = cancelled;
-    cancelled = false;
-    return value;
-}
-
-void ConfirmationDialog::updateLayout() {
-    float dialogWidth = std::min(620.0f, GetScreenWidth() * 0.86f);
-    float dialogHeight = std::min(360.0f, GetScreenHeight() * 0.62f);
-    panelBounds = {
-        (GetScreenWidth() - dialogWidth) * 0.5f,
-        (GetScreenHeight() - dialogHeight) * 0.5f,
-        dialogWidth,
-        dialogHeight,
-    };
-
-    float buttonWidth = std::max(120.0f, dialogWidth * 0.28f);
-    float buttonHeight = std::max(48.0f, dialogHeight * 0.17f);
-    float spacing = std::max(14.0f, dialogWidth * 0.05f);
-    float buttonsY = panelBounds.y + dialogHeight - buttonHeight - std::max(18.0f, dialogHeight * 0.08f);
-    float startX = panelBounds.x + (dialogWidth - (buttonWidth * 2.0f + spacing)) * 0.5f;
-
-    cancelButton.setPosition(startX, buttonsY);
-    cancelButton.setSize(buttonWidth, buttonHeight);
-
-    confirmButton.setPosition(startX + buttonWidth + spacing, buttonsY);
-    confirmButton.setSize(buttonWidth, buttonHeight);
+    return popup.consumeCancelled();
 }

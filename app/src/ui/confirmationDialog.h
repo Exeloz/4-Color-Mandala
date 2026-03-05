@@ -1,6 +1,6 @@
 #pragma once
 
-#include "button.h"
+#include "popupPanel.h"
 #include <string>
 
 class ConfirmationDialog {
@@ -22,14 +22,6 @@ public:
     bool consumeCancelled();
 
 private:
-    void updateLayout();
-
-    bool visible;
-    bool confirmed;
-    bool cancelled;
-    std::string title;
     std::string message;
-    Rectangle panelBounds;
-    Button confirmButton;
-    Button cancelButton;
+    PopupPanel popup;
 };

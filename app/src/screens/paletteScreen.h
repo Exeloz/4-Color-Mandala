@@ -1,7 +1,7 @@
 #pragma once
 #include "../game/gameState.h"
 #include "../ui/button.h"
-#include "../ui/colorWheelPicker.h"
+#include "../ui/colorWheelPopup.h"
 #include "raylib.h"
 #include <vector>
 
@@ -20,26 +20,16 @@ public:
 private:
     std::vector<Color> paletteColors;
     int activeSlotIndex;
-    ColorWheelPicker colorWheelPicker;
+    ColorWheelPopup colorWheelPopup;
 
     Button backButton;
     Button continueButton;
-    Button wheelAcceptButton;
-    Button wheelCancelButton;
 
     bool transitionRequested;
     bool returnRequested;
     bool paletteChanged;
 
-    bool wheelPopupVisible;
-    int wheelPopupSlotIndex;
-
     void layoutControls();
-    void layoutWheelPopup();
-    void openWheelPopupForSlot(int slotIndex);
-    void closeWheelPopup(bool applyChanges);
 
     Rectangle getPaletteSlotBounds(int slotIndex) const;
-    Rectangle getWheelPopupBounds() const;
-    Rectangle getWheelBoundsInPopup(const Rectangle& popupBounds) const;
 };
