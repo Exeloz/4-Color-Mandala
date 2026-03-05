@@ -24,12 +24,22 @@ private:
 
     Button backButton;
     Button continueButton;
+    Button wheelAcceptButton;
+    Button wheelCancelButton;
 
     bool transitionRequested;
     bool returnRequested;
     bool paletteChanged;
 
+    bool wheelPopupVisible;
+    int wheelPopupSlotIndex;
+
     void layoutControls();
+    void layoutWheelPopup();
+    void openWheelPopupForSlot(int slotIndex);
+    void closeWheelPopup(bool applyChanges);
+
     Rectangle getPaletteSlotBounds(int slotIndex) const;
-    Rectangle getColorWheelBounds() const;
+    Rectangle getWheelPopupBounds() const;
+    Rectangle getWheelBoundsInPopup(const Rectangle& popupBounds) const;
 };

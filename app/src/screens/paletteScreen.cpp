@@ -5,6 +5,7 @@
 #include "../ui/input.h"
 #include "raymath.h"
 #include <algorithm>
+#include <string>
 
 namespace {
     constexpr float SLOT_START_X = 86.0f;
@@ -13,8 +14,8 @@ namespace {
     constexpr float SLOT_HEIGHT = 38.0f;
     constexpr float SLOT_GAP = 8.0f;
 
-    constexpr float WHEEL_TOP_Y = 184.0f;
-    constexpr float WHEEL_BOTTOM_MARGIN = 24.0f;
+    constexpr float POPUP_WIDTH_RATIO = 0.86f;
+    constexpr float POPUP_HEIGHT_RATIO = 0.82f;
 
     bool isMobileLayout() {
         return true;
@@ -29,20 +30,38 @@ namespace {
 }
 
 PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
-    : paletteColors(), activeSlotIndex(1),
+    : paletteColors(), activeSlotIndex(-1),
       backButton(20, 20, 100, 50, "BACK"), continueButton(640, 20, 140, 50, "COLOR"),
-      transitionRequested(false), returnRequested(false), paletteChanged(false) {
+            wheelAcceptButton(0, 0, 130, 52, "Apply"), wheelCancelButton(0, 0, 130, 52, "Cancel"),
+            transitionRequested(false), returnRequested(false), paletteChanged(false),
+            wheelPopupVisible(false), wheelPopupSlotIndex(-1) {
 
     ColorPalette defaultPalette;
     paletteColors = initialPaletteColors.empty() ? defaultPalette.getColors() : initialPaletteColors;
-    if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
-        colorWheelPicker.setColor(paletteColors[activeSlotIndex]);
-    }
 }
 
 void PaletteScreen::update(float deltaTime) {
     (void)deltaTime;
     layoutControls();
+
+    if (wheelPopupVisible) {
+        layoutWheelPopup();
+        wheelCancelButton.update();
+        wheelAcceptButton.update();
+        colorWheelPicker.update();
+
+        if (wheelCancelButton.isClicked()) {
+            closeWheelPopup(false);
+            return;
+        }
+
+        if (wheelAcceptButton.isClicked()) {
+            closeWheelPopup(true);
+            return;
+        }
+
+        return;
+    }
 
     backButton.update();
     continueButton.update();
@@ -62,24 +81,9 @@ void PaletteScreen::update(float deltaTime) {
 
         for (int slotIndex = 1; slotIndex < static_cast<int>(paletteColors.size()); slotIndex++) {
             if (CheckCollisionPointRec(pointer, getPaletteSlotBounds(slotIndex))) {
-                activeSlotIndex = slotIndex;
-                colorWheelPicker.setColor(paletteColors[activeSlotIndex]);
+                openWheelPopupForSlot(slotIndex);
                 return;
             }
-        }
-    }
-
-    colorWheelPicker.update();
-
-    if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
-        Color selectedColor = colorWheelPicker.getSelectedColor();
-        Color& slotColor = paletteColors[activeSlotIndex];
-        if (slotColor.r != selectedColor.r
-            || slotColor.g != selectedColor.g
-            || slotColor.b != selectedColor.b
-            || slotColor.a != selectedColor.a) {
-            slotColor = selectedColor;
-            paletteChanged = true;
         }
     }
 }
@@ -90,8 +94,6 @@ void PaletteScreen::draw() {
     float uiScale = getUiScale();
     int titleSize = static_cast<int>(42.0f * uiScale);
     int subtitleSize = static_cast<int>(24.0f * uiScale);
-    int infoSize = static_cast<int>(22.0f * uiScale);
-
     int titleY = static_cast<int>(25.0f * uiScale);
     const char* title = "Color Wheel";
     int titleWidth = MeasureText(title, titleSize);
@@ -123,8 +125,40 @@ void PaletteScreen::draw() {
         }
     }
 
-    colorWheelPicker.draw(Colors::Gainsboro);
+    if (wheelPopupVisible) {
+        Rectangle popupBounds = getWheelPopupBounds();
+        Rectangle wheelBounds = getWheelBoundsInPopup(popupBounds);
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(Colors::Black, 0.55f));
+        DrawRectangleRounded(popupBounds, 0.08f, 14, Colors::WhiteSmoke);
+        DrawRectangleRoundedLinesEx(popupBounds, 0.08f, 14, 3.0f, Colors::DarkBlue);
 
+        int modalTitleSize = std::max(24, static_cast<int>(popupBounds.height * 0.07f));
+        std::string modalTitle = "Edit slot " + std::to_string(wheelPopupSlotIndex);
+        int modalTitleWidth = MeasureText(modalTitle.c_str(), modalTitleSize);
+        int modalTitleX = static_cast<int>(popupBounds.x + (popupBounds.width - modalTitleWidth) * 0.5f);
+        int modalTitleY = static_cast<int>(popupBounds.y + popupBounds.height * 0.06f);
+        DrawText(modalTitle.c_str(), modalTitleX, modalTitleY, modalTitleSize, Colors::Black);
+
+        Color previewColor = colorWheelPicker.getSelectedColor();
+        float previewSize = std::max(34.0f, popupBounds.height * 0.11f);
+        float previewX = popupBounds.x + popupBounds.width * 0.025f;
+        float previewY = wheelBounds.y + (wheelBounds.height - previewSize) * 0.5f;
+        Rectangle previewSwatch = {previewX, previewY, previewSize, previewSize};
+        DrawRectangleRec(previewSwatch, previewColor);
+        DrawRectangleLinesEx(previewSwatch, 2.0f, Colors::Black);
+
+        int previewTextSize = std::max(15, static_cast<int>(popupBounds.height * 0.035f));
+        const char* selectedText = "Preview";
+        DrawText(selectedText,
+                 static_cast<int>(previewSwatch.x + (previewSwatch.width - MeasureText(selectedText, previewTextSize)) * 0.5f),
+                 static_cast<int>(previewSwatch.y + previewSwatch.height + 6.0f),
+                 previewTextSize,
+                 Colors::Black);
+
+        colorWheelPicker.draw(Colors::WhiteSmoke);
+        wheelCancelButton.draw();
+        wheelAcceptButton.draw();
+    }
 }
 
 void PaletteScreen::layoutControls() {
@@ -141,8 +175,56 @@ void PaletteScreen::layoutControls() {
     float continueWidth = mobileLayout ? (170.0f * uiScale) : 140.0f;
     continueButton.setPosition(GetScreenWidth() - sideMargin - continueWidth, topMargin);
     continueButton.setSize(continueWidth, topButtonHeight);
+}
 
-    colorWheelPicker.setBounds(getColorWheelBounds());
+void PaletteScreen::layoutWheelPopup() {
+    Rectangle popupBounds = getWheelPopupBounds();
+    colorWheelPicker.setBounds(getWheelBoundsInPopup(popupBounds));
+
+    float buttonWidth = std::max(130.0f, popupBounds.width * 0.24f);
+    float buttonHeight = std::max(48.0f, popupBounds.height * 0.13f);
+    float buttonY = popupBounds.y + popupBounds.height - buttonHeight - (popupBounds.height * 0.06f);
+    float sidePadding = popupBounds.width * 0.08f;
+
+    wheelCancelButton.setPosition(popupBounds.x + sidePadding, buttonY);
+    wheelCancelButton.setSize(buttonWidth, buttonHeight);
+
+    wheelAcceptButton.setPosition(popupBounds.x + popupBounds.width - sidePadding - buttonWidth, buttonY);
+    wheelAcceptButton.setSize(buttonWidth, buttonHeight);
+}
+
+void PaletteScreen::openWheelPopupForSlot(int slotIndex) {
+    if (slotIndex <= 0 || slotIndex >= static_cast<int>(paletteColors.size())) {
+        return;
+    }
+
+    activeSlotIndex = slotIndex;
+    wheelPopupSlotIndex = slotIndex;
+    colorWheelPicker.setColor(paletteColors[slotIndex]);
+    wheelPopupVisible = true;
+}
+
+void PaletteScreen::closeWheelPopup(bool applyChanges) {
+    if (!wheelPopupVisible || wheelPopupSlotIndex <= 0 || wheelPopupSlotIndex >= static_cast<int>(paletteColors.size())) {
+        wheelPopupVisible = false;
+        wheelPopupSlotIndex = -1;
+        return;
+    }
+
+    if (applyChanges) {
+        Color selectedColor = colorWheelPicker.getSelectedColor();
+        Color& slotColor = paletteColors[wheelPopupSlotIndex];
+        if (slotColor.r != selectedColor.r
+            || slotColor.g != selectedColor.g
+            || slotColor.b != selectedColor.b
+            || slotColor.a != selectedColor.a) {
+            slotColor = selectedColor;
+            paletteChanged = true;
+        }
+    }
+
+    wheelPopupVisible = false;
+    wheelPopupSlotIndex = -1;
 }
 
 bool PaletteScreen::shouldTransitionToColoring() const {
@@ -186,17 +268,26 @@ Rectangle PaletteScreen::getPaletteSlotBounds(int slotIndex) const {
     return {x, y, width, height};
 }
 
-Rectangle PaletteScreen::getColorWheelBounds() const {
-    float uiScale = getUiScale();
-    float top = WHEEL_TOP_Y * uiScale;
-    float bottomMargin = WHEEL_BOTTOM_MARGIN * uiScale;
+Rectangle PaletteScreen::getWheelPopupBounds() const {
+    float width = std::min(720.0f, GetScreenWidth() * POPUP_WIDTH_RATIO);
+    float height = std::min(720.0f, GetScreenHeight() * POPUP_HEIGHT_RATIO);
+    return {
+        (GetScreenWidth() - width) * 0.5f,
+        (GetScreenHeight() - height) * 0.5f,
+        width,
+        height
+    };
+}
 
-    float maxDiameter = std::min(
-        static_cast<float>(GetScreenWidth()) - (80.0f * uiScale),
-        static_cast<float>(GetScreenHeight()) - top - bottomMargin
-    );
-    float diameter = std::max(140.0f * uiScale, maxDiameter);
-
-    float x = (GetScreenWidth() - diameter) * 0.5f;
-    return {x, top, diameter, diameter};
+Rectangle PaletteScreen::getWheelBoundsInPopup(const Rectangle& popupBounds) const {
+    float horizontalPadding = popupBounds.width * 0.08f;
+    float topPadding = popupBounds.height * 0.18f;
+    float bottomPadding = popupBounds.height * 0.24f;
+    float centerShift = popupBounds.width * 0.05f;
+    return {
+        popupBounds.x + horizontalPadding + centerShift,
+        popupBounds.y + topPadding,
+        popupBounds.width - (2.0f * horizontalPadding),
+        popupBounds.height - topPadding - bottomPadding
+    };
 }
