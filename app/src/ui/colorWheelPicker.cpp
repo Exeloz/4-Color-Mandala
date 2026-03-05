@@ -110,8 +110,7 @@ void ColorWheelPicker::draw(Color panelBackground) const {
     DrawCircleV(wheelHandle, 7.0f, Fade(WHITE, 0.35f));
     DrawCircleLines(static_cast<int>(wheelHandle.x), static_cast<int>(wheelHandle.y), 7.0f, handleOutline);
 
-    Color sliderBright = ColorFromHSV(hue, saturation, 1.0f);
-    DrawRectangleGradientEx(valueSliderRect, BLACK, sliderBright, sliderBright, BLACK);
+    DrawRectangleGradientEx(valueSliderRect, BLACK, WHITE, WHITE, BLACK);
     DrawRectangleLinesEx(valueSliderRect, 2.0f, DARKGRAY);
 
     float sliderHandleX = valueSliderRect.x + value * valueSliderRect.width;

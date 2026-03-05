@@ -19,7 +19,6 @@ public:
 
 private:
     std::vector<Color> paletteColors;
-    std::vector<Color> availableColors;
     int activeSlotIndex;
     ColorWheelPicker colorWheelPicker;
 
@@ -34,5 +33,4 @@ private:
     Rectangle getPaletteSlotBounds(int slotIndex) const;
     Rectangle getColorWheelBounds() const;
     Rectangle getPreviewBounds() const;
-    Color findClosestCatalogColor(const Color& color) const;
 };

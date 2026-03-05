@@ -1,12 +1,10 @@
 #include "paletteScreen.h"
 #include "../ui/colorPalette.h"
-#include "../ui/colorCatalog.h"
 #include "../ui/colorTileRenderer.h"
 #include "../ui/colors.h"
 #include "../ui/input.h"
 #include "raymath.h"
 #include <algorithm>
-#include <limits>
 #include <string>
 
 namespace {
@@ -34,13 +32,12 @@ namespace {
 }
 
 PaletteScreen::PaletteScreen(const std::vector<Color>& initialPaletteColors)
-    : paletteColors(), availableColors(), activeSlotIndex(1),
+    : paletteColors(), activeSlotIndex(1),
       backButton(20, 20, 100, 50, "BACK"), continueButton(640, 20, 140, 50, "COLOR"),
       transitionRequested(false), returnRequested(false), paletteChanged(false) {
 
     ColorPalette defaultPalette;
     paletteColors = initialPaletteColors.empty() ? defaultPalette.getColors() : initialPaletteColors;
-    availableColors = ColorCatalog::getAvailableColors();
     if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
         colorWheelPicker.setColor(paletteColors[activeSlotIndex]);
     }
@@ -78,13 +75,13 @@ void PaletteScreen::update(float deltaTime) {
     colorWheelPicker.update();
 
     if (activeSlotIndex > 0 && activeSlotIndex < static_cast<int>(paletteColors.size())) {
-        Color snappedColor = findClosestCatalogColor(colorWheelPicker.getSelectedColor());
+        Color selectedColor = colorWheelPicker.getSelectedColor();
         Color& slotColor = paletteColors[activeSlotIndex];
-        if (slotColor.r != snappedColor.r
-            || slotColor.g != snappedColor.g
-            || slotColor.b != snappedColor.b
-            || slotColor.a != snappedColor.a) {
-            slotColor = snappedColor;
+        if (slotColor.r != selectedColor.r
+            || slotColor.g != selectedColor.g
+            || slotColor.b != selectedColor.b
+            || slotColor.a != selectedColor.a) {
+            slotColor = selectedColor;
             paletteChanged = true;
         }
     }
@@ -135,14 +132,14 @@ void PaletteScreen::draw() {
     DrawRectangleRounded(previewBounds, 0.18f, 12, Colors::WhiteSmoke);
     DrawRectangleLinesEx(previewBounds, 2.0f, Colors::DarkGray);
 
-    Color activeCatalogColor = findClosestCatalogColor(colorWheelPicker.getSelectedColor());
+    Color selectedColor = colorWheelPicker.getSelectedColor();
     Rectangle swatch = {
         previewBounds.x + 12.0f * uiScale,
         previewBounds.y + 12.0f * uiScale,
         previewBounds.height - 24.0f * uiScale,
         previewBounds.height - 24.0f * uiScale
     };
-    DrawRectangleRec(swatch, activeCatalogColor);
+    DrawRectangleRec(swatch, selectedColor);
     DrawRectangleLinesEx(swatch, 2.0f, Colors::Black);
 
     std::string slotText = "Slot " + std::to_string(activeSlotIndex);
@@ -152,7 +149,7 @@ void PaletteScreen::draw() {
              infoSize,
              Colors::Black);
 
-    DrawText("Selected catalog color",
+    DrawText("Selected exact color",
              static_cast<int>(swatch.x + swatch.width + (12.0f * uiScale)),
              static_cast<int>(previewBounds.y + 14.0f * uiScale + infoSize + (8.0f * uiScale)),
              static_cast<int>(18.0f * uiScale),
@@ -241,30 +238,4 @@ Rectangle PaletteScreen::getPreviewBounds() const {
     float x = (GetScreenWidth() - width) * 0.5f;
     float y = wheel.y + wheel.height + (12.0f * uiScale);
     return {x, y, width, height};
-}
-
-Color PaletteScreen::findClosestCatalogColor(const Color& color) const {
-    if (availableColors.empty()) {
-        return color;
-    }
-
-    const auto squaredDistance = [&](const Color& candidate) {
-        int dr = static_cast<int>(candidate.r) - static_cast<int>(color.r);
-        int dg = static_cast<int>(candidate.g) - static_cast<int>(color.g);
-        int db = static_cast<int>(candidate.b) - static_cast<int>(color.b);
-        return (dr * dr) + (dg * dg) + (db * db);
-    };
-
-    const Color* best = &availableColors.front();
-    int bestDistance = std::numeric_limits<int>::max();
-
-    for (const Color& candidate : availableColors) {
-        int distance = squaredDistance(candidate);
-        if (distance < bestDistance) {
-            bestDistance = distance;
-            best = &candidate;
-        }
-    }
-
-    return *best;
 }
