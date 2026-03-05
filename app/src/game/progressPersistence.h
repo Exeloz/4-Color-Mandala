@@ -56,8 +56,6 @@ public:
 private:
     std::string saveFilePath;
     std::vector<Color> savedPalette;
-    std::vector<Color> savedPaletteHard;
     bool paletteAvailable;
-    bool paletteHardAvailable;
     std::unordered_map<std::string, PersistedMandalaState> mandalaStates;
 };

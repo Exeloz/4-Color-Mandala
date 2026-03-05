@@ -74,9 +74,7 @@ namespace {
 ProgressPersistence::ProgressPersistence()
     : saveFilePath(SAVE_FILE_NAME),
       savedPalette(),
-      savedPaletteHard(),
       paletteAvailable(false),
-      paletteHardAvailable(false),
       mandalaStates() {}
 
 std::string ProgressPersistence::makeMandalaKey(int mandalaId, bool hardMode) {
@@ -93,10 +91,8 @@ bool ProgressPersistence::load() {
     UnloadFileText(loadedText);
 
     std::vector<Color> loadedPalette;
-    std::vector<Color> loadedPaletteHard;
     std::unordered_map<std::string, PersistedMandalaState> loadedStates;
     bool loadedPaletteAvailable = false;
-    bool loadedPaletteHardAvailable = false;
 
     std::string magic;
     if (!(stream >> magic) || magic != SAVE_MAGIC) {
@@ -121,10 +117,11 @@ bool ProgressPersistence::load() {
     }
 
     if (sectionToken == PALETTE_HARD_SECTION) {
-        if (!readPalette(stream, sectionCount, loadedPaletteHard)) {
+        std::vector<Color> ignoredHardPalette;
+        if (!readPalette(stream, sectionCount, ignoredHardPalette)) {
             return false;
         }
-        loadedPaletteHardAvailable = (sectionCount > 0);
+        (void)ignoredHardPalette;
 
         if (!(stream >> sectionToken >> sectionCount)) {
             return false;
@@ -198,9 +195,7 @@ bool ProgressPersistence::load() {
     }
 
     savedPalette = std::move(loadedPalette);
-    savedPaletteHard = std::move(loadedPaletteHard);
     paletteAvailable = loadedPaletteAvailable;
-    paletteHardAvailable = loadedPaletteHardAvailable;
     mandalaStates = std::move(loadedStates);
     return true;
 }
@@ -211,14 +206,6 @@ bool ProgressPersistence::save() const {
     stream << SAVE_MAGIC << "\n";
     stream << PALETTE_SECTION << ' ' << savedPalette.size() << "\n";
     for (const Color& color : savedPalette) {
-        stream << static_cast<int>(color.r) << ' '
-               << static_cast<int>(color.g) << ' '
-               << static_cast<int>(color.b) << ' '
-               << static_cast<int>(color.a) << "\n";
-    }
-
-    stream << PALETTE_HARD_SECTION << ' ' << savedPaletteHard.size() << "\n";
-    for (const Color& color : savedPaletteHard) {
         stream << static_cast<int>(color.r) << ' '
                << static_cast<int>(color.g) << ' '
                << static_cast<int>(color.b) << ' '
@@ -256,13 +243,8 @@ void ProgressPersistence::setPalette(const std::vector<Color>& palette) {
 }
 
 void ProgressPersistence::setPalette(const std::vector<Color>& palette, bool hardMode) {
+    (void)hardMode;
     if (palette.empty()) {
-        return;
-    }
-
-    if (hardMode) {
-        savedPaletteHard = palette;
-        paletteHardAvailable = true;
         return;
     }
 
@@ -275,9 +257,7 @@ const std::vector<Color>& ProgressPersistence::getPalette() const {
 }
 
 const std::vector<Color>& ProgressPersistence::getPalette(bool hardMode) const {
-    if (hardMode) {
-        return savedPaletteHard;
-    }
+    (void)hardMode;
     return savedPalette;
 }
 
@@ -286,9 +266,7 @@ bool ProgressPersistence::hasPalette() const {
 }
 
 bool ProgressPersistence::hasPalette(bool hardMode) const {
-    if (hardMode) {
-        return paletteHardAvailable && !savedPaletteHard.empty();
-    }
+    (void)hardMode;
     return paletteAvailable && !savedPalette.empty();
 }
 

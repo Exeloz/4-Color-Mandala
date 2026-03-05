@@ -69,6 +69,7 @@ void SelectionScreen::update(float deltaTime) {
         return;
     }
 
+    const auto& mandalaItems = database->getMandalaListItems();
     paletteButton.update();
 
     if (paletteButton.isClicked()) {
@@ -76,7 +77,6 @@ void SelectionScreen::update(float deltaTime) {
         return;
     }
 
-    const auto& mandalaItems = database->getMandalaListItems();
     for (size_t i = 0; i < mandalaButtons.size() && i < mandalaItems.size(); i++) {
         if (mandalaItems[i].hasHardMode) {
             modeButtons[i].update();
