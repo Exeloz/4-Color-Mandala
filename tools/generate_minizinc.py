@@ -19,6 +19,39 @@ from typing import Iterable, List, Sequence, Set, Tuple
 Edge = Tuple[int, int]
 
 
+def build_degree_map(region_ids: Sequence[int], edges: Sequence[Edge]) -> dict[int, int]:
+    degree_by_region: dict[int, int] = {region_id: 0 for region_id in region_ids}
+    for a, b in edges:
+        if a in degree_by_region:
+            degree_by_region[a] += 1
+        if b in degree_by_region:
+            degree_by_region[b] += 1
+    return degree_by_region
+
+
+def build_degree_order(region_ids: Sequence[int], edges: Sequence[Edge]) -> List[int]:
+    degree_by_region = build_degree_map(region_ids, edges)
+    return sorted(region_ids, key=lambda region_id: (-degree_by_region[region_id], region_id))
+
+
+def pick_secondary_region(anchor_region: int, degree_order: Sequence[int], edges: Sequence[Edge]) -> int | None:
+    neighbor_set = set()
+    for a, b in edges:
+        if a == anchor_region:
+            neighbor_set.add(b)
+        elif b == anchor_region:
+            neighbor_set.add(a)
+
+    if not neighbor_set:
+        return None
+
+    for region_id in degree_order:
+        if region_id in neighbor_set:
+            return region_id
+
+    return None
+
+
 def parse_region_ids(regions_json_path: Path) -> Set[int]:
     data = json.loads(regions_json_path.read_text(encoding="utf-8"))
 
@@ -146,7 +179,9 @@ def build_minizinc_model(region_ids: Sequence[int], edges: Sequence[Edge], sourc
     if not region_ids:
         raise ValueError("No region ids found.")
 
-    first_region = region_ids[0]
+    degree_order = build_degree_order(region_ids, edges)
+    anchor_region = degree_order[0]
+    secondary_region = pick_secondary_region(anchor_region, degree_order, edges)
     edge_u = [edge[0] for edge in edges]
     edge_v = [edge[1] for edge in edges]
 
@@ -157,6 +192,7 @@ def build_minizinc_model(region_ids: Sequence[int], edges: Sequence[Edge], sourc
     lines.append(f"set of int: REGIONS = {format_int_set(region_ids)};")
     lines.append(f"int: REGION_COUNT = {len(region_ids)};")
     lines.append(f"int: EDGE_COUNT = {len(edges)};")
+    lines.append("array[1..REGION_COUNT] of int: degree_order = " + format_int_array(degree_order) + ";")
     lines.append("")
     lines.append("array[REGIONS] of var 1..REGION_COUNT: color;")
     lines.append("var 1..REGION_COUNT: max_color;")
@@ -169,7 +205,12 @@ def build_minizinc_model(region_ids: Sequence[int], edges: Sequence[Edge], sourc
         lines.append("constraint forall(e in 1..EDGE_COUNT)(color[edge_u[e]] != color[edge_v[e]]);")
 
     lines.append("constraint forall(r in REGIONS)(color[r] <= max_color);")
-    lines.append(f"constraint color[{first_region}] = 1;")
+    lines.append("")
+    lines.append("% Symmetry breaking")
+    lines.append(f"constraint color[{anchor_region}] = 1;")
+    if secondary_region is not None:
+        lines.append(f"constraint color[{secondary_region}] = 2;")
+    lines.append("constraint forall(i in 2..REGION_COUNT)(color[degree_order[i]] <= i);")
     lines.append("")
     lines.append("solve :: int_search([color[r] | r in REGIONS], first_fail, indomain_min, complete) minimize max_color;")
     lines.append("")

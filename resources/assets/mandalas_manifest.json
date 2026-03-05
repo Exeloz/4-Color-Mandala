@@ -15,7 +15,7 @@
     "adjacency": "1/mandala_1_adjacency.json",
     "adjacency_hard": "1/mandala_1_adjacency-hard.json",
     "min_colors": 4,
-    "min_colors_hard": 9
+    "min_colors_hard": 6
   },
   {
     "id": 2,
