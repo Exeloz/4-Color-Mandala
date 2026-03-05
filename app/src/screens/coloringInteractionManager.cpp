@@ -67,8 +67,9 @@ void ColoringInteractionManager::updateDebugControls(
     ColoringInspector& inspector,
     Mandala& mandala,
     const Camera2D& camera,
-    Camera2D& mutableCamera) const {
-    inspector.updateDebug(mandala, camera, mutableCamera);
+    Camera2D& mutableCamera,
+    bool hardModeEnabled) const {
+    inspector.updateDebug(mandala, camera, mutableCamera, hardModeEnabled);
 }
 
 int ColoringInteractionManager::getRegionIdForColorSelection(

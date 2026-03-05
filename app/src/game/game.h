@@ -41,6 +41,8 @@ private:
 
     std::shared_ptr<Mandala> selectedMandala;
     std::vector<Color> appPaletteColors;
+    std::vector<Color> appPaletteColorsHard;
+    bool hardModeEnabled;
     bool suppressWinTransition;
     ProgressPersistence progressPersistence;
 

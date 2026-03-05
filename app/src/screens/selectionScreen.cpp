@@ -15,18 +15,28 @@ float getUiScale() {
 }
 
 SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database,
-                                 const std::unordered_set<int>& completedMandalaIds)
+                                 const std::unordered_set<int>& completedMandalaIdsNormal,
+                                 const std::unordered_set<int>& completedMandalaIdsHard)
         : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), pendingResetMandalaId(-1),
+            selectedMandalaHardMode(false), pendingResetMandalaHardMode(false), resetRequestedMandalaHardMode(false),
             resetRequestedMandalaId(-1), transitionRequested(false), paletteRequested(false),
             paletteButton(620, 20, 160, 50, "PALETTE"),
-            completedMandalaIds(completedMandalaIds) {
+            completedMandalaIdsNormal(completedMandalaIdsNormal),
+            completedMandalaIdsHard(completedMandalaIdsHard) {
     
     const auto& mandalaItems = database->getMandalaListItems();
     for (size_t i = 0; i < mandalaItems.size(); i++) {
         mandalaButtons.emplace_back(0.0f, 0.0f, 300.0f, 150.0f, mandalaItems[i].name);
         mandalaButtons.back().setTextScale(1.45f);
+
         resetButtons.emplace_back(0.0f, 0.0f, 96.0f, 40.0f, "RESET");
         resetButtons.back().setTextScale(0.85f);
+
+        modeButtons.emplace_back(0.0f, 0.0f, 96.0f, 40.0f, "MODE: N");
+        modeButtons.back().setTextScale(0.75f);
+
+        hardModeByMandalaId[mandalaItems[i].id] = false;
+        refreshModeButtonLabel(i, mandalaItems[i].id);
     }
 }
 
@@ -39,14 +49,21 @@ void SelectionScreen::update(float deltaTime) {
         if (resetConfirmationDialog.consumeConfirmed()) {
             if (pendingResetMandalaId >= 0) {
                 resetRequestedMandalaId = pendingResetMandalaId;
-                completedMandalaIds.erase(pendingResetMandalaId);
+                resetRequestedMandalaHardMode = pendingResetMandalaHardMode;
+                if (pendingResetMandalaHardMode) {
+                    completedMandalaIdsHard.erase(pendingResetMandalaId);
+                } else {
+                    completedMandalaIdsNormal.erase(pendingResetMandalaId);
+                }
             }
             pendingResetMandalaId = -1;
+            pendingResetMandalaHardMode = false;
             resetConfirmationDialog.hide();
         }
 
         if (resetConfirmationDialog.consumeCancelled()) {
             pendingResetMandalaId = -1;
+            pendingResetMandalaHardMode = false;
             resetConfirmationDialog.hide();
         }
         return;
@@ -61,9 +78,26 @@ void SelectionScreen::update(float deltaTime) {
 
     const auto& mandalaItems = database->getMandalaListItems();
     for (size_t i = 0; i < mandalaButtons.size() && i < mandalaItems.size(); i++) {
+        if (mandalaItems[i].hasHardMode) {
+            modeButtons[i].update();
+            if (modeButtons[i].isClicked()) {
+                bool& hardEnabledForMandala = hardModeByMandalaId[mandalaItems[i].id];
+                hardEnabledForMandala = !hardEnabledForMandala;
+                refreshModeButtonLabel(i, mandalaItems[i].id);
+
+                if (selectedMandalaButtonIndex == static_cast<int>(i)) {
+                    selectedMandala = nullptr;
+                    selectedMandalaButtonIndex = -1;
+                    transitionRequested = false;
+                }
+                return;
+            }
+        }
+
         resetButtons[i].update();
         if (resetButtons[i].isClicked()) {
             pendingResetMandalaId = mandalaItems[i].id;
+            pendingResetMandalaHardMode = mandalaItems[i].hasHardMode && hardModeByMandalaId[mandalaItems[i].id];
             resetConfirmationDialog.configure(
                 "Reset Mandala",
                 "Reset all progress for '" + mandalaItems[i].name + "'?",
@@ -76,10 +110,13 @@ void SelectionScreen::update(float deltaTime) {
         mandalaButtons[i].update();
         if (mandalaButtons[i].isClicked()) {
             const int selectedId = mandalaItems[i].id;
-            database->loadMandala(selectedId);
-            selectedMandala = database->getMandalaById(selectedId);
+            const bool loadHardMode = mandalaItems[i].hasHardMode && hardModeByMandalaId[selectedId];
+
+            database->loadMandala(selectedId, loadHardMode);
+            selectedMandala = database->getMandalaById(selectedId, loadHardMode);
             if (selectedMandala != nullptr) {
                 selectedMandalaButtonIndex = static_cast<int>(i);
+                selectedMandalaHardMode = loadHardMode;
                 transitionRequested = true;
             }
             return;
@@ -108,7 +145,9 @@ void SelectionScreen::draw() {
             DrawRectangleLinesEx(mandalaButtons[i].getBounds(), 5.0f, Colors::DarkBlue);
         }
 
-        if (completedMandalaIds.count(mandalaItems[i].id) > 0) {
+        const bool hardModeShown = mandalaItems[i].hasHardMode && hardModeByMandalaId[mandalaItems[i].id];
+        const auto& completedSet = hardModeShown ? completedMandalaIdsHard : completedMandalaIdsNormal;
+        if (completedSet.count(mandalaItems[i].id) > 0) {
             Rectangle bounds = mandalaButtons[i].getBounds();
             float badgeWidth = 72.0f * uiScale;
             float badgeHeight = 24.0f * uiScale;
@@ -126,6 +165,9 @@ void SelectionScreen::draw() {
             DrawText(doneLabel, doneTextX, doneTextY, doneTextSize, Colors::Black);
         }
 
+        if (mandalaItems[i].hasHardMode) {
+            modeButtons[i].draw();
+        }
         resetButtons[i].draw();
     }
 
@@ -174,10 +216,17 @@ void SelectionScreen::layoutControls() {
 
                 float resetWidth = std::max(92.0f, cardWidth * 0.23f);
                 float resetHeight = std::max(34.0f, cardHeight * 0.30f);
+                float modeWidth = std::max(108.0f, cardWidth * 0.30f);
+                float actionGap = 8.0f * uiScale;
                 resetButtons[i].setPosition(
                     x + cardWidth - resetWidth - (10.0f * uiScale),
                     y + cardHeight - resetHeight - (8.0f * uiScale));
                 resetButtons[i].setSize(resetWidth, resetHeight);
+
+                modeButtons[i].setPosition(
+                    x + cardWidth - resetWidth - modeWidth - actionGap - (10.0f * uiScale),
+                    y + cardHeight - resetHeight - (8.0f * uiScale));
+                modeButtons[i].setSize(modeWidth, resetHeight);
             }
             return;
         }
@@ -194,10 +243,17 @@ void SelectionScreen::layoutControls() {
 
             float resetWidth = std::max(96.0f, availableWidth * 0.22f);
             float resetHeight = std::max(34.0f, cardHeight * 0.28f);
+            float modeWidth = std::max(112.0f, availableWidth * 0.26f);
+            float actionGap = 8.0f * uiScale;
             resetButtons[i].setPosition(
                 sideMargin + availableWidth - resetWidth - (10.0f * uiScale),
                 y + cardHeight - resetHeight - (8.0f * uiScale));
             resetButtons[i].setSize(resetWidth, resetHeight);
+
+            modeButtons[i].setPosition(
+                sideMargin + availableWidth - resetWidth - modeWidth - actionGap - (10.0f * uiScale),
+                y + cardHeight - resetHeight - (8.0f * uiScale));
+            modeButtons[i].setSize(modeWidth, resetHeight);
         }
         return;
     }
@@ -217,10 +273,17 @@ void SelectionScreen::layoutControls() {
 
         float resetWidth = std::max(92.0f, cardWidth * 0.23f);
         float resetHeight = std::max(34.0f, cardHeight * 0.28f);
+        float modeWidth = std::max(112.0f, cardWidth * 0.28f);
+        float actionGap = 8.0f;
         resetButtons[i].setPosition(
             x + cardWidth - resetWidth - 10.0f,
             y + cardHeight - resetHeight - 8.0f);
         resetButtons[i].setSize(resetWidth, resetHeight);
+
+        modeButtons[i].setPosition(
+            x + cardWidth - resetWidth - modeWidth - actionGap - 10.0f,
+            y + cardHeight - resetHeight - 8.0f);
+        modeButtons[i].setSize(modeWidth, resetHeight);
     }
 }
 
@@ -234,6 +297,12 @@ int SelectionScreen::consumeResetMandalaId() {
     return id;
 }
 
+bool SelectionScreen::consumeResetMandalaHardMode() {
+    const bool hardMode = resetRequestedMandalaHardMode;
+    resetRequestedMandalaHardMode = false;
+    return hardMode;
+}
+
 bool SelectionScreen::shouldTransitionToColoring() const {
     return transitionRequested;
 }
@@ -244,4 +313,22 @@ bool SelectionScreen::shouldTransitionToPalette() const {
 
 bool SelectionScreen::shouldReturnToStart() const {
     return false;
+}
+
+bool SelectionScreen::isSelectedMandalaHardMode() const {
+    return selectedMandalaHardMode;
+}
+
+void SelectionScreen::refreshModeButtonLabel(size_t index, int mandalaId) {
+    if (index >= modeButtons.size()) {
+        return;
+    }
+
+    const bool hardEnabled = hardModeByMandalaId[mandalaId];
+    modeButtons[index].setLabel(hardEnabled ? "MODE: H" : "MODE: N");
+    if (hardEnabled) {
+        modeButtons[index].setColors(Color{35, 125, 35, 255}, Color{50, 155, 50, 255}, Colors::LightGray, Colors::White);
+    } else {
+        modeButtons[index].setColors(Color{75, 75, 75, 255}, Color{105, 105, 105, 255}, Colors::LightGray, Colors::White);
+    }
 }

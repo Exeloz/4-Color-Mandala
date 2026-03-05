@@ -234,7 +234,7 @@ void ColoringInspector::updateAnalysis(const Mandala& mandala, const Camera2D& c
     }
 }
 
-void ColoringInspector::updateDebug(Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera) {
+void ColoringInspector::updateDebug(Mandala& mandala, const Camera2D& camera, Camera2D& mutableCamera, bool hardModeEnabled) {
     int previousInspectRegionId = debugInspectRegionId;
 
     if (IsKeyPressed(KEY_F3)) {
@@ -275,17 +275,17 @@ void ColoringInspector::updateDebug(Mandala& mandala, const Camera2D& camera, Ca
 
     if (debugInspectRegionId >= 0 && debugHoverRegionId >= 0 && debugInspectRegionId != debugHoverRegionId) {
         if (IsKeyPressed(KEY_A)) {
-            logAdjacencySuggestion(mandala, true, debugInspectRegionId, debugHoverRegionId);
+            logAdjacencySuggestion(mandala, true, debugInspectRegionId, debugHoverRegionId, hardModeEnabled);
         }
         if (IsKeyPressed(KEY_R)) {
-            logAdjacencySuggestion(mandala, false, debugInspectRegionId, debugHoverRegionId);
+            logAdjacencySuggestion(mandala, false, debugInspectRegionId, debugHoverRegionId, hardModeEnabled);
         }
     }
 
     if (IsKeyPressed(KEY_B)) {
         int targetRegionId = debugInspectRegionId >= 0 ? debugInspectRegionId : debugHoverRegionId;
         if (targetRegionId >= 0) {
-            logRegionBlackoutSuggestion(mandala, targetRegionId);
+            logRegionBlackoutSuggestion(mandala, targetRegionId, hardModeEnabled);
         }
     }
 
@@ -400,7 +400,7 @@ void ColoringInspector::drawDebugInfoPanel(const Mandala& mandala, float uiScale
     }
 }
 
-void ColoringInspector::logRegionBlackoutSuggestion(Mandala& mandala, int regionId) {
+void ColoringInspector::logRegionBlackoutSuggestion(Mandala& mandala, int regionId, bool hardModeEnabled) {
     TraceLog(LOG_INFO, "[REGION DEBUG] Set region %d defaultColor=black and colorable=false", regionId);
 
     Region* region = mandala.getRegionById(regionId);
@@ -419,7 +419,7 @@ void ColoringInspector::logRegionBlackoutSuggestion(Mandala& mandala, int region
         TraceLog(LOG_WARNING, "[REGION DEBUG] Failed to update regions JSON on disk for mandala %d.", mandala.getId());
     }
 
-    if (applyAdjacencyJsonRemoveAllForRegion(mandala.getId(), regionId)) {
+    if (applyAdjacencyJsonRemoveAllForRegion(mandala.getId(), regionId, hardModeEnabled)) {
         TraceLog(LOG_INFO, "[REGION DEBUG] Removed all adjacency pairs containing region %d in JSON.", regionId);
     } else {
         TraceLog(LOG_WARNING, "[REGION DEBUG] Failed to clear adjacency JSON pairs for region %d.", regionId);
@@ -501,7 +501,11 @@ void ColoringInspector::centerCameraOnRegion(const Mandala& mandala, int regionI
     camera.target = region->getCentroid();
 }
 
-void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala, bool shouldExist, int regionA, int regionB) {
+void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala,
+                                               bool shouldExist,
+                                               int regionA,
+                                               int regionB,
+                                               bool hardModeEnabled) {
     int a = std::min(regionA, regionB);
     int b = std::max(regionA, regionB);
 
@@ -513,7 +517,7 @@ void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala, bool shou
             TraceLog(LOG_INFO, "[ADJ DEBUG] Already adjacent in current graph.");
         }
         TraceLog(LOG_INFO, "[ADJ DEBUG] Line to add: adjacencyGraph.addAdjacency(%d, %d);", a, b);
-        if (applyAdjacencyJsonEdit(mandala.getId(), true, a, b)) {
+        if (applyAdjacencyJsonEdit(mandala.getId(), true, a, b, hardModeEnabled)) {
             TraceLog(LOG_INFO, "[ADJ DEBUG] Updated adjacency JSON on disk for mandala %d.", mandala.getId());
         } else {
             TraceLog(LOG_WARNING, "[ADJ DEBUG] Failed to update adjacency JSON on disk for mandala %d.", mandala.getId());
@@ -526,16 +530,20 @@ void ColoringInspector::logAdjacencySuggestion(const Mandala& mandala, bool shou
         TraceLog(LOG_INFO, "[ADJ DEBUG] Pair not currently adjacent in graph.");
     }
     TraceLog(LOG_INFO, "[ADJ DEBUG] Remove pair from adjacency JSON: [%d, %d]", a, b);
-    if (applyAdjacencyJsonEdit(mandala.getId(), false, a, b)) {
+    if (applyAdjacencyJsonEdit(mandala.getId(), false, a, b, hardModeEnabled)) {
         TraceLog(LOG_INFO, "[ADJ DEBUG] Updated adjacency JSON on disk for mandala %d.", mandala.getId());
     } else {
         TraceLog(LOG_WARNING, "[ADJ DEBUG] Failed to update adjacency JSON on disk for mandala %d.", mandala.getId());
     }
 }
 
-bool ColoringInspector::applyAdjacencyJsonEdit(int mandalaId, bool shouldExist, int regionA, int regionB) const {
+bool ColoringInspector::applyAdjacencyJsonEdit(int mandalaId,
+                                               bool shouldExist,
+                                               int regionA,
+                                               int regionB,
+                                               bool hardModeEnabled) const {
     std::string adjacencyPath;
-    if (!resolveAdjacencyPathForMandala(mandalaId, adjacencyPath)) {
+    if (!resolveAdjacencyPathForMandala(mandalaId, hardModeEnabled, adjacencyPath)) {
         return false;
     }
 
@@ -582,9 +590,9 @@ bool ColoringInspector::applyAdjacencyJsonEdit(int mandalaId, bool shouldExist, 
     return writeFileText(adjacencyPath, output.str());
 }
 
-bool ColoringInspector::applyAdjacencyJsonRemoveAllForRegion(int mandalaId, int regionId) const {
+bool ColoringInspector::applyAdjacencyJsonRemoveAllForRegion(int mandalaId, int regionId, bool hardModeEnabled) const {
     std::string adjacencyPath;
-    if (!resolveAdjacencyPathForMandala(mandalaId, adjacencyPath)) {
+    if (!resolveAdjacencyPathForMandala(mandalaId, hardModeEnabled, adjacencyPath)) {
         return false;
     }
 
@@ -627,7 +635,9 @@ bool ColoringInspector::applyAdjacencyJsonRemoveAllForRegion(int mandalaId, int 
     return writeFileText(adjacencyPath, output.str());
 }
 
-bool ColoringInspector::resolveAdjacencyPathForMandala(int mandalaId, std::string& adjacencyPath) {
+bool ColoringInspector::resolveAdjacencyPathForMandala(int mandalaId,
+                                                       bool hardModeEnabled,
+                                                       std::string& adjacencyPath) {
     std::string manifest;
     if (!readFileText("resources/assets/mandalas_manifest.json", manifest)
         && !readFileText("mandalas_manifest.json", manifest)) {
@@ -637,6 +647,7 @@ bool ColoringInspector::resolveAdjacencyPathForMandala(int mandalaId, std::strin
     const std::regex objectRegex(R"(\{[\s\S]*?\})");
     const std::regex idRegex(R"("id"\s*:\s*(-?\d+))");
     const std::regex adjacencyRegex(R"adj("adjacency"\s*:\s*"([^"]+)")adj");
+    const std::regex adjacencyHardRegex(R"adjhard("adjacency_hard"\s*:\s*"([^"]+)")adjhard");
 
     for (std::sregex_iterator it(manifest.begin(), manifest.end(), objectRegex), end; it != end; ++it) {
         const std::string objectText = it->str();
@@ -650,12 +661,20 @@ bool ColoringInspector::resolveAdjacencyPathForMandala(int mandalaId, std::strin
             continue;
         }
 
-        std::smatch adjacencyMatch;
-        if (!std::regex_search(objectText, adjacencyMatch, adjacencyRegex)) {
-            return false;
+        std::string relativePath;
+        if (hardModeEnabled) {
+            std::smatch adjacencyHardMatch;
+            if (!std::regex_search(objectText, adjacencyHardMatch, adjacencyHardRegex)) {
+                return false;
+            }
+            relativePath = adjacencyHardMatch[1].str();
+        } else {
+            std::smatch adjacencyMatch;
+            if (!std::regex_search(objectText, adjacencyMatch, adjacencyRegex)) {
+                return false;
+            }
+            relativePath = adjacencyMatch[1].str();
         }
-
-        const std::string relativePath = adjacencyMatch[1].str();
 
         std::ifstream directPath(relativePath);
         if (directPath.is_open()) {

@@ -510,7 +510,8 @@ namespace {
     }
 }
 
-MandalaDatabase::MandalaDatabase() {
+MandalaDatabase::MandalaDatabase()
+    : hardModeEnabled(false) {
     createSampleMandala();
 }
 
@@ -521,8 +522,8 @@ void MandalaDatabase::createSampleMandala() {
     }
 }
 
-void MandalaDatabase::loadMandala(int id) {
-    if (hasMandala(id)) {
+void MandalaDatabase::loadMandala(int id, bool hardMode) {
+    if (hasMandala(id, hardMode)) {
         return;
     }
 
@@ -539,19 +540,26 @@ void MandalaDatabase::loadMandala(int id) {
         return;
     }
 
-    if (!loadMandalaFromAssets(*iterator)) {
-        TraceLog(LOG_WARNING, "Failed loading mandala id %d from assets", id);
+    if (!loadMandalaFromAssets(*iterator, hardMode)) {
+        TraceLog(LOG_WARNING, "Failed loading mandala id %d (%s) from assets", id, hardMode ? "hard" : "normal");
     }
 }
 
-const std::vector<std::shared_ptr<Mandala>>& MandalaDatabase::getAllMandala() const {
-    return mandalaList;
+std::vector<std::shared_ptr<Mandala>> MandalaDatabase::getAllMandala() const {
+    std::vector<std::shared_ptr<Mandala>> all;
+    all.reserve(loadedMandalas.size());
+    for (const LoadedMandalaEntry& entry : loadedMandalas) {
+        if (entry.mandala != nullptr) {
+            all.push_back(entry.mandala);
+        }
+    }
+    return all;
 }
 
-std::shared_ptr<Mandala> MandalaDatabase::getMandalaById(int id) const {
-    for (const auto& mandala : mandalaList) {
-        if (mandala->getId() == id) {
-            return mandala;
+std::shared_ptr<Mandala> MandalaDatabase::getMandalaById(int id, bool hardMode) const {
+    for (const LoadedMandalaEntry& entry : loadedMandalas) {
+        if (entry.id == id && entry.hardMode == hardMode) {
+            return entry.mandala;
         }
     }
     return nullptr;
@@ -583,8 +591,8 @@ void MandalaDatabase::createHexagonMandala() {
     }
 
     auto mandala = std::make_shared<Mandala>(0, "Tutorial", regions, adjacencyGraph);
-    mandalaList.push_back(mandala);
-    mandalaListItems.push_back({0, "Tutorial"});
+    loadedMandalas.push_back({0, false, mandala});
+    mandalaListItems.push_back({0, "Tutorial", false});
 }
 
 bool MandalaDatabase::loadManifest() {
@@ -610,6 +618,7 @@ bool MandalaDatabase::loadManifest() {
     }
 
     mandalaDescriptors.clear();
+    hardModeEnabled = false;
     for (const JsonValue& entry : root.arrayValue) {
         if (!entry.isObject()) {
             continue;
@@ -629,18 +638,27 @@ bool MandalaDatabase::loadManifest() {
             continue;
         }
 
+        readStringField(entry, "adjacency_hard", descriptor.hardAdjacencyPath);
+        if (!descriptor.hardAdjacencyPath.empty()) {
+            hardModeEnabled = true;
+        }
+
         mandalaDescriptors.push_back(descriptor);
-        mandalaListItems.push_back({descriptor.id, descriptor.name});
+        mandalaListItems.push_back({descriptor.id, descriptor.name, !descriptor.hardAdjacencyPath.empty()});
     }
 
     return true;
+}
+
+bool MandalaDatabase::isHardModeEnabled() const {
+    return hardModeEnabled;
 }
 
 const std::vector<MandalaDatabase::MandalaListItem>& MandalaDatabase::getMandalaListItems() const {
     return mandalaListItems;
 }
 
-bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descriptor) {
+bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descriptor, bool hardMode) {
     struct RawRegionData {
         int id = -1;
         std::vector<Vector2> vertices;
@@ -771,7 +789,18 @@ bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descri
 
     std::string adjacencyText;
     std::string loadedAdjacencyPath;
-    if (!tryLoadTextFile(makeCandidateAssetPaths(descriptor.adjacencyPath), adjacencyText, loadedAdjacencyPath)) {
+    std::string chosenAdjacencyPath = descriptor.adjacencyPath;
+    if (hardMode) {
+        if (descriptor.hardAdjacencyPath.empty()) {
+            TraceLog(LOG_WARNING,
+                     "Mandala id %d requested in hard mode but no adjacency_hard path is defined",
+                     descriptor.id);
+            return false;
+        }
+        chosenAdjacencyPath = descriptor.hardAdjacencyPath;
+    }
+
+    if (!tryLoadTextFile(makeCandidateAssetPaths(chosenAdjacencyPath), adjacencyText, loadedAdjacencyPath)) {
         TraceLog(LOG_ERROR, "Unable to load adjacency file for mandala %d", descriptor.id);
         return false;
     }
@@ -815,16 +844,16 @@ bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descri
         adjacencyGraph.addAdjacency(static_cast<int>(aValue.numberValue), static_cast<int>(bValue.numberValue));
     }
 
-    mandalaList.push_back(std::make_shared<Mandala>(descriptor.id, descriptor.name, regions, adjacencyGraph));
+    loadedMandalas.push_back({descriptor.id, hardMode, std::make_shared<Mandala>(descriptor.id, descriptor.name, regions, adjacencyGraph)});
     return true;
 }
 
-bool MandalaDatabase::hasMandala(int id) const {
+bool MandalaDatabase::hasMandala(int id, bool hardMode) const {
     return std::any_of(
-        mandalaList.begin(),
-        mandalaList.end(),
-        [id](const std::shared_ptr<Mandala>& mandala) {
-            return mandala != nullptr && mandala->getId() == id;
+        loadedMandalas.begin(),
+        loadedMandalas.end(),
+        [id, hardMode](const LoadedMandalaEntry& entry) {
+            return entry.id == id && entry.hardMode == hardMode && entry.mandala != nullptr;
         }
     );
 }

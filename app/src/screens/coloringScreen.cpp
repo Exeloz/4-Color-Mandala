@@ -48,7 +48,8 @@ namespace {
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala,
                                const std::vector<Color>& customPaletteColors,
-                               bool readOnlyMode)
+                               bool readOnlyMode,
+                               bool hardModeEnabled)
         : mandala(mandala), colorPalette(), colorButtons(), 
             backButton(0, 0, 1, 1, "BACK"),
             undoButton(0, 0, 1, 1, "UNDO"),
@@ -62,7 +63,8 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala,
             actionManager(),
             interactionManager(),
             camera{}, zoom(1.0f),
-            pendingColorChangesForSave(0), saveRequested(false), readOnlyMode(readOnlyMode) {
+            pendingColorChangesForSave(0), saveRequested(false), readOnlyMode(readOnlyMode),
+            hardModeEnabled(hardModeEnabled) {
 
         camera.target = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
@@ -253,7 +255,7 @@ void ColoringScreen::updateAnalysisInteractions() {
 }
 
 void ColoringScreen::updateDebugInteractions() {
-    interactionManager.updateDebugControls(inspector, *mandala, camera, camera);
+    interactionManager.updateDebugControls(inspector, *mandala, camera, camera, hardModeEnabled);
 }
 
 void ColoringScreen::fitCameraToMandala() {

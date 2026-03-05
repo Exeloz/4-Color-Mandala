@@ -131,6 +131,10 @@ void Button::setSize(float width, float height) {
     bounds.height = height;
 }
 
+void Button::setLabel(const std::string& newLabel) {
+    label = newLabel;
+}
+
 void Button::setTextScale(float scale) {
     textScale = std::max(0.5f, scale);
 }

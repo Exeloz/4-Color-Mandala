@@ -1,11 +1,15 @@
 #include "progressPersistence.h"
 
 #include <algorithm>
+#include <cctype>
 #include <sstream>
 
 namespace {
     constexpr const char* SAVE_FILE_NAME = "mandala_progress.dat";
     constexpr const char* SAVE_MAGIC = "MANDALA_PROGRESS_V1";
+    constexpr const char* PALETTE_SECTION = "PALETTE";
+    constexpr const char* PALETTE_HARD_SECTION = "PALETTE_HARD";
+    constexpr const char* MANDALAS_SECTION = "MANDALAS";
 
     Color clampColorChannels(int red, int green, int blue, int alpha) {
         Color color{};
@@ -15,13 +19,69 @@ namespace {
         color.a = static_cast<unsigned char>(std::max(0, std::min(255, alpha)));
         return color;
     }
+
+    bool isHardKey(const std::string& key) {
+        return !key.empty() && key.back() == 'H';
+    }
+
+    bool tryParseBaseMandalaId(const std::string& key, int& outId) {
+        outId = -1;
+        if (key.empty()) {
+            return false;
+        }
+
+        std::string numericPart = key;
+        if (isHardKey(numericPart)) {
+            numericPart.pop_back();
+        }
+        if (numericPart.empty()) {
+            return false;
+        }
+
+        for (char c : numericPart) {
+            if (std::isdigit(static_cast<unsigned char>(c)) == 0) {
+                return false;
+            }
+        }
+
+        outId = std::stoi(numericPart);
+        return true;
+    }
+
+    bool readPalette(std::istringstream& stream, int count, std::vector<Color>& outputPalette) {
+        if (count < 0) {
+            return false;
+        }
+
+        outputPalette.clear();
+        outputPalette.reserve(static_cast<size_t>(count));
+
+        for (int i = 0; i < count; ++i) {
+            int red = 0;
+            int green = 0;
+            int blue = 0;
+            int alpha = 255;
+            if (!(stream >> red >> green >> blue >> alpha)) {
+                return false;
+            }
+            outputPalette.push_back(clampColorChannels(red, green, blue, alpha));
+        }
+
+        return true;
+    }
 }
 
 ProgressPersistence::ProgressPersistence()
     : saveFilePath(SAVE_FILE_NAME),
       savedPalette(),
+      savedPaletteHard(),
       paletteAvailable(false),
+      paletteHardAvailable(false),
       mandalaStates() {}
+
+std::string ProgressPersistence::makeMandalaKey(int mandalaId, bool hardMode) {
+    return hardMode ? (std::to_string(mandalaId) + "H") : std::to_string(mandalaId);
+}
 
 bool ProgressPersistence::load() {
     char* loadedText = LoadFileText(saveFilePath.c_str());
@@ -33,8 +93,10 @@ bool ProgressPersistence::load() {
     UnloadFileText(loadedText);
 
     std::vector<Color> loadedPalette;
-    std::unordered_map<int, PersistedMandalaState> loadedStates;
+    std::vector<Color> loadedPaletteHard;
+    std::unordered_map<std::string, PersistedMandalaState> loadedStates;
     bool loadedPaletteAvailable = false;
+    bool loadedPaletteHardAvailable = false;
 
     std::string magic;
     if (!(stream >> magic) || magic != SAVE_MAGIC) {
@@ -43,28 +105,37 @@ bool ProgressPersistence::load() {
 
     std::string paletteToken;
     int paletteCount = 0;
-    if (!(stream >> paletteToken >> paletteCount) || paletteToken != "PALETTE" || paletteCount < 0) {
+    if (!(stream >> paletteToken >> paletteCount) || paletteToken != PALETTE_SECTION) {
         return false;
     }
 
-    loadedPalette.reserve(static_cast<size_t>(paletteCount));
-    for (int i = 0; i < paletteCount; ++i) {
-        int red = 0;
-        int green = 0;
-        int blue = 0;
-        int alpha = 255;
-        if (!(stream >> red >> green >> blue >> alpha)) {
-            return false;
-        }
-        loadedPalette.push_back(clampColorChannels(red, green, blue, alpha));
+    if (!readPalette(stream, paletteCount, loadedPalette)) {
+        return false;
     }
     loadedPaletteAvailable = (paletteCount > 0);
 
-    std::string mandalasToken;
-    int mandalaCount = 0;
-    if (!(stream >> mandalasToken >> mandalaCount) || mandalasToken != "MANDALAS" || mandalaCount < 0) {
+    std::string sectionToken;
+    int sectionCount = 0;
+    if (!(stream >> sectionToken >> sectionCount)) {
         return false;
     }
+
+    if (sectionToken == PALETTE_HARD_SECTION) {
+        if (!readPalette(stream, sectionCount, loadedPaletteHard)) {
+            return false;
+        }
+        loadedPaletteHardAvailable = (sectionCount > 0);
+
+        if (!(stream >> sectionToken >> sectionCount)) {
+            return false;
+        }
+    }
+
+    if (sectionToken != MANDALAS_SECTION || sectionCount < 0) {
+        return false;
+    }
+
+    const int mandalaCount = sectionCount;
 
     for (int i = 0; i < mandalaCount; ++i) {
         std::string mandalaHeaderLine;
@@ -74,13 +145,14 @@ bool ProgressPersistence::load() {
 
         std::istringstream mandalaHeaderStream(mandalaHeaderLine);
         std::string mandalaToken;
-        int mandalaId = -1;
+        std::string mandalaKey;
         int completed = 0;
         int regionCount = 0;
         int frozenPaletteCount = 0;
 
-        if (!(mandalaHeaderStream >> mandalaToken >> mandalaId >> completed >> regionCount)
+        if (!(mandalaHeaderStream >> mandalaToken >> mandalaKey >> completed >> regionCount)
             || mandalaToken != "MANDALA"
+            || mandalaKey.empty()
             || regionCount < 0) {
             return false;
         }
@@ -122,11 +194,13 @@ bool ProgressPersistence::load() {
             state.regionColors[regionId] = colorIndex;
         }
 
-        loadedStates[mandalaId] = std::move(state);
+        loadedStates[mandalaKey] = std::move(state);
     }
 
     savedPalette = std::move(loadedPalette);
+    savedPaletteHard = std::move(loadedPaletteHard);
     paletteAvailable = loadedPaletteAvailable;
+    paletteHardAvailable = loadedPaletteHardAvailable;
     mandalaStates = std::move(loadedStates);
     return true;
 }
@@ -135,7 +209,7 @@ bool ProgressPersistence::save() const {
     std::ostringstream stream;
 
     stream << SAVE_MAGIC << "\n";
-    stream << "PALETTE " << savedPalette.size() << "\n";
+    stream << PALETTE_SECTION << ' ' << savedPalette.size() << "\n";
     for (const Color& color : savedPalette) {
         stream << static_cast<int>(color.r) << ' '
                << static_cast<int>(color.g) << ' '
@@ -143,12 +217,20 @@ bool ProgressPersistence::save() const {
                << static_cast<int>(color.a) << "\n";
     }
 
-    stream << "MANDALAS " << mandalaStates.size() << "\n";
+    stream << PALETTE_HARD_SECTION << ' ' << savedPaletteHard.size() << "\n";
+    for (const Color& color : savedPaletteHard) {
+        stream << static_cast<int>(color.r) << ' '
+               << static_cast<int>(color.g) << ' '
+               << static_cast<int>(color.b) << ' '
+               << static_cast<int>(color.a) << "\n";
+    }
+
+    stream << MANDALAS_SECTION << ' ' << mandalaStates.size() << "\n";
     for (const auto& entry : mandalaStates) {
-        const int mandalaId = entry.first;
+        const std::string& mandalaKey = entry.first;
         const PersistedMandalaState& state = entry.second;
         stream << "MANDALA "
-               << mandalaId << ' '
+               << mandalaKey << ' '
                << (state.completed ? 1 : 0) << ' '
                << state.regionColors.size() << ' '
                << state.frozenPalette.size() << "\n";
@@ -170,7 +252,17 @@ bool ProgressPersistence::save() const {
 }
 
 void ProgressPersistence::setPalette(const std::vector<Color>& palette) {
+    setPalette(palette, false);
+}
+
+void ProgressPersistence::setPalette(const std::vector<Color>& palette, bool hardMode) {
     if (palette.empty()) {
+        return;
+    }
+
+    if (hardMode) {
+        savedPaletteHard = palette;
+        paletteHardAvailable = true;
         return;
     }
 
@@ -179,16 +271,36 @@ void ProgressPersistence::setPalette(const std::vector<Color>& palette) {
 }
 
 const std::vector<Color>& ProgressPersistence::getPalette() const {
+    return getPalette(false);
+}
+
+const std::vector<Color>& ProgressPersistence::getPalette(bool hardMode) const {
+    if (hardMode) {
+        return savedPaletteHard;
+    }
     return savedPalette;
 }
 
 bool ProgressPersistence::hasPalette() const {
+    return hasPalette(false);
+}
+
+bool ProgressPersistence::hasPalette(bool hardMode) const {
+    if (hardMode) {
+        return paletteHardAvailable && !savedPaletteHard.empty();
+    }
     return paletteAvailable && !savedPalette.empty();
 }
 
 void ProgressPersistence::captureMandalaState(const Mandala& mandala, const std::vector<Color>& activePalette) {
+    captureMandalaState(makeMandalaKey(mandala.getId(), false), mandala, activePalette);
+}
+
+void ProgressPersistence::captureMandalaState(const std::string& mandalaKey,
+                                             const Mandala& mandala,
+                                             const std::vector<Color>& activePalette) {
     PersistedMandalaState state;
-    auto existingState = mandalaStates.find(mandala.getId());
+    auto existingState = mandalaStates.find(mandalaKey);
     const bool wasCompleted = existingState != mandalaStates.end() && existingState->second.completed;
     if (existingState != mandalaStates.end()) {
         state.frozenPalette = existingState->second.frozenPalette;
@@ -206,7 +318,7 @@ void ProgressPersistence::captureMandalaState(const Mandala& mandala, const std:
         state.frozenPalette = activePalette;
     }
 
-    mandalaStates[mandala.getId()] = std::move(state);
+    mandalaStates[mandalaKey] = std::move(state);
 }
 
 void ProgressPersistence::captureAllMandalas(const std::vector<std::shared_ptr<Mandala>>& mandalas,
@@ -215,7 +327,7 @@ void ProgressPersistence::captureAllMandalas(const std::vector<std::shared_ptr<M
         if (mandala == nullptr) {
             continue;
         }
-        captureMandalaState(*mandala, activePalette);
+        captureMandalaState(makeMandalaKey(mandala->getId(), false), *mandala, activePalette);
     }
 }
 
@@ -224,30 +336,45 @@ void ProgressPersistence::applyToMandalas(const std::vector<std::shared_ptr<Mand
         if (mandala == nullptr) {
             continue;
         }
+        applyToMandala(makeMandalaKey(mandala->getId(), false), mandala);
+    }
+}
 
-        auto stateIterator = mandalaStates.find(mandala->getId());
-        if (stateIterator == mandalaStates.end()) {
+void ProgressPersistence::applyToMandala(const std::string& mandalaKey, const std::shared_ptr<Mandala>& mandala) const {
+    if (mandala == nullptr) {
+        return;
+    }
+
+    auto stateIterator = mandalaStates.find(mandalaKey);
+    if (stateIterator == mandalaStates.end()) {
+        return;
+    }
+
+    const PersistedMandalaState& state = stateIterator->second;
+    for (const auto& regionEntry : state.regionColors) {
+        Region* region = mandala->getRegionById(regionEntry.first);
+        if (region == nullptr || !region->isColorable()) {
             continue;
         }
 
-        const PersistedMandalaState& state = stateIterator->second;
-        for (const auto& regionEntry : state.regionColors) {
-            Region* region = mandala->getRegionById(regionEntry.first);
-            if (region == nullptr || !region->isColorable()) {
-                continue;
-            }
-
-            region->setColor(regionEntry.second);
-        }
+        region->setColor(regionEntry.second);
     }
 }
 
 void ProgressPersistence::clearMandalaState(int mandalaId) {
-    mandalaStates.erase(mandalaId);
+    clearMandalaState(makeMandalaKey(mandalaId, false));
+}
+
+void ProgressPersistence::clearMandalaState(const std::string& mandalaKey) {
+    mandalaStates.erase(mandalaKey);
 }
 
 bool ProgressPersistence::isMandalaCompleted(int mandalaId) const {
-    auto iterator = mandalaStates.find(mandalaId);
+    return isMandalaCompleted(makeMandalaKey(mandalaId, false));
+}
+
+bool ProgressPersistence::isMandalaCompleted(const std::string& mandalaKey) const {
+    auto iterator = mandalaStates.find(mandalaKey);
     if (iterator == mandalaStates.end()) {
         return false;
     }
@@ -256,9 +383,13 @@ bool ProgressPersistence::isMandalaCompleted(int mandalaId) const {
 }
 
 bool ProgressPersistence::tryGetMandalaFrozenPalette(int mandalaId, std::vector<Color>& outPalette) const {
+    return tryGetMandalaFrozenPalette(makeMandalaKey(mandalaId, false), outPalette);
+}
+
+bool ProgressPersistence::tryGetMandalaFrozenPalette(const std::string& mandalaKey, std::vector<Color>& outPalette) const {
     outPalette.clear();
 
-    auto iterator = mandalaStates.find(mandalaId);
+    auto iterator = mandalaStates.find(mandalaKey);
     if (iterator == mandalaStates.end() || iterator->second.frozenPalette.empty()) {
         return false;
     }
@@ -268,10 +399,24 @@ bool ProgressPersistence::tryGetMandalaFrozenPalette(int mandalaId, std::vector<
 }
 
 std::unordered_set<int> ProgressPersistence::getCompletedMandalaIds() const {
+    return getCompletedMandalaIds(false);
+}
+
+std::unordered_set<int> ProgressPersistence::getCompletedMandalaIds(bool hardMode) const {
     std::unordered_set<int> completedIds;
     for (const auto& entry : mandalaStates) {
-        if (entry.second.completed) {
-            completedIds.insert(entry.first);
+        if (!entry.second.completed) {
+            continue;
+        }
+
+        const std::string& key = entry.first;
+        if (isHardKey(key) != hardMode) {
+            continue;
+        }
+
+        int baseMandalaId = -1;
+        if (tryParseBaseMandalaId(key, baseMandalaId)) {
+            completedIds.insert(baseMandalaId);
         }
     }
     return completedIds;
