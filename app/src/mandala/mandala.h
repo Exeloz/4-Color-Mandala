@@ -7,7 +7,9 @@
 class Mandala {
 public:
     Mandala(int id, const std::string& name, const std::vector<Region>& regions, 
-            const AdjacencyGraph& adjacencyGraph);
+            const AdjacencyGraph& adjacencyGraph,
+            const std::string& regionsSourcePath = "",
+            const std::string& adjacencySourcePath = "");
 
     int getId() const;
     const std::string& getName() const;
@@ -17,6 +19,8 @@ public:
     const Region* getRegionById(int regionId) const;
     const std::vector<Region>& getRegions() const;
     const AdjacencyGraph& getAdjacencyGraph() const;
+    const std::string& getRegionsSourcePath() const;
+    const std::string& getAdjacencySourcePath() const;
     bool isFullyColored() const;
     bool isValidColoring() const;
     void draw(const std::vector<Color>& colorPalette, bool ignoreColoring = false) const;
@@ -26,4 +30,6 @@ private:
     std::string name;
     std::vector<Region> regions;
     AdjacencyGraph adjacencyGraph;
+    std::string regionsSourcePath;
+    std::string adjacencySourcePath;
 };

@@ -27,8 +27,7 @@ public:
         ColoringInspector& inspector,
         Mandala& mandala,
         const Camera2D& camera,
-        Camera2D& mutableCamera,
-        bool hardModeEnabled) const;
+        Camera2D& mutableCamera) const;
 
     int getRegionIdForColorSelection(
         Mandala& mandala,

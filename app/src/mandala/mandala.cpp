@@ -2,8 +2,15 @@
 #include <algorithm>
 
 Mandala::Mandala(int id, const std::string& name, const std::vector<Region>& regions, 
-                 const AdjacencyGraph& adjacencyGraph)
-    : id(id), name(name), regions(regions), adjacencyGraph(adjacencyGraph) {}
+                                 const AdjacencyGraph& adjacencyGraph,
+                                 const std::string& regionsSourcePath,
+                                 const std::string& adjacencySourcePath)
+        : id(id),
+            name(name),
+            regions(regions),
+            adjacencyGraph(adjacencyGraph),
+            regionsSourcePath(regionsSourcePath),
+            adjacencySourcePath(adjacencySourcePath) {}
 
 int Mandala::getId() const {
     return id;
@@ -50,6 +57,14 @@ const std::vector<Region>& Mandala::getRegions() const {
 
 const AdjacencyGraph& Mandala::getAdjacencyGraph() const {
     return adjacencyGraph;
+}
+
+const std::string& Mandala::getRegionsSourcePath() const {
+    return regionsSourcePath;
+}
+
+const std::string& Mandala::getAdjacencySourcePath() const {
+    return adjacencySourcePath;
 }
 
 bool Mandala::isFullyColored() const {

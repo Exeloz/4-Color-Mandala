@@ -844,7 +844,16 @@ bool MandalaDatabase::loadMandalaFromAssets(const MandalaAssetDescriptor& descri
         adjacencyGraph.addAdjacency(static_cast<int>(aValue.numberValue), static_cast<int>(bValue.numberValue));
     }
 
-    loadedMandalas.push_back({descriptor.id, hardMode, std::make_shared<Mandala>(descriptor.id, descriptor.name, regions, adjacencyGraph)});
+    loadedMandalas.push_back({
+        descriptor.id,
+        hardMode,
+        std::make_shared<Mandala>(descriptor.id,
+                                  descriptor.name,
+                                  regions,
+                                  adjacencyGraph,
+                                  loadedRegionsPath,
+                                  loadedAdjacencyPath)
+    });
     return true;
 }
 

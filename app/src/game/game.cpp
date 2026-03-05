@@ -75,8 +75,7 @@ void Game::update(float deltaTime) {
 
                 coloringScreen = std::make_shared<ColoringScreen>(selectedMandala,
                                                                   activeColorsForMandala,
-                                                                  openReadOnly,
-                                                                  hardModeEnabled);
+                                                                  openReadOnly);
                 suppressWinTransition = false;
                 transitionToState(GameScreenState::COLORING);
             }
