@@ -182,7 +182,9 @@ void ColoringScreen::draw() {
         drawColorPalette();
     }
     backButton.draw();
-    undoButton.draw();
+    if (!readOnlyMode) {
+        undoButton.draw();
+    }
     if (!readOnlyMode) {
         validateButton.draw();
     }
@@ -336,10 +338,15 @@ void ColoringScreen::layoutTopButtons() {
 
     float undoButtonWidth = mobileLayout ? 126.0f * uiScale : 110.0f;
     float undoButtonHeight = topButtonHeight;
-    float undoButtonX = GetScreenWidth() - undoButtonWidth - rightMargin;
-    float undoButtonY = GetScreenHeight() - undoButtonHeight - (20.0f * uiScale);
-    undoButton.setPosition(undoButtonX, undoButtonY);
-    undoButton.setSize(undoButtonWidth, undoButtonHeight);
+    if (readOnlyMode) {
+        undoButton.setPosition(0.0f, 0.0f);
+        undoButton.setSize(0.0f, 0.0f);
+    } else {
+        float undoButtonX = GetScreenWidth() - undoButtonWidth - rightMargin;
+        float undoButtonY = GetScreenHeight() - undoButtonHeight - (20.0f * uiScale);
+        undoButton.setPosition(undoButtonX, undoButtonY);
+        undoButton.setSize(undoButtonWidth, undoButtonHeight);
+    }
 
     float validateButtonX = GetScreenWidth() - 2*mainButtonWidth - rightMargin;
     if (readOnlyMode) {
