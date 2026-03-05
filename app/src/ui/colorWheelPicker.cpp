@@ -91,10 +91,6 @@ void ColorWheelPicker::draw(Color panelBackground) const {
     }
     rlEnd();
 
-    if (value < 1.0f) {
-        DrawCircleV(center, radius, Fade(BLACK, 1.0f - value));
-    }
-
     DrawCircleLines(static_cast<int>(center.x), static_cast<int>(center.y), radius, Fade(BLACK, 0.55f));
 
     float hueRadians = hue * DEG2RAD;
@@ -110,15 +106,15 @@ void ColorWheelPicker::draw(Color panelBackground) const {
     DrawCircleV(wheelHandle, 7.0f, Fade(WHITE, 0.35f));
     DrawCircleLines(static_cast<int>(wheelHandle.x), static_cast<int>(wheelHandle.y), 7.0f, handleOutline);
 
-    DrawRectangleGradientEx(valueSliderRect, BLACK, WHITE, WHITE, BLACK);
+    DrawRectangleGradientEx(valueSliderRect, WHITE, WHITE, BLACK, BLACK);
     DrawRectangleLinesEx(valueSliderRect, 2.0f, DARKGRAY);
 
-    float sliderHandleX = valueSliderRect.x + value * valueSliderRect.width;
+    float sliderHandleY = valueSliderRect.y + (1.0f - value) * valueSliderRect.height;
     Rectangle sliderHandle = {
-        sliderHandleX - 4.0f,
-        valueSliderRect.y - 3.0f,
-        8.0f,
-        valueSliderRect.height + 6.0f
+        valueSliderRect.x - 3.0f,
+        sliderHandleY - 4.0f,
+        valueSliderRect.width + 6.0f,
+        8.0f
     };
     DrawRectangleRec(sliderHandle, WHITE);
     DrawRectangleLinesEx(sliderHandle, 1.5f, BLACK);
@@ -129,24 +125,25 @@ Color ColorWheelPicker::getSelectedColor() const {
 }
 
 void ColorWheelPicker::updateGeometry() {
-    float sliderHeight = std::max(14.0f, bounds.height * 0.08f);
-    float sliderHorizontalPadding = std::max(16.0f, bounds.width * 0.12f);
-    float sliderGap = std::max(10.0f, bounds.height * 0.05f);
+    float sliderWidth = std::max(14.0f, bounds.width * 0.08f);
+    float sliderVerticalPadding = std::max(12.0f, bounds.height * 0.08f);
+    float sliderGap = std::max(10.0f, bounds.width * 0.05f);
 
     valueSliderRect = {
-        bounds.x + sliderHorizontalPadding,
-        bounds.y + bounds.height - sliderHeight,
-        std::max(20.0f, bounds.width - (sliderHorizontalPadding * 2.0f)),
-        sliderHeight
+        bounds.x + bounds.width - sliderWidth,
+        bounds.y + sliderVerticalPadding,
+        sliderWidth,
+        std::max(24.0f, bounds.height - (2.0f * sliderVerticalPadding))
     };
 
-    float wheelHeight = std::max(20.0f, valueSliderRect.y - bounds.y - sliderGap);
-    float diameter = std::min(bounds.width, wheelHeight) * 0.92f;
+    float wheelWidth = std::max(20.0f, valueSliderRect.x - bounds.x - sliderGap);
+    float wheelHeight = std::max(20.0f, bounds.height);
+    float diameter = std::min(wheelWidth, wheelHeight) * 0.92f;
     radius = std::max(12.0f, diameter * 0.5f);
 
     center = {
-        bounds.x + (bounds.width * 0.5f),
-        bounds.y + (wheelHeight * 0.5f)
+        bounds.x + (wheelWidth * 0.5f),
+        bounds.y + (bounds.height * 0.5f)
     };
 }
 
@@ -156,10 +153,10 @@ bool ColorWheelPicker::isPointerInsideWheel(Vector2 pointer) const {
 
 bool ColorWheelPicker::isPointerInsideValueSlider(Vector2 pointer) const {
     Rectangle touchRect = {
-        valueSliderRect.x,
-        valueSliderRect.y - 8.0f,
-        valueSliderRect.width,
-        valueSliderRect.height + 16.0f
+        valueSliderRect.x - 8.0f,
+        valueSliderRect.y,
+        valueSliderRect.width + 16.0f,
+        valueSliderRect.height
     };
     return CheckCollisionPointRec(pointer, touchRect);
 }
@@ -182,7 +179,7 @@ void ColorWheelPicker::updateWheelFromPointer(Vector2 pointer) {
 }
 
 void ColorWheelPicker::updateValueFromPointer(Vector2 pointer) {
-    float clampedX = Clamp(pointer.x, valueSliderRect.x, valueSliderRect.x + valueSliderRect.width);
-    value = (clampedX - valueSliderRect.x) / valueSliderRect.width;
+    float clampedY = Clamp(pointer.y, valueSliderRect.y, valueSliderRect.y + valueSliderRect.height);
+    value = 1.0f - ((clampedY - valueSliderRect.y) / valueSliderRect.height);
     value = Clamp(value, 0.0f, 1.0f);
 }

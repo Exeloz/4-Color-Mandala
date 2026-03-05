@@ -5,7 +5,6 @@
 #include "../ui/input.h"
 #include "raymath.h"
 #include <algorithm>
-#include <string>
 
 namespace {
     constexpr float SLOT_START_X = 86.0f;
@@ -16,8 +15,6 @@ namespace {
 
     constexpr float WHEEL_TOP_Y = 184.0f;
     constexpr float WHEEL_BOTTOM_MARGIN = 24.0f;
-    constexpr float PREVIEW_WIDTH = 200.0f;
-    constexpr float PREVIEW_HEIGHT = 70.0f;
 
     bool isMobileLayout() {
         return true;
@@ -128,32 +125,6 @@ void PaletteScreen::draw() {
 
     colorWheelPicker.draw(Colors::Gainsboro);
 
-    Rectangle previewBounds = getPreviewBounds();
-    DrawRectangleRounded(previewBounds, 0.18f, 12, Colors::WhiteSmoke);
-    DrawRectangleLinesEx(previewBounds, 2.0f, Colors::DarkGray);
-
-    Color selectedColor = colorWheelPicker.getSelectedColor();
-    Rectangle swatch = {
-        previewBounds.x + 12.0f * uiScale,
-        previewBounds.y + 12.0f * uiScale,
-        previewBounds.height - 24.0f * uiScale,
-        previewBounds.height - 24.0f * uiScale
-    };
-    DrawRectangleRec(swatch, selectedColor);
-    DrawRectangleLinesEx(swatch, 2.0f, Colors::Black);
-
-    std::string slotText = "Slot " + std::to_string(activeSlotIndex);
-    DrawText(slotText.c_str(),
-             static_cast<int>(swatch.x + swatch.width + (12.0f * uiScale)),
-             static_cast<int>(previewBounds.y + 14.0f * uiScale),
-             infoSize,
-             Colors::Black);
-
-    DrawText("Selected exact color",
-             static_cast<int>(swatch.x + swatch.width + (12.0f * uiScale)),
-             static_cast<int>(previewBounds.y + 14.0f * uiScale + infoSize + (8.0f * uiScale)),
-             static_cast<int>(18.0f * uiScale),
-             Colors::DarkSlateGray);
 }
 
 void PaletteScreen::layoutControls() {
@@ -222,20 +193,10 @@ Rectangle PaletteScreen::getColorWheelBounds() const {
 
     float maxDiameter = std::min(
         static_cast<float>(GetScreenWidth()) - (80.0f * uiScale),
-        static_cast<float>(GetScreenHeight()) - top - bottomMargin - (PREVIEW_HEIGHT * uiScale) - (12.0f * uiScale)
+        static_cast<float>(GetScreenHeight()) - top - bottomMargin
     );
     float diameter = std::max(140.0f * uiScale, maxDiameter);
 
     float x = (GetScreenWidth() - diameter) * 0.5f;
     return {x, top, diameter, diameter};
-}
-
-Rectangle PaletteScreen::getPreviewBounds() const {
-    float uiScale = getUiScale();
-    Rectangle wheel = getColorWheelBounds();
-    float width = PREVIEW_WIDTH * uiScale;
-    float height = PREVIEW_HEIGHT * uiScale;
-    float x = (GetScreenWidth() - width) * 0.5f;
-    float y = wheel.y + wheel.height + (12.0f * uiScale);
-    return {x, y, width, height};
 }

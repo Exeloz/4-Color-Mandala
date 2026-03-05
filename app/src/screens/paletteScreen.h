@@ -32,5 +32,4 @@ private:
     void layoutControls();
     Rectangle getPaletteSlotBounds(int slotIndex) const;
     Rectangle getColorWheelBounds() const;
-    Rectangle getPreviewBounds() const;
 };
