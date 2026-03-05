@@ -30,6 +30,11 @@ void PopupPanel::setSizeRatios(float newWidthRatio, float newHeightRatio) {
     heightRatio = Clamp(newHeightRatio, 0.35f, 0.98f);
 }
 
+void PopupPanel::setMaxSize(float newMaxWidth, float newMaxHeight) {
+    maxWidth = std::max(120.0f, newMaxWidth);
+    maxHeight = std::max(120.0f, newMaxHeight);
+}
+
 void PopupPanel::show() {
     visible = true;
     confirmed = false;
@@ -47,12 +52,18 @@ bool PopupPanel::isVisible() const {
     return visible;
 }
 
-void PopupPanel::update() {
+void PopupPanel::refreshLayout() {
+    if (!visible) {
+        return;
+    }
+    updateLayout();
+}
+
+void PopupPanel::updateButtons() {
     if (!visible) {
         return;
     }
 
-    updateLayout();
     cancelButton.update();
     confirmButton.update();
 
@@ -65,6 +76,15 @@ void PopupPanel::update() {
         confirmed = true;
         cancelled = false;
     }
+}
+
+void PopupPanel::update() {
+    if (!visible) {
+        return;
+    }
+
+    refreshLayout();
+    updateButtons();
 }
 
 void PopupPanel::drawShell() const {
@@ -120,6 +140,14 @@ Rectangle PopupPanel::getContentBounds(float horizontalPaddingRatio,
         panelBounds.width - (2.0f * horizontalPadding),
         panelBounds.height - topPadding - bottomPadding
     };
+}
+
+Button& PopupPanel::getConfirmButton() {
+    return confirmButton;
+}
+
+Button& PopupPanel::getCancelButton() {
+    return cancelButton;
 }
 
 void PopupPanel::updateLayout() {

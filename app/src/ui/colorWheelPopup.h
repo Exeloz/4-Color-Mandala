@@ -18,6 +18,8 @@ public:
 
 private:
     void updateLayout();
+    void updateActionButtonsLayout();
+    void drawColorColumn(const Rectangle& popupBounds) const;
 
     PopupPanel popup;
     ColorWheelPicker wheelPicker;
@@ -26,6 +28,8 @@ private:
     bool cancelled;
 
     int activeSlotIndex;
+    Color currentColor;
     Color selectedColor;
     Rectangle wheelBounds;
+    Rectangle colorColumnBounds;
 };

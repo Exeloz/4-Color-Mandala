@@ -13,11 +13,14 @@ public:
                    const std::string& cancelLabel = "Cancel");
 
     void setSizeRatios(float widthRatio, float heightRatio);
+    void setMaxSize(float maxWidth, float maxHeight);
 
     void show();
     void hide();
     bool isVisible() const;
 
+    void refreshLayout();
+    void updateButtons();
     void update();
 
     void drawShell() const;
@@ -30,6 +33,9 @@ public:
     Rectangle getContentBounds(float horizontalPaddingRatio,
                                float topPaddingRatio,
                                float bottomPaddingRatio) const;
+
+    Button& getConfirmButton();
+    Button& getCancelButton();
 
 private:
     void updateLayout();

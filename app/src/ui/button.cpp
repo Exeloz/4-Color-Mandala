@@ -81,7 +81,9 @@ std::vector<std::string> buildWrappedLines(const std::string& text, int textSize
 }
 
 Button::Button(float x, float y, float width, float height, const std::string& label)
-    : label(label), hovered(false), clicked(false), textScale(1.0f) {
+    : label(label), hovered(false), clicked(false), textScale(1.0f),
+      baseColor{70, 70, 150, 255}, hoverColor{100, 100, 200, 255},
+      borderColor(Colors::LightGray), textColor(Colors::White) {
     bounds = {x, y, width, height};
 }
 
@@ -92,9 +94,9 @@ void Button::update() {
 }
 
 void Button::draw() {
-    Color buttonColor = hovered ? Color{100, 100, 200, 255} : Color{70, 70, 150, 255};
+    Color buttonColor = hovered ? hoverColor : baseColor;
     DrawRectangleRec(bounds, buttonColor);
-    DrawRectangleLinesEx(bounds, 2, Colors::LightGray);
+    DrawRectangleLinesEx(bounds, 2, borderColor);
 
     float textSizeFloat = std::max(16.0f, std::min(42.0f, bounds.height * 0.24f * textScale));
     int textSize = static_cast<int>(textSizeFloat);
@@ -111,7 +113,7 @@ void Button::draw() {
         int textWidth = MeasureText(lines[i].c_str(), textSize);
         int textX = static_cast<int>(bounds.x + (bounds.width - textWidth) * 0.5f);
         int textY = static_cast<int>(baseY + i * lineSpacing);
-        DrawText(lines[i].c_str(), textX, textY, textSize, Colors::White);
+        DrawText(lines[i].c_str(), textX, textY, textSize, textColor);
     }
 }
 
@@ -131,6 +133,13 @@ void Button::setSize(float width, float height) {
 
 void Button::setTextScale(float scale) {
     textScale = std::max(0.5f, scale);
+}
+
+void Button::setColors(Color newBaseColor, Color newHoverColor, Color newBorderColor, Color newTextColor) {
+    baseColor = newBaseColor;
+    hoverColor = newHoverColor;
+    borderColor = newBorderColor;
+    textColor = newTextColor;
 }
 
 Rectangle Button::getBounds() const {
