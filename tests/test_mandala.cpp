@@ -59,3 +59,13 @@ TEST_CASE(mandala_non_colorable_uncolored_regions_do_not_block_validity) {
     EXPECT_FALSE(mandala.isFullyColored());
     EXPECT_TRUE(mandala.isValidColoring());
 }
+
+TEST_CASE(mandala_none_color_index_does_not_count_as_colored) {
+    Mandala mandala = makeTwoRegionMandala();
+
+    mandala.getRegionById(0)->setColor(1);
+    mandala.getRegionById(1)->setColor(0);
+
+    EXPECT_FALSE(mandala.isFullyColored());
+    EXPECT_FALSE(mandala.isValidColoring());
+}

@@ -40,3 +40,15 @@ TEST_CASE(coloring_action_manager_clear_resets_history) {
     EXPECT_FALSE(manager.canUndo());
     EXPECT_FALSE(manager.undoLast(mandala));
 }
+
+TEST_CASE(coloring_action_manager_treats_none_as_uncolored) {
+    Mandala mandala = makeTwoRegionMandala();
+    ColoringActionManager manager;
+
+    EXPECT_FALSE(manager.applyColorChange(mandala, 0, 0));
+    EXPECT_EQ(mandala.getRegionById(0)->getColor(), -1);
+
+    EXPECT_TRUE(manager.applyColorChange(mandala, 0, 2));
+    EXPECT_TRUE(manager.applyColorChange(mandala, 0, 0));
+    EXPECT_EQ(mandala.getRegionById(0)->getColor(), -1);
+}

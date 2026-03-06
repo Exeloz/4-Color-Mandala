@@ -6,9 +6,9 @@
 
 class ColorTileRenderer {
 public:
-    static bool isNoneColor(const Color& color);
     static void drawColorTile(const Color& color, Rectangle bounds, float uiScale,
-                              FillPattern style = FillPattern());
+                              FillPattern style = FillPattern(),
+                              bool isNoneTile = false);
 };
 
 #endif

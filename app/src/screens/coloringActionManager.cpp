@@ -6,13 +6,14 @@ bool ColoringActionManager::applyColorChange(Mandala& mandala, int regionId, int
         return false;
     }
 
+    const int normalizedNewColor = (newColor <= 0) ? -1 : newColor;
     int previousColor = region->getColor();
-    if (previousColor == newColor) {
+    if (previousColor == normalizedNewColor) {
         return false;
     }
 
-    region->setColor(newColor);
-    history.push_back({regionId, previousColor, newColor});
+    region->setColor(normalizedNewColor);
+    history.push_back({regionId, previousColor, normalizedNewColor});
     return true;
 }
 

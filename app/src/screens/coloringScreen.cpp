@@ -281,7 +281,7 @@ void ColoringScreen::drawColorPalette() {
     for (int colorIndex = 0; colorIndex <= availableEditableColorCount; colorIndex++) {
         Color color = colorPalette.getColor(colorIndex);
         Rectangle bounds = colorButtons[colorIndex].getBounds();
-        ColorTileRenderer::drawColorTile(color, bounds, uiScale);
+        ColorTileRenderer::drawColorTile(color, bounds, uiScale, FillPattern(), colorIndex == 0);
         
         if (colorIndex == colorPalette.getSelectedColorIndex()) {
             DrawRectangleLinesEx(bounds, 7.0f, Colors::Black);

@@ -4,6 +4,7 @@
 set of int: REGIONS = {0, 1, 2, 3, 4, 5, 6};
 int: REGION_COUNT = 7;
 int: EDGE_COUNT = 15;
+array[1..REGION_COUNT] of int: degree_order = [1, 2, 3, 4, 5, 6, 0];
 
 array[REGIONS] of var 1..REGION_COUNT: color;
 var 1..REGION_COUNT: max_color;
@@ -13,7 +14,11 @@ array[1..EDGE_COUNT] of int: edge_v = [2, 3, 4, 5, 6, 3, 4, 5, 6, 4, 5, 6, 5, 6,
 
 constraint forall(e in 1..EDGE_COUNT)(color[edge_u[e]] != color[edge_v[e]]);
 constraint forall(r in REGIONS)(color[r] <= max_color);
-constraint color[0] = 1;
+
+% Symmetry breaking
+constraint color[1] = 1;
+constraint color[2] = 2;
+constraint forall(i in 2..REGION_COUNT)(color[degree_order[i]] <= i);
 
 solve :: int_search([color[r] | r in REGIONS], first_fail, indomain_min, complete) minimize max_color;
 

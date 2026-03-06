@@ -18,6 +18,10 @@ TEST_CASE(region_initial_state_and_color_updates) {
     region.setColor(-1);
     EXPECT_FALSE(region.hasColor());
     EXPECT_EQ(region.getColor(), -1);
+
+    region.setColor(0);
+    EXPECT_FALSE(region.hasColor());
+    EXPECT_EQ(region.getColor(), -1);
 }
 
 TEST_CASE(region_non_colorable_rejects_color_changes) {

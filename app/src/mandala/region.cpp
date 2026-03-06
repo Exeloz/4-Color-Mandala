@@ -24,8 +24,10 @@ void Region::setColor(int colorIndex) {
     if (!colorable) {
         return;
     }
-    this->colorIndex = colorIndex;
-    colored = (colorIndex >= 0);
+
+    const int normalizedColorIndex = (colorIndex <= 0) ? -1 : colorIndex;
+    this->colorIndex = normalizedColorIndex;
+    colored = (normalizedColorIndex >= 0);
 }
 
 int Region::getColor() const {

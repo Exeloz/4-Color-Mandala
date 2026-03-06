@@ -3,16 +3,10 @@
 #include "../rendering/fillPatternRenderer.h"
 #include <algorithm>
 
-bool ColorTileRenderer::isNoneColor(const Color& color) {
-    return color.r == Colors::None.r &&
-           color.g == Colors::None.g &&
-           color.b == Colors::None.b &&
-           color.a == Colors::None.a;
-}
-
 void ColorTileRenderer::drawColorTile(const Color& color, Rectangle bounds, float uiScale,
-                                      FillPattern style) {
-    if (!isNoneColor(color)) {
+                                      FillPattern style,
+                                      bool isNoneTile) {
+    if (!isNoneTile) {
         FillPatternRenderer::drawRectangleFill(bounds, color, style);
         return;
     }
