@@ -105,9 +105,10 @@ void SelectionScreen::update(float deltaTime) {
         if (resetButtons[i].isClicked()) {
             pendingResetMandalaId = mandalaItems[i].id;
             pendingResetMandalaHardMode = mandalaItems[i].hasHardMode && hardModeByMandalaId[mandalaItems[i].id];
+            std::string hardModeReset = pendingResetMandalaHardMode ? "(hard mode) " : "";
             resetConfirmationDialog.configure(
                 "Reset Mandala",
-                "Reset all progress for '" + mandalaItems[i].name + "'?",
+                "Reset all progress for '" + mandalaItems[i].name + "' " + hardModeReset + "?",
                 "Yes, Reset",
                 "Cancel");
             resetConfirmationDialog.show();
