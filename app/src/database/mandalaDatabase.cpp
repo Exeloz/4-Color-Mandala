@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cctype>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -29,7 +30,7 @@ namespace {
         double numberValue = 0.0;
         std::string stringValue;
         std::vector<JsonValue> arrayValue;
-        std::unordered_map<std::string, JsonValue> objectValue;
+        std::unordered_map<std::string, std::unique_ptr<JsonValue>> objectValue;
 
         bool isObject() const { return type == Type::Object; }
         bool isArray() const { return type == Type::Array; }
@@ -46,7 +47,7 @@ namespace {
             if (iterator == objectValue.end()) {
                 return nullptr;
             }
-            return &iterator->second;
+            return iterator->second.get();
         }
     };
 
@@ -143,7 +144,7 @@ namespace {
                 skipWhitespace();
                 expect(':');
                 JsonValue value = parseValue();
-                object.objectValue.emplace(std::move(key), std::move(value));
+                object.objectValue.emplace(std::move(key), std::make_unique<JsonValue>(std::move(value)));
 
                 skipWhitespace();
                 if (tryConsume('}')) {

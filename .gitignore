@@ -1,4 +1,4 @@
-main
+/main
 tests_runner
 obj/
 **/node_modules/**
