@@ -23,6 +23,8 @@ private:
     bool hovered;
     bool clicked;
     float textScale;
+    float hoverBlend;
+    float pressBlend;
     Color baseColor;
     Color hoverColor;
     Color borderColor;

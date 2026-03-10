@@ -38,7 +38,8 @@ Game::Game()
             nextState(GameScreenState::START),
             appPaletteColors(ColorPalette().getColors()),
             hardModeEnabled(false),
-            suppressWinTransition(false) {}
+                        suppressWinTransition(false),
+                        transitionOverlayAlpha(0.0f) {}
 
 Game::~Game() {
     savePaletteProgress();
@@ -61,6 +62,7 @@ void Game::initialize() {
 }
 
 void Game::update(float deltaTime) {
+    transitionOverlayAlpha = std::max(0.0f, transitionOverlayAlpha - deltaTime * 2.8f);
     updateCurrentState(deltaTime);
 
     switch (currentState) {
@@ -187,6 +189,7 @@ bool Game::shouldClose() const {
 
 void Game::transitionToState(GameScreenState newState) {
     currentState = newState;
+    transitionOverlayAlpha = 0.12f;
 }
 
 void Game::updateCurrentState(float deltaTime) {
@@ -226,6 +229,10 @@ void Game::drawCurrentState() {
         case GameScreenState::WIN:
             if (winScreen) winScreen->draw();
             break;
+    }
+
+    if (transitionOverlayAlpha > 0.0f) {
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade({243, 246, 251, 255}, transitionOverlayAlpha));
     }
 }
 

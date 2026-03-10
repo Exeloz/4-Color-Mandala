@@ -51,6 +51,7 @@ private:
     float heightRatio;
     float maxWidth;
     float maxHeight;
+    float backdropAlpha;
 
     Button confirmButton;
     Button cancelButton;

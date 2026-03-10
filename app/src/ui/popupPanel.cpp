@@ -14,6 +14,7 @@ PopupPanel::PopupPanel()
       heightRatio(0.82f),
       maxWidth(720.0f),
       maxHeight(720.0f),
+      backdropAlpha(0.0f),
       confirmButton(0.0f, 0.0f, 130.0f, 52.0f, "Confirm"),
       cancelButton(0.0f, 0.0f, 130.0f, 52.0f, "Cancel") {}
 
@@ -39,6 +40,7 @@ void PopupPanel::show() {
     visible = true;
     confirmed = false;
     cancelled = false;
+    backdropAlpha = 0.0f;
     updateLayout();
 }
 
@@ -46,6 +48,7 @@ void PopupPanel::hide() {
     visible = false;
     confirmed = false;
     cancelled = false;
+    backdropAlpha = 0.0f;
 }
 
 bool PopupPanel::isVisible() const {
@@ -83,6 +86,9 @@ void PopupPanel::update() {
         return;
     }
 
+    const float alphaLerp = std::min(1.0f, GetFrameTime() * 10.0f);
+    backdropAlpha = Lerp(backdropAlpha, 1.0f, alphaLerp);
+
     refreshLayout();
     updateButtons();
 }
@@ -92,15 +98,15 @@ void PopupPanel::drawShell() const {
         return;
     }
 
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(Colors::Black, 0.55f));
-    DrawRectangleRounded(panelBounds, 0.08f, 14, Colors::WhiteSmoke);
-    DrawRectangleRoundedLinesEx(panelBounds, 0.08f, 14, 3.0f, Colors::DarkBlue);
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(Colors::Black, 0.55f * backdropAlpha));
+    DrawRectangleRounded(panelBounds, 0.08f, 14, Fade(Colors::WhiteSmoke, backdropAlpha));
+    DrawRectangleRoundedLinesEx(panelBounds, 0.08f, 14, 3.0f, Fade(Colors::DarkBlue, backdropAlpha));
 
     int titleSize = std::max(24, static_cast<int>(panelBounds.height * 0.07f));
     int titleWidth = MeasureText(title.c_str(), titleSize);
     int titleX = static_cast<int>(panelBounds.x + (panelBounds.width - titleWidth) * 0.5f);
     int titleY = static_cast<int>(panelBounds.y + panelBounds.height * 0.06f);
-    DrawText(title.c_str(), titleX, titleY, titleSize, Colors::Black);
+    DrawText(title.c_str(), titleX, titleY, titleSize, Fade(Colors::Black, backdropAlpha));
 }
 
 void PopupPanel::drawButtons() {

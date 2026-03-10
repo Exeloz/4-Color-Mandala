@@ -45,6 +45,7 @@ private:
     std::unordered_map<int, bool> hardModeSelectionByMandalaId;
     bool hardModeEnabled;
     bool suppressWinTransition;
+    float transitionOverlayAlpha;
     ProgressPersistence progressPersistence;
 
     void transitionToState(GameScreenState newState);

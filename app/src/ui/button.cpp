@@ -2,10 +2,21 @@
 #include "colors.h"
 #include "input.h"
 #include <algorithm>
+#include "raymath.h"
 #include <sstream>
 #include <vector>
 
 namespace {
+Color blendColor(const Color& from, const Color& to, float t) {
+    const float clamped = Clamp(t, 0.0f, 1.0f);
+    return {
+        static_cast<unsigned char>(from.r + (to.r - from.r) * clamped),
+        static_cast<unsigned char>(from.g + (to.g - from.g) * clamped),
+        static_cast<unsigned char>(from.b + (to.b - from.b) * clamped),
+        static_cast<unsigned char>(from.a + (to.a - from.a) * clamped)
+    };
+}
+
 std::string trimToEllipsis(const std::string& text, int textSize, float maxWidth) {
     const std::string ellipsis = "...";
     if (MeasureText(text.c_str(), textSize) <= maxWidth) {
@@ -81,7 +92,7 @@ std::vector<std::string> buildWrappedLines(const std::string& text, int textSize
 }
 
 Button::Button(float x, float y, float width, float height, const std::string& label)
-    : label(label), hovered(false), clicked(false), textScale(1.0f),
+    : label(label), hovered(false), clicked(false), textScale(1.0f), hoverBlend(0.0f), pressBlend(0.0f),
       baseColor{70, 70, 150, 255}, hoverColor{100, 100, 200, 255},
       borderColor(Colors::LightGray), textColor(Colors::White) {
     bounds = {x, y, width, height};
@@ -91,27 +102,45 @@ void Button::update() {
     Vector2 pointerPos = Input::GetPointerPosition();
     hovered = CheckCollisionPointRec(pointerPos, bounds);
     clicked = hovered && Input::IsPointerPressed();
+
+    const float deltaTime = GetFrameTime();
+    const float hoverTarget = hovered ? 1.0f : 0.0f;
+    const float pressTarget = (hovered && Input::IsPointerDown()) ? 1.0f : 0.0f;
+    const float hoverLerp = std::min(1.0f, deltaTime * 12.0f);
+    const float pressLerp = std::min(1.0f, deltaTime * 18.0f);
+    hoverBlend = Lerp(hoverBlend, hoverTarget, hoverLerp);
+    pressBlend = Lerp(pressBlend, pressTarget, pressLerp);
 }
 
 void Button::draw() {
-    Color buttonColor = hovered ? hoverColor : baseColor;
-    DrawRectangleRec(bounds, buttonColor);
-    DrawRectangleLinesEx(bounds, 2, borderColor);
+    const Color buttonColor = blendColor(baseColor, hoverColor, hoverBlend);
 
-    float textSizeFloat = std::max(16.0f, std::min(42.0f, bounds.height * 0.24f * textScale));
+    Rectangle animatedBounds = bounds;
+    animatedBounds.y -= (2.0f * hoverBlend);
+    animatedBounds.y += (1.5f * pressBlend);
+
+    Rectangle shadowBounds = animatedBounds;
+    shadowBounds.y += 3.0f;
+
+    DrawRectangleRounded(shadowBounds, 0.18f, 8, Fade(Colors::Black, 0.10f + 0.05f * hoverBlend));
+    DrawRectangleRounded(animatedBounds, 0.18f, 8, buttonColor);
+    DrawRectangleRoundedLinesEx(animatedBounds, 0.18f, 8, 2.0f, borderColor);
+
+    float textSizeFloat = std::max(16.0f, std::min(42.0f, animatedBounds.height * 0.24f * textScale));
+    textSizeFloat *= (1.0f + hoverBlend * 0.04f - pressBlend * 0.04f);
     int textSize = static_cast<int>(textSizeFloat);
-    int maxLines = bounds.height >= 70.0f ? 2 : 1;
-    float horizontalPadding = std::max(8.0f, bounds.width * 0.08f);
-    float maxTextWidth = std::max(1.0f, bounds.width - (2.0f * horizontalPadding));
+    int maxLines = animatedBounds.height >= 70.0f ? 2 : 1;
+    float horizontalPadding = std::max(8.0f, animatedBounds.width * 0.08f);
+    float maxTextWidth = std::max(1.0f, animatedBounds.width - (2.0f * horizontalPadding));
 
     std::vector<std::string> lines = buildWrappedLines(label, textSize, maxTextWidth, maxLines);
     float lineSpacing = textSize * 1.15f;
     float totalHeight = static_cast<float>(lines.size()) * lineSpacing;
-    float baseY = bounds.y + (bounds.height - totalHeight) * 0.5f;
+    float baseY = animatedBounds.y + (animatedBounds.height - totalHeight) * 0.5f;
 
     for (size_t i = 0; i < lines.size(); i++) {
         int textWidth = MeasureText(lines[i].c_str(), textSize);
-        int textX = static_cast<int>(bounds.x + (bounds.width - textWidth) * 0.5f);
+        int textX = static_cast<int>(animatedBounds.x + (animatedBounds.width - textWidth) * 0.5f);
         int textY = static_cast<int>(baseY + i * lineSpacing);
         DrawText(lines[i].c_str(), textX, textY, textSize, textColor);
     }
