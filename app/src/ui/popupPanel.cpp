@@ -59,6 +59,10 @@ void PopupPanel::refreshLayout() {
     if (!visible) {
         return;
     }
+
+    const float alphaLerp = std::min(1.0f, GetFrameTime() * 10.0f);
+    backdropAlpha = Lerp(backdropAlpha, 1.0f, alphaLerp);
+
     updateLayout();
 }
 
@@ -85,9 +89,6 @@ void PopupPanel::update() {
     if (!visible) {
         return;
     }
-
-    const float alphaLerp = std::min(1.0f, GetFrameTime() * 10.0f);
-    backdropAlpha = Lerp(backdropAlpha, 1.0f, alphaLerp);
 
     refreshLayout();
     updateButtons();
