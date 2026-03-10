@@ -161,10 +161,10 @@ void ColorWheelPopup::drawColorColumn(const Rectangle& popupBounds) const {
     Rectangle currentSwatch = {swatchX, topSwatchY, swatchSize, swatchSize};
     Rectangle previewSwatch = {swatchX, bottomSwatchY, swatchSize, swatchSize};
 
-    DrawRectangleRec(currentSwatch, currentColor);
-    DrawRectangleLinesEx(currentSwatch, 2.0f, Colors::DarkGray);
-    DrawRectangleRec(previewSwatch, previewColor);
-    DrawRectangleLinesEx(previewSwatch, 2.0f, Colors::Black);
+    DrawRectangleRounded(currentSwatch, 0.18f, 8, currentColor);
+    DrawRectangleRoundedLinesEx(currentSwatch, 0.18f, 8, 2.0f, Colors::DarkGray);
+    DrawRectangleRounded(previewSwatch, 0.18f, 8, previewColor);
+    DrawRectangleRoundedLinesEx(previewSwatch, 0.18f, 8, 2.0f, Colors::Black);
 
     int labelSize = std::max(14, static_cast<int>(popupBounds.height * 0.03f));
     const char* currentLabel = "Current";
