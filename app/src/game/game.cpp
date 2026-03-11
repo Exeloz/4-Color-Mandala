@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <ctime>
 
 namespace {
@@ -39,27 +40,77 @@ std::shared_ptr<Mandala> cloneMandala(const std::shared_ptr<Mandala>& src) {
     return std::make_shared<Mandala>(*src);
 }
 
-int chooseRandomMandalaId(const MandalaDatabase& database) {
-    const auto& items = database.getMandalaListItems();
-    if (items.empty()) {
-        return -1;
-    }
+struct DailySelection {
+    int mandalaId;
+    bool hardMode;
+};
 
-    const time_t now = time(nullptr);
-    const tm* local = localtime(&now);
-    const int daySeed = (local->tm_year + 1900) * 10000 + (local->tm_mon + 1) * 100 + local->tm_mday;
-    const size_t index = static_cast<size_t>(daySeed % static_cast<int>(items.size()));
-    return items[index].id;
+uint64_t mix64(uint64_t value) {
+    value += 0x9e3779b97f4a7c15ULL;
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31);
 }
 
-std::string buildTransientSessionKey(int mandalaId) {
+uint64_t daySeedUtcIndependent() {
+    const time_t now = time(nullptr);
+    const tm* local = localtime(&now);
+    const uint64_t year = static_cast<uint64_t>(local->tm_year + 1900);
+    const uint64_t month = static_cast<uint64_t>(local->tm_mon + 1);
+    const uint64_t day = static_cast<uint64_t>(local->tm_mday);
+    return year * 10000ULL + month * 100ULL + day;
+}
+
+uint64_t scoreCandidate(uint64_t daySeed, int mandalaId, bool hardMode) {
+    uint64_t key = daySeed;
+    key ^= static_cast<uint64_t>(mandalaId) * 0x9e3779b185ebca87ULL;
+    key ^= hardMode ? 0xa0761d6478bd642fULL : 0xe7037ed1a0b428dbULL;
+    return mix64(key);
+}
+
+DailySelection chooseDailyMandalaForDay(const MandalaDatabase& database) {
+    const auto& items = database.getMandalaListItems();
+    const uint64_t daySeed = daySeedUtcIndependent();
+
+    DailySelection best{-1, false};
+    uint64_t bestScore = 0;
+    bool hasBest = false;
+
+    for (const auto& item : items) {
+        if (item.id == 0) {
+            // Skip tutorial mandala from Daily rotation.
+            continue;
+        }
+
+        const uint64_t normalScore = scoreCandidate(daySeed, item.id, false);
+        if (!hasBest || normalScore > bestScore) {
+            best = {item.id, false};
+            bestScore = normalScore;
+            hasBest = true;
+        }
+
+        if (item.hasHardMode) {
+            const uint64_t hardScore = scoreCandidate(daySeed, item.id, true);
+            if (!hasBest || hardScore > bestScore) {
+                best = {item.id, true};
+                bestScore = hardScore;
+                hasBest = true;
+            }
+        }
+    }
+
+    return hasBest ? best : DailySelection{-1, false};
+}
+
+std::string buildTransientSessionKey(int mandalaId, bool hardMode) {
     const time_t now = time(nullptr);
     const tm* local = localtime(&now);
     const int year = local->tm_year + 1900;
     const int month = local->tm_mon + 1;
     const int day = local->tm_mday;
     return "R" + std::to_string(year) + "_" + std::to_string(month) + "_" + std::to_string(day)
-           + "_" + std::to_string(mandalaId);
+           + "_" + std::to_string(mandalaId)
+           + (hardMode ? "_H" : "_N");
 }
 
 void clearColorableRegions(const std::shared_ptr<Mandala>& mandala) {
@@ -123,14 +174,14 @@ void Game::update(float deltaTime) {
                 selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             } else if (startScreen->consumeTransitionToDaily()) {
-                const int randomMandalaId = chooseRandomMandalaId(*database);
-                if (randomMandalaId < 0) {
+                const DailySelection dailySelection = chooseDailyMandalaForDay(*database);
+                if (dailySelection.mandalaId < 0) {
                     break;
                 }
 
-                hardModeEnabled = false;
-                database->loadMandala(randomMandalaId, false);
-                selectedMandala = cloneMandala(database->getMandalaById(randomMandalaId, false));
+                hardModeEnabled = dailySelection.hardMode;
+                database->loadMandala(dailySelection.mandalaId, hardModeEnabled);
+                selectedMandala = cloneMandala(database->getMandalaById(dailySelection.mandalaId, hardModeEnabled));
                 if (selectedMandala == nullptr) {
                     break;
                 }
@@ -138,9 +189,9 @@ void Game::update(float deltaTime) {
                 // Daily session must start from a clean copy and never inherit normal save state.
                 clearColorableRegions(selectedMandala);
 
-                std::vector<Color> palette = buildPaletteForMode(appPaletteColors, false);
+                std::vector<Color> palette = buildPaletteForMode(appPaletteColors, hardModeEnabled);
                 transientRandomSession = true;
-                transientSessionKey = buildTransientSessionKey(randomMandalaId);
+                transientSessionKey = buildTransientSessionKey(dailySelection.mandalaId, hardModeEnabled);
                 progressPersistence.applyToMandala(transientSessionKey, selectedMandala);
                 coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, palette, false);
                 suppressWinTransition = false;
