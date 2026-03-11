@@ -311,31 +311,16 @@ void ColoringScreen::drawColorPalette() {
     int labelX = static_cast<int>(firstButton.x);
     int labelY = static_cast<int>(firstButton.y - labelSize - (10.0f * uiScale));
     DrawText("Colors:", labelX, labelY, labelSize, Colors::Black);
-
-    Vector2 pointer = Input::GetPointerPosition();
     
     for (int colorIndex = 0; colorIndex <= availableEditableColorCount; colorIndex++) {
         Color color = colorPalette.getColor(colorIndex);
         Rectangle bounds = colorButtons[colorIndex].getBounds();
-        bool isHovered = CheckCollisionPointRec(pointer, bounds);
-        bool isSelected = (colorIndex == colorPalette.getSelectedColorIndex());
-
-        Rectangle card = {
-            bounds.x - (4.0f * uiScale),
-            bounds.y - (4.0f * uiScale),
-            bounds.width + (8.0f * uiScale),
-            bounds.height + (8.0f * uiScale)
-        };
-
-        DrawRectangleRounded(card, 0.18f, 8, Fade(Colors::WhiteSmoke, isHovered ? 0.96f : 0.88f));
         ColorTileRenderer::drawColorTile(color, bounds, uiScale, FillPattern(), colorIndex == 0);
 
-        if (isSelected) {
-            DrawRectangleRoundedLinesEx(card, 0.18f, 8, 4.0f, Colors::DarkBlue);
-        } else if (isHovered) {
-            DrawRectangleRoundedLinesEx(card, 0.18f, 8, 2.6f, Colors::RoyalBlue);
+        if (colorIndex == colorPalette.getSelectedColorIndex()) {
+            DrawRectangleLinesEx(bounds, 7.0f, Colors::Black);
         } else {
-            DrawRectangleRoundedLinesEx(card, 0.18f, 8, 1.8f, Colors::SlateGray);
+            DrawRectangleLinesEx(bounds, 2.0f, Colors::Gray);
         }
     }
 }
@@ -538,13 +523,6 @@ void ColoringScreen::layoutTopButtons() {
 
     analysisClearButton.setPosition(GetScreenWidth() - clearButtonWidth - rightMargin, controlsY);
     analysisClearButton.setSize(clearButtonWidth, clearButtonHeight);
-
-    backButton.setColors(Color{57, 96, 168, 255}, Color{78, 122, 198, 255}, Colors::DarkBlue, Colors::White);
-    undoButton.setColors(Color{57, 96, 168, 255}, Color{78, 122, 198, 255}, Colors::DarkBlue, Colors::White);
-    validateButton.setColors(Color{57, 96, 168, 255}, Color{78, 122, 198, 255}, Colors::DarkBlue, Colors::White);
-    analysisButton.setColors(Color{57, 96, 168, 255}, Color{78, 122, 198, 255}, Colors::DarkBlue, Colors::White);
-    analysisCloseButton.setColors(Color{57, 96, 168, 255}, Color{78, 122, 198, 255}, Colors::DarkBlue, Colors::White);
-    analysisClearButton.setColors(Color{57, 96, 168, 255}, Color{78, 122, 198, 255}, Colors::DarkBlue, Colors::White);
 
     if (colorButtons.empty()) {
         return;
