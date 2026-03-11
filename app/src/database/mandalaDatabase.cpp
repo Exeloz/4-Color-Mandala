@@ -604,12 +604,13 @@ bool MandalaDatabase::loadManifest() {
         if (!readIntField(entry, "min_colors_hard", descriptor.minimumColorsHard)) {
             descriptor.minimumColorsHard = descriptor.minimumColors;
         }
+        readIntField(entry, "available_from", descriptor.availableFrom);
         if (!descriptor.hardAdjacencyPath.empty()) {
             hardModeEnabled = true;
         }
 
         mandalaDescriptors.push_back(descriptor);
-        mandalaListItems.push_back({descriptor.id, descriptor.name, !descriptor.hardAdjacencyPath.empty()});
+        mandalaListItems.push_back({descriptor.id, descriptor.name, !descriptor.hardAdjacencyPath.empty(), descriptor.availableFrom});
     }
 
     return true;

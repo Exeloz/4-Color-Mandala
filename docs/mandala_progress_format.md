@@ -24,8 +24,8 @@ Ordre attendu:
 - `mandalaKey`:
   - Mandala normal: id numerique (`"1"`, `"2"`, ...)
   - Mandala hard: id suffixe `H` (`"1H"`, `"2H"`, ...)
-  - Session Daily (copie): cle temporaire datee `R_<year>_<month>_<day>_<mandalaId>`
-    - Exemple: `R_2026_3_11_2`
+  - Session Daily (copie): cle temporaire datee `R_<year>_<month>_<day>_<mandalaId>_<H|N>`
+    - Exemple: `R_2026_3_11_2_N`
     - Cette entree sauvegarde la progression Daily sans ecraser la progression du mandala normal.
 - `colorIndex`:
   - `-1` = region non coloriee

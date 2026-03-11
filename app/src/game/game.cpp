@@ -68,9 +68,8 @@ uint64_t scoreCandidate(uint64_t daySeed, int mandalaId, bool hardMode) {
     return mix64(key);
 }
 
-DailySelection chooseDailyMandalaForDay(const MandalaDatabase& database) {
+DailySelection chooseDailyMandalaForDay(const MandalaDatabase& database, uint64_t targetDate) {
     const auto& items = database.getMandalaListItems();
-    const uint64_t daySeed = daySeedUtcIndependent();
 
     DailySelection best{-1, false};
     uint64_t bestScore = 0;
@@ -82,7 +81,12 @@ DailySelection chooseDailyMandalaForDay(const MandalaDatabase& database) {
             continue;
         }
 
-        const uint64_t normalScore = scoreCandidate(daySeed, item.id, false);
+        // Skip mandalas not yet published on the target date.
+        if (item.availableFrom > 0 && static_cast<uint64_t>(item.availableFrom) > targetDate) {
+            continue;
+        }
+
+        const uint64_t normalScore = scoreCandidate(targetDate, item.id, false);
         if (!hasBest || normalScore > bestScore) {
             best = {item.id, false};
             bestScore = normalScore;
@@ -90,7 +94,7 @@ DailySelection chooseDailyMandalaForDay(const MandalaDatabase& database) {
         }
 
         if (item.hasHardMode) {
-            const uint64_t hardScore = scoreCandidate(daySeed, item.id, true);
+            const uint64_t hardScore = scoreCandidate(targetDate, item.id, true);
             if (!hasBest || hardScore > bestScore) {
                 best = {item.id, true};
                 bestScore = hardScore;
@@ -174,7 +178,7 @@ void Game::update(float deltaTime) {
                 selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             } else if (startScreen->consumeTransitionToDaily()) {
-                const DailySelection dailySelection = chooseDailyMandalaForDay(*database);
+                const DailySelection dailySelection = chooseDailyMandalaForDay(*database, daySeedUtcIndependent());
                 if (dailySelection.mandalaId < 0) {
                     break;
                 }

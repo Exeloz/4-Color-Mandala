@@ -10,6 +10,7 @@ public:
         int id;
         std::string name;
         bool hasHardMode;
+        int availableFrom = 0;  // YYYYMMDD; 0 = always available
     };
 
     MandalaDatabase();
@@ -29,6 +30,7 @@ private:
         std::string hardAdjacencyPath;
         int minimumColors = 0;
         int minimumColorsHard = 0;
+        int availableFrom = 0;  // YYYYMMDD; 0 = always available
     };
 
     struct LoadedMandalaEntry {
