@@ -1,4 +1,5 @@
 #include "game.h"
+#include "dailyRuleset.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -43,6 +44,7 @@ std::shared_ptr<Mandala> cloneMandala(const std::shared_ptr<Mandala>& src) {
 struct DailySelection {
     int mandalaId;
     bool hardMode;
+    int rulesetId = 0;  // id of the DailyRuleset chosen for this session
 };
 
 uint64_t mix64(uint64_t value) {
@@ -61,17 +63,19 @@ uint64_t daySeedUtcIndependent() {
     return year * 10000ULL + month * 100ULL + day;
 }
 
-uint64_t scoreCandidate(uint64_t daySeed, int mandalaId, bool hardMode) {
+uint64_t scoreCandidate(uint64_t daySeed, int mandalaId, bool hardMode, const DailyRuleset& ruleset) {
     uint64_t key = daySeed;
     key ^= static_cast<uint64_t>(mandalaId) * 0x9e3779b185ebca87ULL;
     key ^= hardMode ? 0xa0761d6478bd642fULL : 0xe7037ed1a0b428dbULL;
+    key ^= ruleset.hashContribution();
     return mix64(key);
 }
 
 DailySelection chooseDailyMandalaForDay(const MandalaDatabase& database, uint64_t targetDate) {
     const auto& items = database.getMandalaListItems();
+    const auto& rulesets = getAllDailyRulesets();
 
-    DailySelection best{-1, false};
+    DailySelection best{-1, false, 0};
     uint64_t bestScore = 0;
     bool hasBest = false;
 
@@ -86,35 +90,38 @@ DailySelection chooseDailyMandalaForDay(const MandalaDatabase& database, uint64_
             continue;
         }
 
-        const uint64_t normalScore = scoreCandidate(targetDate, item.id, false);
-        if (!hasBest || normalScore > bestScore) {
-            best = {item.id, false};
-            bestScore = normalScore;
-            hasBest = true;
-        }
-
-        if (item.hasHardMode) {
-            const uint64_t hardScore = scoreCandidate(targetDate, item.id, true);
-            if (!hasBest || hardScore > bestScore) {
-                best = {item.id, true};
-                bestScore = hardScore;
+        for (const auto& ruleset : rulesets) {
+            const uint64_t normalScore = scoreCandidate(targetDate, item.id, false, *ruleset);
+            if (!hasBest || normalScore > bestScore) {
+                best = {item.id, false, ruleset->getId()};
+                bestScore = normalScore;
                 hasBest = true;
+            }
+
+            if (item.hasHardMode) {
+                const uint64_t hardScore = scoreCandidate(targetDate, item.id, true, *ruleset);
+                if (!hasBest || hardScore > bestScore) {
+                    best = {item.id, true, ruleset->getId()};
+                    bestScore = hardScore;
+                    hasBest = true;
+                }
             }
         }
     }
 
-    return hasBest ? best : DailySelection{-1, false};
+    return hasBest ? best : DailySelection{-1, false, 0};
 }
 
-std::string buildTransientSessionKey(int mandalaId, bool hardMode) {
-    const time_t now = time(nullptr);
-    const tm* local = localtime(&now);
-    const int year = local->tm_year + 1900;
-    const int month = local->tm_mon + 1;
-    const int day = local->tm_mday;
-    return "R" + std::to_string(year) + "_" + std::to_string(month) + "_" + std::to_string(day)
+std::string buildTransientSessionKey(uint64_t dateYYYYMMDD, int mandalaId, bool hardMode, int rulesetId) {
+    const int year  = static_cast<int>(dateYYYYMMDD / 10000);
+    const int month = static_cast<int>((dateYYYYMMDD / 100) % 100);
+    const int day   = static_cast<int>(dateYYYYMMDD % 100);
+    return "R_" + std::to_string(year)
+           + "_" + std::to_string(month)
+           + "_" + std::to_string(day)
            + "_" + std::to_string(mandalaId)
-           + (hardMode ? "_H" : "_N");
+           + (hardMode ? "_H" : "_N")
+           + "_" + std::to_string(rulesetId);
 }
 
 void clearColorableRegions(const std::shared_ptr<Mandala>& mandala) {
@@ -194,8 +201,12 @@ void Game::update(float deltaTime) {
                 clearColorableRegions(selectedMandala);
 
                 std::vector<Color> palette = buildPaletteForMode(appPaletteColors, hardModeEnabled);
+                const uint64_t todaySeed = daySeedUtcIndependent();
+                const DailyRuleset& ruleset = getDailyRulesetById(dailySelection.rulesetId);
+                ruleset.applyToMandala(*selectedMandala, {todaySeed, dailySelection.mandalaId, hardModeEnabled});
                 transientRandomSession = true;
-                transientSessionKey = buildTransientSessionKey(dailySelection.mandalaId, hardModeEnabled);
+                transientSessionKey = buildTransientSessionKey(
+                    todaySeed, dailySelection.mandalaId, hardModeEnabled, dailySelection.rulesetId);
                 progressPersistence.applyToMandala(transientSessionKey, selectedMandala);
                 coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, palette, false);
                 suppressWinTransition = false;

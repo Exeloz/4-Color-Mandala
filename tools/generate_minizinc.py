@@ -212,7 +212,7 @@ def build_minizinc_model(region_ids: Sequence[int], edges: Sequence[Edge], sourc
         lines.append(f"constraint color[{secondary_region}] = 2;")
     lines.append("constraint forall(i in 2..REGION_COUNT)(color[degree_order[i]] <= i);")
     lines.append("")
-    lines.append("solve :: int_search([color[r] | r in REGIONS], first_fail, indomain_min, complete) minimize max_color;")
+    lines.append("solve :: int_search([color[r] | r in REGIONS], first_fail, indomain_random, complete) minimize max_color;")
     lines.append("")
     lines.append(
         'output ["min_colors=", show(max_color), "\\n", '

@@ -114,6 +114,27 @@ python3 generate_adjacency.py --json ../resources/assets/$MID/mandala_regions.js
 python3 generate_minizinc.py --mandala-id $MID --include-hard
 ```
 
+### Banque de solutions Daily (optionnel)
+
+Prerequis: MiniZinc installe et disponible (`minizinc --version`).
+
+```bash
+cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/tools
+
+# Genere/re-genere le modele .mzn
+python3 generate_minizinc.py --mandala-id 1
+
+# Genere 100 solutions uniques (fichier: resources/assets/1/daily_solutions.txt)
+python3 generate_solution_bank.py ../resources/assets/1/mandala_1_regions_satisfy.mzn --count 1000 --solver gecode
+```
+
+Si `minizinc` n'est pas dans le PATH:
+
+```bash
+python3 generate_solution_bank.py ../resources/assets/1/mandala_1_regions_satisfy.mzn \
+  --count 1000 --solver gecode --minizinc-bin /full/path/to/minizinc
+```
+
 Winding (`json_to_mandala_code.py`):
 - défaut: clockwise
 - `--counter-clockwise`: force anti-horaire
