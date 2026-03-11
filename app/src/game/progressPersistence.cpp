@@ -6,7 +6,8 @@
 
 namespace {
     constexpr const char* SAVE_FILE_NAME = "mandala_progress.dat";
-    constexpr const char* SAVE_MAGIC = "MANDALA_PROGRESS_V1";
+    constexpr const char* SAVE_MAGIC_V1 = "MANDALA_PROGRESS_V1";
+    constexpr const char* SAVE_MAGIC_V2 = "MANDALA_PROGRESS_V2";
     constexpr const char* PALETTE_SECTION = "PALETTE";
     constexpr const char* PALETTE_HARD_SECTION = "PALETTE_HARD";
     constexpr const char* MANDALAS_SECTION = "MANDALAS";
@@ -95,7 +96,7 @@ bool ProgressPersistence::load() {
     bool loadedPaletteAvailable = false;
 
     std::string magic;
-    if (!(stream >> magic) || magic != SAVE_MAGIC) {
+    if (!(stream >> magic) || (magic != SAVE_MAGIC_V1 && magic != SAVE_MAGIC_V2)) {
         return false;
     }
 
@@ -203,7 +204,7 @@ bool ProgressPersistence::load() {
 bool ProgressPersistence::save() const {
     std::ostringstream stream;
 
-    stream << SAVE_MAGIC << "\n";
+    stream << SAVE_MAGIC_V2 << "\n";
     stream << PALETTE_SECTION << ' ' << savedPalette.size() << "\n";
     for (const Color& color : savedPalette) {
         stream << static_cast<int>(color.r) << ' '
@@ -288,7 +289,11 @@ void ProgressPersistence::captureMandalaState(const std::string& mandalaKey,
         if (!region.isColorable()) {
             continue;
         }
-        state.regionColors[region.getId()] = region.getColor();
+
+        // Sparse format: only persist actual painted regions.
+        if (region.getColor() >= 0) {
+            state.regionColors[region.getId()] = region.getColor();
+        }
     }
 
     state.completed = wasCompleted || mandala.isValidColoring();
@@ -326,6 +331,19 @@ void ProgressPersistence::applyToMandala(const std::string& mandalaKey, const st
     auto stateIterator = mandalaStates.find(mandalaKey);
     if (stateIterator == mandalaStates.end()) {
         return;
+    }
+
+    // Sparse format compatibility: start from a clean uncolored state,
+    // then apply only persisted region overrides.
+    for (const Region& regionView : mandala->getRegions()) {
+        if (!regionView.isColorable()) {
+            continue;
+        }
+
+        Region* region = mandala->getRegionById(regionView.getId());
+        if (region != nullptr) {
+            region->setColor(-1);
+        }
     }
 
     const PersistedMandalaState& state = stateIterator->second;
