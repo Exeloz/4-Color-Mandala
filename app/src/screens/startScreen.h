@@ -9,11 +9,14 @@ public:
 
     void update(float deltaTime) override;
     void draw() override;
-    bool shouldTransitionToSelection() const;
+    bool consumeTransitionToSelection();
+    bool consumeTransitionToDaily();
 
 private:
     Button startButton;
+    Button dailyButton;
     bool transitionRequested;
+    bool dailyRequested;
 
     void layoutControls();
 };

@@ -12,7 +12,10 @@ float getUiScale() {
 }
 
 StartScreen::StartScreen()
-    : startButton(300, 250, 200, 100, "START"), transitionRequested(false) {}
+        : startButton(300, 250, 200, 100, "START"),
+            dailyButton(300, 250, 200, 100, "DAILY"),
+            transitionRequested(false),
+            dailyRequested(false) {}
 
 void StartScreen::update(float deltaTime) {
     layoutControls();
@@ -20,6 +23,11 @@ void StartScreen::update(float deltaTime) {
     startButton.update();
     if (startButton.isClicked()) {
         transitionRequested = true;
+    }
+
+    dailyButton.update();
+    if (dailyButton.isClicked()) {
+        dailyRequested = true;
     }
 }
 
@@ -35,6 +43,7 @@ void StartScreen::draw() {
     DrawText(title, titleX, titleY, titleSize, Colors::Black);
 
     startButton.draw();
+    dailyButton.draw();
 }
 
 void StartScreen::layoutControls() {
@@ -42,12 +51,31 @@ void StartScreen::layoutControls() {
     float buttonWidth = 220.0f * uiScale;
     float buttonHeight = 88.0f * uiScale;
     float buttonX = (GetScreenWidth() - buttonWidth) * 0.5f;
-    float buttonY = (GetScreenHeight() - buttonHeight) * 0.62f;
+    float buttonY = (GetScreenHeight() - buttonHeight) * 0.56f;
+    float gapY = 16.0f * uiScale;
 
     startButton.setPosition(buttonX, buttonY);
     startButton.setSize(buttonWidth, buttonHeight);
+
+    dailyButton.setPosition(buttonX, buttonY + buttonHeight + gapY);
+    dailyButton.setSize(buttonWidth, buttonHeight);
+    dailyButton.setColors(Color{57, 96, 168, 255}, Color{86, 124, 194, 255}, Colors::Black, Colors::White);
 }
 
-bool StartScreen::shouldTransitionToSelection() const {
-    return transitionRequested;
+bool StartScreen::consumeTransitionToSelection() {
+    if (!transitionRequested) {
+        return false;
+    }
+
+    transitionRequested = false;
+    return true;
+}
+
+bool StartScreen::consumeTransitionToDaily() {
+    if (!dailyRequested) {
+        return false;
+    }
+
+    dailyRequested = false;
+    return true;
 }

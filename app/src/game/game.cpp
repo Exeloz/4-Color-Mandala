@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include <algorithm>
+#include <random>
 
 namespace {
 std::vector<Color> normalizePaletteSize(const std::vector<Color>& palette) {
@@ -30,16 +31,42 @@ std::vector<Color> buildPaletteForMode(const std::vector<Color>& fullPalette, bo
     }
     return limited;
 }
+
+std::shared_ptr<Mandala> cloneMandala(const std::shared_ptr<Mandala>& src) {
+    if (!src) {
+        return nullptr;
+    }
+    return std::make_shared<Mandala>(*src);
+}
+
+int chooseRandomMandalaId(const MandalaDatabase& database) {
+    const auto& items = database.getMandalaListItems();
+    if (items.empty()) {
+        return -1;
+    }
+
+    static std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<size_t> dist(0, items.size() - 1);
+    return items[dist(rng)].id;
+}
+
+std::string buildTransientSessionKey(int mandalaId) {
+    static unsigned long long counter = 0;
+    ++counter;
+    return "R" + std::to_string(mandalaId) + "_" + std::to_string(counter);
+}
 }
 
 Game::Game() 
     : database(std::make_shared<MandalaDatabase>()), 
       currentState(GameScreenState::START),
-            nextState(GameScreenState::START),
-            appPaletteColors(ColorPalette().getColors()),
-            hardModeEnabled(false),
-                        suppressWinTransition(false),
-                        transitionOverlayAlpha(0.0f) {}
+    nextState(GameScreenState::START),
+    appPaletteColors(ColorPalette().getColors()),
+    hardModeEnabled(false),
+    suppressWinTransition(false),
+    transientRandomSession(false),
+    transientSessionKey(),
+    transitionOverlayAlpha(0.0f) {}
 
 Game::~Game() {
     savePaletteProgress();
@@ -67,9 +94,30 @@ void Game::update(float deltaTime) {
 
     switch (currentState) {
         case GameScreenState::START:
-            if (startScreen->shouldTransitionToSelection()) {
+            if (startScreen->consumeTransitionToSelection()) {
+                transientRandomSession = false;
+                transientSessionKey.clear();
                 selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
+            } else if (startScreen->consumeTransitionToDaily()) {
+                const int randomMandalaId = chooseRandomMandalaId(*database);
+                if (randomMandalaId < 0) {
+                    break;
+                }
+
+                hardModeEnabled = false;
+                database->loadMandala(randomMandalaId, false);
+                selectedMandala = cloneMandala(database->getMandalaById(randomMandalaId, false));
+                if (selectedMandala == nullptr) {
+                    break;
+                }
+
+                std::vector<Color> palette = buildPaletteForMode(appPaletteColors, false);
+                coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, palette, false);
+                transientRandomSession = true;
+                transientSessionKey = buildTransientSessionKey(randomMandalaId);
+                suppressWinTransition = false;
+                transitionToState(GameScreenState::COLORING);
             }
             break;
 
@@ -109,6 +157,8 @@ void Game::update(float deltaTime) {
                 coloringScreen = std::make_shared<ColoringScreen>(selectedMandala,
                                                                   activeColorsForMandala,
                                                                   openReadOnly);
+                transientRandomSession = false;
+                transientSessionKey.clear();
                 suppressWinTransition = false;
                 transitionToState(GameScreenState::COLORING);
             }
@@ -118,6 +168,8 @@ void Game::update(float deltaTime) {
                 transitionToState(GameScreenState::PALETTE);
             }
             if (selectionScreen->shouldReturnToStart()) {
+                transientRandomSession = false;
+                transientSessionKey.clear();
                 transitionToState(GameScreenState::START);
             }
             break;
@@ -151,6 +203,8 @@ void Game::update(float deltaTime) {
                 transitionToState(GameScreenState::WIN);
             }
             if (coloringScreen->shouldReturnToSelection()) {
+                transientRandomSession = false;
+                transientSessionKey.clear();
                 selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             }
@@ -160,8 +214,12 @@ void Game::update(float deltaTime) {
             if (winScreen->shouldReturnToColoring()) {
                 if (selectedMandala != nullptr
                     && progressPersistence.isMandalaCompleted(
-                        ProgressPersistence::makeMandalaKey(selectedMandala->getId(), hardModeEnabled))) {
+                        transientRandomSession
+                            ? transientSessionKey
+                            : ProgressPersistence::makeMandalaKey(selectedMandala->getId(), hardModeEnabled))) {
                     suppressWinTransition = false;
+                    transientRandomSession = false;
+                    transientSessionKey.clear();
                     selectionScreen = createSelectionScreen();
                     transitionToState(GameScreenState::SELECTION);
                     break;
@@ -172,6 +230,8 @@ void Game::update(float deltaTime) {
             if (winScreen->shouldReturnToSelection()) {
                 suppressWinTransition = false;
                 saveSelectedMandalaProgress();
+                transientRandomSession = false;
+                transientSessionKey.clear();
                 selectionScreen = createSelectionScreen();
                 transitionToState(GameScreenState::SELECTION);
             }
@@ -261,7 +321,9 @@ void Game::saveSelectedMandalaProgress() {
         return;
     }
 
-    const std::string mandalaKey = ProgressPersistence::makeMandalaKey(selectedMandala->getId(), hardModeEnabled);
+    const std::string mandalaKey = transientRandomSession
+        ? transientSessionKey
+        : ProgressPersistence::makeMandalaKey(selectedMandala->getId(), hardModeEnabled);
 
     std::vector<Color> paletteForCapture = appPaletteColors;
     if (progressPersistence.isMandalaCompleted(mandalaKey)) {

@@ -9,6 +9,7 @@
 #include "../ui/colorPalette.h"
 #include "progressPersistence.h"
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 enum class GameScreenState {
@@ -45,6 +46,8 @@ private:
     std::unordered_map<int, bool> hardModeSelectionByMandalaId;
     bool hardModeEnabled;
     bool suppressWinTransition;
+    bool transientRandomSession;
+    std::string transientSessionKey;
     float transitionOverlayAlpha;
     ProgressPersistence progressPersistence;
 
