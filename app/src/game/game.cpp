@@ -328,20 +328,27 @@ void Game::update(float deltaTime) {
 
         case GameScreenState::WIN:
             if (winScreen->shouldReturnToColoring()) {
-                if (selectedMandala != nullptr
-                    && progressPersistence.isMandalaCompleted(
-                        transientRandomSession
-                            ? transientSessionKey
-                            : ProgressPersistence::makeMandalaKey(selectedMandala->getId(), hardModeEnabled))) {
-                    suppressWinTransition = false;
-                    transientRandomSession = false;
-                    transientSessionKey.clear();
-                    selectionScreen = createSelectionScreen();
-                    transitionToState(GameScreenState::SELECTION);
-                    break;
-                }
-                suppressWinTransition = true;
-                transitionToState(GameScreenState::COLORING);
+                   // View the completed colored mandala in read-only mode
+                   if (selectedMandala != nullptr) {
+                       std::vector<Color> activeColorsForMandala = buildPaletteForMode(appPaletteColors, hardModeEnabled);
+                       const std::string mandalaKey = transientRandomSession
+                           ? transientSessionKey
+                           : ProgressPersistence::makeMandalaKey(selectedMandala->getId(), hardModeEnabled);
+           
+                       // Use frozen palette if available for completed mandalas
+                       std::vector<Color> frozenPalette;
+                       if (progressPersistence.tryGetMandalaFrozenPalette(mandalaKey, frozenPalette)
+                           && !frozenPalette.empty()) {
+                           activeColorsForMandala = frozenPalette;
+                       }
+           
+                       // Recreate the coloring screen in read-only mode
+                       coloringScreen = std::make_shared<ColoringScreen>(selectedMandala,
+                                                                         activeColorsForMandala,
+                                                                         true);  // readOnlyMode = true
+                   }
+                   suppressWinTransition = true;
+                   transitionToState(GameScreenState::COLORING);
             }
             if (winScreen->shouldReturnToSelection()) {
                 const bool wasTransientRandomSession = transientRandomSession;
