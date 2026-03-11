@@ -33,11 +33,11 @@ int main() {
 #if defined(PLATFORM_ANDROID) || defined(PLATFORM_WEB)
     const int screenWidth = 0;
     const int screenHeight = 0;
-    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
+    SetConfigFlags(FLAG_VSYNC_HINT);
 #else
     const int screenWidth = 1600;
     const int screenHeight = 720;
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
 #endif
 
     InitWindow(screenWidth, screenHeight, "Color Mandala");
