@@ -20,8 +20,9 @@ SelectionScreen::SelectionScreen(std::shared_ptr<MandalaDatabase> database,
                                  const std::unordered_map<int, bool>& initialHardModeByMandalaId)
         : database(database), selectedMandala(nullptr), selectedMandalaButtonIndex(-1), pendingResetMandalaId(-1),
             selectedMandalaHardMode(false), pendingResetMandalaHardMode(false), resetRequestedMandalaHardMode(false),
-            resetRequestedMandalaId(-1), transitionRequested(false), paletteRequested(false),
+            resetRequestedMandalaId(-1), transitionRequested(false), paletteRequested(false), returnRequested(false),
             paletteButton(620, 20, 160, 50, "PALETTE"),
+            backButton(20, 20, 160, 50, "BACK"),
             completedMandalaIdsNormal(completedMandalaIdsNormal),
             completedMandalaIdsHard(completedMandalaIdsHard) {
     
@@ -78,6 +79,12 @@ void SelectionScreen::update(float deltaTime) {
 
     const auto& mandalaItems = database->getMandalaListItems();
     paletteButton.update();
+    backButton.update();
+
+    if (backButton.isClicked()) {
+        returnRequested = true;
+        return;
+    }
 
     if (paletteButton.isClicked()) {
         paletteRequested = true;
@@ -143,6 +150,7 @@ void SelectionScreen::draw() {
     int titleY = static_cast<int>(20.0f * uiScale);
     DrawText(title, titleX, titleY, titleSize, Colors::Black);
 
+    backButton.draw();
     paletteButton.draw();
 
     const auto& mandalaItems = database->getMandalaListItems();
@@ -191,6 +199,9 @@ void SelectionScreen::layoutControls() {
 
     float topButtonHeight = mobileLayout ? (58.0f * uiScale) : 50.0f;
     float paletteWidth = mobileLayout ? (190.0f * uiScale) : 160.0f;
+
+    backButton.setPosition(sideMargin, topMargin);
+    backButton.setSize(paletteWidth, topButtonHeight);
 
     paletteButton.setPosition(GetScreenWidth() - sideMargin - paletteWidth, topMargin);
     paletteButton.setSize(paletteWidth, topButtonHeight);
@@ -320,7 +331,7 @@ bool SelectionScreen::shouldTransitionToPalette() const {
 }
 
 bool SelectionScreen::shouldReturnToStart() const {
-    return false;
+    return returnRequested;
 }
 
 bool SelectionScreen::isSelectedMandalaHardMode() const {

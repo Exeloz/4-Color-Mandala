@@ -205,8 +205,10 @@ void Game::update(float deltaTime) {
             if (coloringScreen->shouldReturnToSelection()) {
                 transientRandomSession = false;
                 transientSessionKey.clear();
-                selectionScreen = createSelectionScreen();
-                transitionToState(GameScreenState::SELECTION);
+                if (startScreen == nullptr) {
+                    startScreen = std::make_shared<StartScreen>();
+                }
+                transitionToState(GameScreenState::START);
             }
             break;
 
@@ -232,8 +234,10 @@ void Game::update(float deltaTime) {
                 saveSelectedMandalaProgress();
                 transientRandomSession = false;
                 transientSessionKey.clear();
-                selectionScreen = createSelectionScreen();
-                transitionToState(GameScreenState::SELECTION);
+                if (startScreen == nullptr) {
+                    startScreen = std::make_shared<StartScreen>();
+                }
+                transitionToState(GameScreenState::START);
             }
             break;
     }

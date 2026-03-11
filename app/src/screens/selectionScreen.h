@@ -40,7 +40,9 @@ private:
     bool resetRequestedMandalaHardMode;
     bool transitionRequested;
     bool paletteRequested;
+    bool returnRequested;
     Button paletteButton;
+    Button backButton;
     ConfirmationDialog resetConfirmationDialog;
     std::unordered_set<int> completedMandalaIdsNormal;
     std::unordered_set<int> completedMandalaIdsHard;
