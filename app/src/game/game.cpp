@@ -209,11 +209,15 @@ void Game::update(float deltaTime) {
                     todaySeed, dailySelection.mandalaId, hardModeEnabled, dailySelection.rulesetId);
                 progressPersistence.applyToMandala(transientSessionKey, selectedMandala);
 
-                std::vector<RuleBadgeInfo> ruleBadges;
+                std::vector<StatusBadge> ruleBadges;
                 {
                     const std::string shortLabel = ruleset.getShortLabel();
                     if (!shortLabel.empty()) {
-                        ruleBadges.push_back({shortLabel, ruleset.getDescription()});
+                        ruleBadges.push_back({shortLabel, ruleset.getDescription(),
+                            Color{147, 112, 219, 255},   // bgColor: MediumPurple
+                            Color{ 80,  20, 160, 255},   // bgColorOpen: dark purple
+                            Color{255, 255, 255, 255},   // textColor: white
+                            Color{  0,   0,   0, 255}}); // borderColor: black
                     }
                 }
                 coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, palette, false, std::move(ruleBadges));
