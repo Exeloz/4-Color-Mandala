@@ -1,0 +1,153 @@
+name: Android Test Tag Artifact
+
+on:
+  push:
+    tags: ["test*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build-test-artifact:
+    name: Build Android test artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      artifact-id: ${{ steps.upload_artifact.outputs.artifact-id }}
+
+    steps:
+      - name: Validate test tag format
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "$TAG" =~ ^test.*$ ]]; then
+            echo "Tag '$TAG' does not start with 'test'"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Android SDK components
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_SDK_ROOT }}/ndk/26.3.11579264
+            ${{ env.ANDROID_SDK_ROOT }}/cmake/3.30.3
+            ${{ env.ANDROID_SDK_ROOT }}/platforms/android-34
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools/34.0.0
+            ${{ env.ANDROID_SDK_ROOT }}/platform-tools
+          key: android-sdk-${{ runner.os }}-ndk26.3.11579264-cmake3.30.3-api34-bt34.0.0
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+
+          if [ ! -d "${ANDROID_SDK_ROOT}/platform-tools" ]; then
+            sdkmanager "platform-tools"
+          fi
+          if [ ! -d "${ANDROID_SDK_ROOT}/platforms/android-34" ]; then
+            sdkmanager "platforms;android-34"
+          fi
+          if [ ! -d "${ANDROID_SDK_ROOT}/build-tools/34.0.0" ]; then
+            sdkmanager "build-tools;34.0.0"
+          fi
+          if [ ! -d "${ANDROID_SDK_ROOT}/ndk/26.3.11579264" ]; then
+            sdkmanager "ndk;26.3.11579264"
+          fi
+          if [ ! -d "${ANDROID_SDK_ROOT}/cmake/3.30.3" ]; then
+            sdkmanager "cmake;3.30.3"
+          fi
+
+      - name: Create local.properties for test build
+        run: |
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Build Android release APK
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Sign Android release APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "${ANDROID_KEYSTORE_BASE64}" ] || [ -z "${ANDROID_KEY_ALIAS}" ] || [ -z "${ANDROID_KEYSTORE_PASSWORD}" ] || [ -z "${ANDROID_KEY_PASSWORD}" ]; then
+            echo "Missing signing secrets. Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD."
+            exit 1
+          fi
+
+          KEYSTORE_PATH="${RUNNER_TEMP}/release.keystore"
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${KEYSTORE_PATH}"
+
+          UNSIGNED_APK=$(ls -1 app/build/outputs/apk/release/*-unsigned.apk | head -n1)
+          if [ -z "${UNSIGNED_APK}" ]; then
+            echo "Unsigned APK not found in app/build/outputs/apk/release"
+            exit 1
+          fi
+
+          SIGNED_APK="app/build/outputs/apk/release/app-release-signed.apk"
+          BT_VER=$(ls -1 "${ANDROID_SDK_ROOT}/build-tools" | sort -V | tail -n1)
+          APKSIGNER="${ANDROID_SDK_ROOT}/build-tools/${BT_VER}/apksigner"
+
+          "${APKSIGNER}" sign \
+            --ks "${KEYSTORE_PATH}" \
+            --ks-key-alias "${ANDROID_KEY_ALIAS}" \
+            --ks-pass pass:"${ANDROID_KEYSTORE_PASSWORD}" \
+            --key-pass pass:"${ANDROID_KEY_PASSWORD}" \
+            --out "${SIGNED_APK}" \
+            "${UNSIGNED_APK}"
+
+          "${APKSIGNER}" verify --verbose "${SIGNED_APK}"
+
+      - name: Upload temporary Android test artifact
+        id: upload_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-${{ github.ref_name }}-${{ github.run_id }}
+          path: |
+            app/build/outputs/apk/release/app-release-signed.apk
+            app/build/outputs/mapping/release/**
+          if-no-files-found: error
+          retention-days: 1
+
+  delete-test-artifact-after-1h:
+    name: Delete test artifact after 1 hour
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: build-test-artifact
+    if: needs.build-test-artifact.outputs.artifact-id != ''
+
+    steps:
+      - name: Wait 1 hour before deletion
+        run: sleep 3600
+
+      - name: Delete uploaded artifact
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactId = Number('${{ needs.build-test-artifact.outputs.artifact-id }}');
+            await github.rest.actions.deleteArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: artifactId
+            });
+            core.info(`Deleted artifact ${artifactId}`);
