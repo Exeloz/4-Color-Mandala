@@ -63,7 +63,8 @@ namespace {
 
 ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala,
                                const std::vector<Color>& customPaletteColors,
-                               bool readOnlyMode)
+                               bool readOnlyMode,
+                               std::vector<RuleBadgeInfo> ruleBadges)
         : mandala(mandala), colorPalette(), colorButtons(), 
             backButton(0, 0, 1, 1, "BACK"),
             undoButton(0, 0, 1, 1, "UNDO"),
@@ -77,7 +78,8 @@ ColoringScreen::ColoringScreen(std::shared_ptr<Mandala> mandala,
             actionManager(),
             interactionManager(),
             camera{}, zoom(1.0f),
-            pendingColorChangesForSave(0), saveRequested(false), readOnlyMode(readOnlyMode) {
+            pendingColorChangesForSave(0), saveRequested(false), readOnlyMode(readOnlyMode),
+            ruleBadges(std::move(ruleBadges)), ruleBadgePopupIndex(-1) {
 
         camera.target = {SCREEN_CENTER_X, SCREEN_CENTER_Y};
         camera.offset = {GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
@@ -117,6 +119,23 @@ void ColoringScreen::update(float deltaTime) {
         returnRequested = true;
         saveRequested = !readOnlyMode;
         return;
+    }
+
+    // Rule badge tap: toggle tooltip popup
+    if (Input::IsPointerPressed()) {
+        Vector2 ptr = Input::GetPointerPosition();
+        bool hitBadge = false;
+        for (int i = 0; i < static_cast<int>(ruleBadgeRects.size()); i++) {
+            if (CheckCollisionPointRec(ptr, ruleBadgeRects[i])) {
+                ruleBadgePopupIndex = (ruleBadgePopupIndex == i) ? -1 : i;
+                hitBadge = true;
+                break;
+            }
+        }
+        // Tapping anywhere outside a badge or the popup dismisses it
+        if (!hitBadge && ruleBadgePopupIndex >= 0) {
+            ruleBadgePopupIndex = -1;
+        }
     }
 
     if (readOnlyMode) {
@@ -232,6 +251,39 @@ void ColoringScreen::draw() {
         int doneTextX = static_cast<int>(badgeX + (badgeWidth - doneTextWidth) * 0.5f);
         int doneTextY = static_cast<int>(badgeY + (badgeHeight - doneTextSize) * 0.5f);
         DrawText(doneLabel, doneTextX, doneTextY, doneTextSize, Colors::Black);
+
+        statusBadgeX += badgeWidth + (8.0f * uiScale);
+    }
+
+    // Rule badges (e.g. HINTS) — drawn after HARD/DONE badges, clickable for tooltip
+    ruleBadgeRects.clear();
+    {
+        int ruleLabelSize = std::max(12, static_cast<int>(12.0f * uiScale));
+        float ruleBadgeHeight = 24.0f * uiScale;
+        for (int i = 0; i < static_cast<int>(ruleBadges.size()); i++) {
+            const std::string& label = ruleBadges[i].label;
+            if (label.empty()) continue;
+            float rw = static_cast<float>(MeasureText(label.c_str(), ruleLabelSize)) + (18.0f * uiScale);
+            Rectangle br = {statusBadgeX, statusBadgeY, rw, ruleBadgeHeight};
+            ruleBadgeRects.push_back(br);
+
+            bool isOpen = (ruleBadgePopupIndex == i);
+            Color bgColor    = isOpen ? Colors::DarkOrchid : Colors::MediumPurple;
+            Color borderColor= isOpen ? Colors::White      : Colors::Black;
+            DrawRectangleRec(br, bgColor);
+            DrawRectangleLinesEx(br, 2.0f, borderColor);
+
+            int tx = static_cast<int>(br.x + (rw - MeasureText(label.c_str(), ruleLabelSize)) * 0.5f);
+            int ty = static_cast<int>(br.y + (ruleBadgeHeight - ruleLabelSize) * 0.5f);
+            DrawText(label.c_str(), tx, ty, ruleLabelSize, Colors::White);
+
+            statusBadgeX += rw + (8.0f * uiScale);
+        }
+    }
+
+    // Popup tooltip for the open rule badge
+    if (ruleBadgePopupIndex >= 0 && ruleBadgePopupIndex < static_cast<int>(ruleBadges.size())) {
+        drawRuleBadgePopup(ruleBadges[ruleBadgePopupIndex], ruleBadgeRects[ruleBadgePopupIndex]);
     }
 
     BeginMode2D(camera);
@@ -392,7 +444,62 @@ void ColoringScreen::drawDebugOverlay() const {
     inspector.drawDebugOverlay(*mandala);
 }
 
+void ColoringScreen::drawRuleBadgePopup(const RuleBadgeInfo& badge, Rectangle badgeRect) const {
+    float uiScale = getUiScale();
+    int titleSize  = std::max(14, static_cast<int>(14.0f * uiScale));
+    int bodySize   = std::max(12, static_cast<int>(12.0f * uiScale));
+    const int padding = static_cast<int>(10.0f * uiScale);
+    const float lineSpacing = bodySize * 1.4f;
+
+    // Split description on \n
+    std::vector<std::string> lines;
+    std::string rem = badge.description;
+    std::string::size_type pos;
+    while ((pos = rem.find('\n')) != std::string::npos) {
+        lines.push_back(rem.substr(0, pos));
+        rem = rem.substr(pos + 1);
+    }
+    if (!rem.empty()) lines.push_back(rem);
+
+    // Measure width
+    int maxTextWidth = MeasureText(badge.label.c_str(), titleSize);
+    for (const auto& line : lines) {
+        maxTextWidth = std::max(maxTextWidth, MeasureText(line.c_str(), bodySize));
+    }
+
+    float popupW = static_cast<float>(maxTextWidth) + 2.0f * padding;
+    float popupH = padding + titleSize + (padding / 2)
+                   + static_cast<float>(lines.size()) * lineSpacing
+                   + padding;
+
+    // Position below the badge, clamped to screen
+    float popupX = badgeRect.x;
+    float popupY = badgeRect.y + badgeRect.height + 6.0f * uiScale;
+    if (popupX + popupW > GetScreenWidth() - 8.0f) {
+        popupX = GetScreenWidth() - popupW - 8.0f;
+    }
+
+    // Background
+    DrawRectangleRec({popupX, popupY, popupW, popupH}, {30, 10, 50, 230});
+    DrawRectangleLinesEx({popupX, popupY, popupW, popupH}, 2.0f, Colors::MediumPurple);
+
+    // Title
+    DrawText(badge.label.c_str(), static_cast<int>(popupX + padding),
+             static_cast<int>(popupY + padding), titleSize, Colors::Violet);
+
+    // Body lines
+    float lineY = popupY + padding + titleSize + (padding / 2);
+    for (const auto& line : lines) {
+        DrawText(line.c_str(), static_cast<int>(popupX + padding),
+                 static_cast<int>(lineY), bodySize, Colors::White);
+        lineY += lineSpacing;
+    }
+}
+
 bool ColoringScreen::isPointerOverUi(Vector2 screenPos) const {
+    for (const Rectangle& r : ruleBadgeRects) {
+        if (CheckCollisionPointRec(screenPos, r)) return true;
+    }
     return interactionManager.isPointerOverUi(
         screenPos,
         inspector.isAnalysisMode(),
@@ -414,7 +521,7 @@ void ColoringScreen::layoutTopButtons() {
 
     float topButtonHeight = mobileLayout ? 56.0f * uiScale : 50.0f;
     float backButtonWidth = mobileLayout ? 136.0f * uiScale : 100.0f;
-    float mainButtonWidth = mobileLayout ? 190.0f * uiScale : 190.0f;
+    float mainButtonWidth = mobileLayout ? 150.0f * uiScale : 150.0f;
     float clearButtonWidth = mobileLayout ? 86.0f * uiScale : 70.0f;
     float clearButtonHeight = mobileLayout ? 44.0f * uiScale : 44.0f;
 

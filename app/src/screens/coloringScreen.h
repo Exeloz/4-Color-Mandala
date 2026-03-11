@@ -10,12 +10,19 @@
 #include "../rendering/fillPattern.h"
 #include "raylib.h"
 #include <memory>
+#include <string>
+
+struct RuleBadgeInfo {
+    std::string label;        // short uppercase text shown on the badge
+    std::string description;  // multi-line tooltip text (\n separator)
+};
 
 class ColoringScreen : public GameState {
 public:
     ColoringScreen(std::shared_ptr<Mandala> mandala,
                   const std::vector<Color>& customPaletteColors = {},
-                  bool readOnlyMode = false);
+                  bool readOnlyMode = false,
+                  std::vector<RuleBadgeInfo> ruleBadges = {});
 
     void update(float deltaTime) override;
     void draw() override;
@@ -47,8 +54,13 @@ private:
     int pendingColorChangesForSave;
     bool saveRequested;
     bool readOnlyMode;
+    std::vector<RuleBadgeInfo> ruleBadges;
+    // Popup state: index of the badge whose tooltip is open (-1 = none)
+    int ruleBadgePopupIndex;
+    std::vector<Rectangle> ruleBadgeRects;  // updated each draw(); used by update()
 
     void drawColorPalette();
+    void drawRuleBadgePopup(const RuleBadgeInfo& badge, Rectangle badgeRect) const;
     void updatePatternControls();
     void applyCurrentPatternStyle(int regionId);
     void updateAnalysisInteractions();

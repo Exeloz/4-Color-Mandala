@@ -25,6 +25,13 @@ public:
     // Human-readable label shown in the UI (empty string = no label shown).
     virtual std::string getName() const = 0;
 
+    // Short uppercase label shown as a badge (e.g. "HINTS").  Empty = no badge.
+    virtual std::string getShortLabel() const { return ""; }
+
+    // One or two lines of description shown in the badge tooltip popup.
+    // Use \n to split lines.
+    virtual std::string getDescription() const { return ""; }
+
     // A unique 64-bit mixing constant baked into the hash for this ruleset.
     // Must differ from every other ruleset's constant.
     virtual uint64_t hashContribution() const = 0;
@@ -41,6 +48,10 @@ class SolutionFreezeDailyRuleset : public DailyRuleset {
 public:
     int      getId()              const override { return 0; }
     std::string getName()         const override { return "Freeze 50"; }
+    std::string getShortLabel()   const override { return "HINTS"; }
+    std::string getDescription()  const override {
+        return "Some regions are pre-colored\nwith correct solution colors.";
+    }
     uint64_t hashContribution()   const override { return 0x517cc1b727220a95ULL; }
     void applyToMandala(Mandala& mandala, const DailyRuleContext& context) const override;
 

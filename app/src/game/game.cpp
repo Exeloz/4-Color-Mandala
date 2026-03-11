@@ -208,7 +208,15 @@ void Game::update(float deltaTime) {
                 transientSessionKey = buildTransientSessionKey(
                     todaySeed, dailySelection.mandalaId, hardModeEnabled, dailySelection.rulesetId);
                 progressPersistence.applyToMandala(transientSessionKey, selectedMandala);
-                coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, palette, false);
+
+                std::vector<RuleBadgeInfo> ruleBadges;
+                {
+                    const std::string shortLabel = ruleset.getShortLabel();
+                    if (!shortLabel.empty()) {
+                        ruleBadges.push_back({shortLabel, ruleset.getDescription()});
+                    }
+                }
+                coloringScreen = std::make_shared<ColoringScreen>(selectedMandala, palette, false, std::move(ruleBadges));
                 suppressWinTransition = false;
                 transitionToState(GameScreenState::COLORING);
             }
