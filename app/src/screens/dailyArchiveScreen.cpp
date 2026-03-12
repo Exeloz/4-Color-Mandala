@@ -108,18 +108,13 @@ void DailyArchiveScreen::draw() {
         Button& button = entryButtons[static_cast<size_t>(i - firstIndex)];
 
         const DailyRuleset& ruleset = getDailyRulesetById(entry.selection.rulesetId);
-        const std::string mode = entry.selection.hardMode ? "Hard" : "Normal";
-        const std::string status = entry.completed ? "Completed" : "Not completed";
         std::string mandalaName = "#" + std::to_string(entry.selection.mandalaId);
         if (database) {
             for (const auto& item : database->getMandalaListItems()) {
                 if (item.id == entry.selection.mandalaId) { mandalaName = item.name; break; }
             }
         }
-        button.setLabel(formatDate(entry.dateSeed)
-                        + " - " + mandalaName
-                        + " - " + mode
-                        + " - " + status);
+        button.setLabel(formatDate(entry.dateSeed) + " - " + mandalaName);
 
         if (entry.completed) {
             button.setColors(Color{62, 136, 74, 255}, Color{81, 162, 94, 255}, Colors::Black, Colors::White);
@@ -128,6 +123,42 @@ void DailyArchiveScreen::draw() {
         }
 
         button.draw();
+
+        {
+            const Rectangle bounds = button.getBounds();
+            const float badgePadX = 6.0f * uiScale;
+            const float badgePadY = 4.0f * uiScale;
+            const int badgeTextSize = static_cast<int>(12.0f * uiScale);
+            float badgeX = bounds.x + bounds.width - 8.0f * uiScale;
+            float badgeY = bounds.y + (bounds.height - badgeTextSize - badgePadY * 2.0f) * 0.5f;
+            
+            if (!ruleset.getShortLabel().empty()) {
+                const std::string ruleLabel = ruleset.getShortLabel();
+                const int ruleWidth = MeasureText(ruleLabel.c_str(), badgeTextSize);
+                const float ruleBadgeW = ruleWidth + badgePadX * 2.0f;
+                const float ruleBadgeH = badgeTextSize + badgePadY * 2.0f;
+                badgeX -= ruleBadgeW;
+                DrawRectangleRounded({badgeX, badgeY, ruleBadgeW, ruleBadgeH}, 0.4f, 4, Color{80, 120, 200, 255});
+                DrawText(ruleLabel.c_str(),
+                         static_cast<int>(badgeX + badgePadX),
+                         static_cast<int>(badgeY + badgePadY),
+                         badgeTextSize, Colors::White);
+                badgeX -= 4.0f * uiScale;
+            }
+            
+            if (entry.selection.hardMode) {
+                const std::string hardLabel = "HARD";
+                const int hardWidth = MeasureText(hardLabel.c_str(), badgeTextSize);
+                const float hardBadgeW = hardWidth + badgePadX * 2.0f;
+                const float hardBadgeH = badgeTextSize + badgePadY * 2.0f;
+                badgeX -= hardBadgeW;
+                DrawRectangleRounded({badgeX, badgeY, hardBadgeW, hardBadgeH}, 0.4f, 4, Color{200, 60, 60, 255});
+                DrawText(hardLabel.c_str(), 
+                         static_cast<int>(badgeX + badgePadX),
+                         static_cast<int>(badgeY + badgePadY),
+                         badgeTextSize, Colors::White);
+            }
+        }
 
         if (i == selectedIndex) {
             const Rectangle bounds = button.getBounds();
