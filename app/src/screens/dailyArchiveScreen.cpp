@@ -131,15 +131,20 @@ void DailyArchiveScreen::draw() {
     }
 
     {
+        const float navY = GetScreenHeight() - (58.0f * uiScale);
+        const float navH = 46.0f * uiScale;
+        const float navW = 124.0f * uiScale;
+        const float margin = 18.0f * uiScale;
         const std::string pageLabel = std::to_string(pageIndex + 1) + " / " + std::to_string(std::max(1, pageCount()));
         const int pageSize = static_cast<int>(18.0f * uiScale);
         const int labelW = MeasureText(pageLabel.c_str(), pageSize);
-        const float pillPadX = 14.0f * uiScale;
+        const float pillPadX = 12.0f * uiScale;
         const float pillPadY = 6.0f * uiScale;
         const float pillW = labelW + pillPadX * 2.0f;
         const float pillH = pageSize + pillPadY * 2.0f;
-        const float pillX = (GetScreenWidth() - pillW) * 0.5f;
-        const float pillY = GetScreenHeight() - (58.0f * uiScale) - pillH * 0.5f;
+        // Place pill just to the left of the NEXT button
+        const float pillX = GetScreenWidth() - margin - navW - 8.0f * uiScale - pillW;
+        const float pillY = navY + (navH - pillH) * 0.5f;
         DrawRectangleRounded({pillX, pillY, pillW, pillH}, 0.5f, 8, Color{60, 60, 60, 200});
         DrawText(pageLabel.c_str(),
                  static_cast<int>(pillX + pillPadX),
@@ -247,6 +252,15 @@ void DailyArchiveScreen::layoutControls() {
     nextPageButton.setPosition(GetScreenWidth() - margin - navW, navY);
     nextPageButton.setSize(navW, navH);
 
+    // BACK: neutral dark gray
+    backButton.setColors({72, 72, 78, 255}, {95, 95, 102, 255}, Colors::LightGray, Colors::White);
+
+    // PREV / NEXT: dark gray, disabled at page boundaries
+    prevPageButton.setColors({72, 72, 78, 255}, {95, 95, 102, 255}, Colors::LightGray, Colors::White);
+    nextPageButton.setColors({72, 72, 78, 255}, {95, 95, 102, 255}, Colors::LightGray, Colors::White);
+    prevPageButton.setEnabled(pageIndex > 0);
+    nextPageButton.setEnabled(pageIndex < pageCount() - 1);
+
     const float openW = 170.0f * uiScale;
     openButton.setPosition((GetScreenWidth() - openW) * 0.5f, navY);
     openButton.setSize(openW, navH);
@@ -260,7 +274,6 @@ int DailyArchiveScreen::pageCount() const {
     if (entries.empty()) {
         return 1;
     }
-
     const int count = static_cast<int>(entries.size());
     const int perPage = entriesPerPage();
     return (count + perPage - 1) / perPage;

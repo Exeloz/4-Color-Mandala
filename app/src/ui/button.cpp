@@ -92,13 +92,20 @@ std::vector<std::string> buildWrappedLines(const std::string& text, int textSize
 }
 
 Button::Button(float x, float y, float width, float height, const std::string& label)
-    : label(label), hovered(false), clicked(false), textScale(1.0f), hoverBlend(0.0f), pressBlend(0.0f),
+    : label(label), hovered(false), clicked(false), enabled(true), textScale(1.0f), hoverBlend(0.0f), pressBlend(0.0f),
       baseColor{70, 70, 150, 255}, hoverColor{100, 100, 200, 255},
       borderColor(Colors::LightGray), textColor(Colors::White) {
     bounds = {x, y, width, height};
 }
 
 void Button::update() {
+    if (!enabled) {
+        hovered = false;
+        clicked = false;
+        hoverBlend = 0.0f;
+        pressBlend = 0.0f;
+        return;
+    }
     Vector2 pointerPos = Input::GetPointerPosition();
     hovered = CheckCollisionPointRec(pointerPos, bounds);
     clicked = hovered && Input::IsPointerPressed();
@@ -113,7 +120,8 @@ void Button::update() {
 }
 
 void Button::draw() {
-    const Color buttonColor = blendColor(baseColor, hoverColor, hoverBlend);
+    const Color drawBase = enabled ? baseColor : Color{110, 110, 110, 70};
+    const Color buttonColor = enabled ? blendColor(baseColor, hoverColor, hoverBlend) : drawBase;
 
     Rectangle animatedBounds = bounds;
     animatedBounds.y -= (2.0f * hoverBlend);
@@ -166,6 +174,10 @@ void Button::setLabel(const std::string& newLabel) {
 
 void Button::setTextScale(float scale) {
     textScale = std::max(0.5f, scale);
+}
+
+void Button::setEnabled(bool value) {
+    enabled = value;
 }
 
 void Button::setColors(Color newBaseColor, Color newHoverColor, Color newBorderColor, Color newTextColor) {

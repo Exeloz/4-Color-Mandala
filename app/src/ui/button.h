@@ -15,6 +15,7 @@ public:
     void setLabel(const std::string& newLabel);
     void setTextScale(float scale);
     void setColors(Color baseColor, Color hoverColor, Color borderColor, Color textColor);
+    void setEnabled(bool enabled);
     Rectangle getBounds() const;
 
 private:
@@ -22,6 +23,7 @@ private:
     std::string label;
     bool hovered;
     bool clicked;
+    bool enabled;
     float textScale;
     float hoverBlend;
     float pressBlend;
