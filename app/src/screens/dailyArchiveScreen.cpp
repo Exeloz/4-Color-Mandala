@@ -110,8 +110,14 @@ void DailyArchiveScreen::draw() {
         const DailyRuleset& ruleset = getDailyRulesetById(entry.selection.rulesetId);
         const std::string mode = entry.selection.hardMode ? "Hard" : "Normal";
         const std::string status = entry.completed ? "Completed" : "Not completed";
+        std::string mandalaName = "#" + std::to_string(entry.selection.mandalaId);
+        if (database) {
+            for (const auto& item : database->getMandalaListItems()) {
+                if (item.id == entry.selection.mandalaId) { mandalaName = item.name; break; }
+            }
+        }
         button.setLabel(formatDate(entry.dateSeed)
-                        + "  #" + std::to_string(entry.selection.mandalaId)
+                        + "  " + mandalaName
                         + "  " + mode
                         + "  " + ruleset.getName()
                         + "  " + status);
@@ -232,14 +238,14 @@ void DailyArchiveScreen::layoutControls() {
 
     const int count = entriesPerPage();
     const float rowWidth = GetScreenWidth()/2.0f - 2.0f * margin;
-    const float rowHeight = 42.0f * uiScale;
+    const float rowHeight = 52.0f * uiScale;
     const float top = 76.0f * uiScale;
     const float gap = 7.0f * uiScale;
 
     for (int i = 0; i < count; ++i) {
         entryButtons[static_cast<size_t>(i)].setPosition((GetScreenWidth()-rowWidth)/2.0f, top + static_cast<float>(i) * (rowHeight + gap));
         entryButtons[static_cast<size_t>(i)].setSize(rowWidth, rowHeight);
-        entryButtons[static_cast<size_t>(i)].setTextScale(0.72f);
+        entryButtons[static_cast<size_t>(i)].setTextScale(2.0f);
     }
 
     const float navY = GetScreenHeight() - (58.0f * uiScale);
