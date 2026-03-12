@@ -117,10 +117,9 @@ void DailyArchiveScreen::draw() {
             }
         }
         button.setLabel(formatDate(entry.dateSeed)
-                        + "  " + mandalaName
-                        + "  " + mode
-                        + "  " + ruleset.getName()
-                        + "  " + status);
+                        + " - " + mandalaName
+                        + " - " + mode
+                        + " - " + status);
 
         if (entry.completed) {
             button.setColors(Color{62, 136, 74, 255}, Color{81, 162, 94, 255}, Colors::Black, Colors::White);
@@ -245,7 +244,7 @@ void DailyArchiveScreen::layoutControls() {
     for (int i = 0; i < count; ++i) {
         entryButtons[static_cast<size_t>(i)].setPosition((GetScreenWidth()-rowWidth)/2.0f, top + static_cast<float>(i) * (rowHeight + gap));
         entryButtons[static_cast<size_t>(i)].setSize(rowWidth, rowHeight);
-        entryButtons[static_cast<size_t>(i)].setTextScale(2.0f);
+        entryButtons[static_cast<size_t>(i)].setTextScale(1.50f);
     }
 
     const float navY = GetScreenHeight() - (58.0f * uiScale);
