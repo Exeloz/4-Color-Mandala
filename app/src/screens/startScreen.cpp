@@ -14,8 +14,10 @@ float getUiScale() {
 StartScreen::StartScreen()
         : startButton(300, 250, 200, 100, "START"),
             dailyButton(300, 250, 200, 100, "DAILY"),
+            archiveButton(300, 250, 200, 100, "ARCHIVE"),
             transitionRequested(false),
-            dailyRequested(false) {}
+            dailyRequested(false),
+            archiveRequested(false) {}
 
 void StartScreen::update(float deltaTime) {
     layoutControls();
@@ -28,6 +30,11 @@ void StartScreen::update(float deltaTime) {
     dailyButton.update();
     if (dailyButton.isClicked()) {
         dailyRequested = true;
+    }
+
+    archiveButton.update();
+    if (archiveButton.isClicked()) {
+        archiveRequested = true;
     }
 }
 
@@ -44,10 +51,12 @@ void StartScreen::draw() {
 
     startButton.draw();
     dailyButton.draw();
+    archiveButton.draw();
 }
 
 void StartScreen::layoutControls() {
     float uiScale = getUiScale();
+    float margin = 18.0f * uiScale;
     float buttonWidth = 220.0f * uiScale;
     float buttonHeight = 88.0f * uiScale;
     float buttonX = (GetScreenWidth() - buttonWidth) * 0.5f;
@@ -60,6 +69,14 @@ void StartScreen::layoutControls() {
     dailyButton.setPosition(buttonX, buttonY + buttonHeight + gapY);
     dailyButton.setSize(buttonWidth, buttonHeight);
     dailyButton.setColors(Color{57, 96, 168, 255}, Color{86, 124, 194, 255}, Colors::Black, Colors::White);
+
+    float archiveButtonWidth = buttonWidth * 0.5f;
+    float archiveButtonHeight = buttonHeight * 0.5f;
+    archiveButton.setPosition(GetScreenWidth() - margin - archiveButtonWidth,
+                              GetScreenHeight() - margin - archiveButtonHeight);
+    archiveButton.setSize(archiveButtonWidth, archiveButtonHeight);
+    archiveButton.setTextScale(0.8f);
+    archiveButton.setColors(Color{74, 87, 112, 255}, Color{97, 112, 140, 255}, Colors::Black, Colors::White);
 }
 
 bool StartScreen::consumeTransitionToSelection() {
@@ -77,5 +94,14 @@ bool StartScreen::consumeTransitionToDaily() {
     }
 
     dailyRequested = false;
+    return true;
+}
+
+bool StartScreen::consumeTransitionToArchive() {
+    if (!archiveRequested) {
+        return false;
+    }
+
+    archiveRequested = false;
     return true;
 }

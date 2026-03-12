@@ -16,8 +16,10 @@ import argparse
 import random
 import re
 import subprocess
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
+from concurrent.futures import wait as futures_wait
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 MIN_COLORS_RE = re.compile(r"min_colors\s*=\s*(\d+)")
@@ -126,6 +128,12 @@ def parse_args() -> argparse.Namespace:
         default="minizinc",
         help="MiniZinc executable",
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=4,
+        help="Number of parallel MiniZinc workers (default: 4)",
+    )
     return parser.parse_args()
 
 
@@ -152,28 +160,45 @@ def main() -> None:
     target_min_colors: Optional[int] = None
 
     attempts = 0
-    while attempts < args.max_attempts and len(unique_solutions) < args.count:
+    pending: Dict = {}
+
+    def submit_next(executor: ThreadPoolExecutor) -> None:
+        nonlocal attempts
+        if attempts >= args.max_attempts:
+            return
         attempts += 1
         seed = prng.randint(1, 2_147_483_647)
-        stdout = run_minizinc(model_path, args.solver, seed, args.minizinc_bin, args.timeout)
-        if stdout is None:
-            continue
-        min_colors, solution = parse_solution_output(stdout)
+        f = executor.submit(run_minizinc, model_path, args.solver, seed, args.minizinc_bin, args.timeout)
+        pending[f] = seed
 
-        if solution is None:
-            continue
+    with ThreadPoolExecutor(max_workers=args.threads) as executor:
+        for _ in range(min(args.threads, args.max_attempts)):
+            submit_next(executor)
 
-        if target_min_colors is None and min_colors is not None:
-            target_min_colors = min_colors
+        while pending and len(unique_solutions) < args.count:
+            done, _ = futures_wait(pending, return_when=FIRST_COMPLETED)
+            for f in done:
+                del pending[f]
+                try:
+                    stdout = f.result()
+                except Exception:
+                    stdout = None
 
-        if target_min_colors is not None and min_colors is not None and min_colors != target_min_colors:
-            continue
+                if stdout is not None:
+                    min_colors, solution = parse_solution_output(stdout)
 
-        if solution in seen:
-            continue
+                    if solution is not None:
+                        if target_min_colors is None and min_colors is not None:
+                            target_min_colors = min_colors
 
-        seen.add(solution)
-        unique_solutions.append(solution)
+                        if not (target_min_colors is not None and min_colors is not None and min_colors != target_min_colors):
+                            if solution not in seen:
+                                seen.add(solution)
+                                unique_solutions.append(solution)
+                                print(f"Solution {len(unique_solutions)} out of {args.count} found in {attempts} attempts.")
+
+                if len(unique_solutions) < args.count:
+                    submit_next(executor)
 
     if not unique_solutions:
         raise RuntimeError("No solution captured. Check solver/model output format.")

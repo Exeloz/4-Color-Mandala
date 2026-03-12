@@ -11,12 +11,15 @@ public:
     void draw() override;
     bool consumeTransitionToSelection();
     bool consumeTransitionToDaily();
+    bool consumeTransitionToArchive();
 
 private:
     Button startButton;
     Button dailyButton;
+    Button archiveButton;
     bool transitionRequested;
     bool dailyRequested;
+    bool archiveRequested;
 
     void layoutControls();
 };
