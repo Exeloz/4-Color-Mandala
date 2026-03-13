@@ -29,9 +29,11 @@
   },
   {
     "id": 3,
-    "name": "Mandala ?",
+    "name": "Mandala 1374",
+	"available_from": 20260312,
     "regions": "3/mandala_3_regions.json",
-    "adjacency": "3/mandala_3_adjacency.json"
+    "adjacency": "3/mandala_3_adjacency.json",
+	"min_colors": 4
   },
   {
     "id": 4,

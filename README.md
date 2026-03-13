@@ -125,7 +125,7 @@ cd $HOME/cegep/Documents/Dev/Mobile/Raylib/4-Color_Mandala/tools
 python3 generate_minizinc.py --mandala-id 1
 
 # Genere 100 solutions uniques (fichier: resources/assets/1/daily_solutions.txt)
-python3 generate_solution_bank.py ../resources/assets/1/mandala_1_regions_satisfy.mzn --count 1000 --solver gecode
+python3 generate_solution_bank.py ../resources/assets/1/mandala_1_regions_satisfy.mzn --count 100 --solver gecode
 ```
 
 Si `minizinc` n'est pas dans le PATH:
