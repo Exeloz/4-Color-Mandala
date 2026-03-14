@@ -12,6 +12,7 @@
 #include "raylib.h"
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 class ColoringScreen : public GameState {
 public:
@@ -54,6 +55,7 @@ private:
     std::vector<StatusBadge> allBadges;      // full list built each draw() from mandala state + ruleBadges
     int badgePopupIndex;                     // index into allBadges of open tooltip (-1 = none)
     std::vector<Rectangle> badgeRects;       // bounding rects, rebuilt each draw(), used by update()
+    mutable std::unordered_map<int, Vector2> lastColorHintLabelCache;
 
     void drawColorPalette();
     void drawBadgePopup(const StatusBadge& badge, Rectangle badgeRect) const;
@@ -64,6 +66,9 @@ private:
     void drawAnalysisOverlay() const;
     void fitCameraToMandala();
     void drawDebugOverlay() const;
+    int getLastColorHintRemainingCount(int regionId) const;
+    bool isLastColorHintRuleSatisfied() const;
+    void drawLastColorHintOverlay() const;
     bool isPointerOverUi(Vector2 screenPos) const;
     void layoutTopButtons();
 };

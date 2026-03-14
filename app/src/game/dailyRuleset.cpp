@@ -128,6 +128,7 @@ uint64_t buildDailyRulesetSeed(const DailyRuleContext& context, uint64_t salt) {
 const std::vector<std::shared_ptr<DailyRuleset>>& getAllDailyRulesets() {
     static const std::vector<std::shared_ptr<DailyRuleset>> rulesets = {
         std::make_shared<SolutionFreezeDailyRuleset>(),
+        std::make_shared<LastColorHintDailyRuleset>(),
     };
     return rulesets;
 }
@@ -143,6 +144,8 @@ const DailyRuleset& getDailyRulesetById(int id) {
 }
 
 void SolutionFreezeDailyRuleset::applyToMandala(Mandala& mandala, const DailyRuleContext& context) const {
+    mandala.clearLastColorHintData();
+
     std::vector<std::vector<int>> solutions = loadSolutions(context.mandalaId, context.hardMode);
     if (solutions.empty()) {
         return;
@@ -221,4 +224,100 @@ void SolutionFreezeDailyRuleset::applyToMandala(Mandala& mandala, const DailyRul
         region->setColor(colorIndex);
         region->setColorable(false);
     }
+}
+
+void LastColorHintDailyRuleset::applyToMandala(Mandala& mandala, const DailyRuleContext& context) const {
+    mandala.clearLastColorHintData();
+
+    std::vector<std::vector<int>> solutions = loadSolutions(context.mandalaId, context.hardMode);
+    if (solutions.empty()) {
+        return;
+    }
+
+    std::vector<int> colorableRegionIds;
+    int maxRegionId = -1;
+    colorableRegionIds.reserve(mandala.getRegions().size());
+    for (const Region& region : mandala.getRegions()) {
+        maxRegionId = std::max(maxRegionId, region.getId());
+        if (region.isColorable()) {
+            colorableRegionIds.push_back(region.getId());
+        }
+    }
+
+    if (colorableRegionIds.empty() || maxRegionId < 0) {
+        return;
+    }
+
+    std::sort(colorableRegionIds.begin(), colorableRegionIds.end());
+
+    std::vector<const std::vector<int>*> compatibleSolutions;
+    compatibleSolutions.reserve(solutions.size());
+    for (const auto& solution : solutions) {
+        const bool hasRegionIdIndexing = solution.size() > static_cast<size_t>(maxRegionId);
+        const bool hasCompactColorableIndexing = solution.size() == colorableRegionIds.size();
+        if (hasRegionIdIndexing || hasCompactColorableIndexing) {
+            compatibleSolutions.push_back(&solution);
+        }
+    }
+
+    if (compatibleSolutions.empty()) {
+        return;
+    }
+
+    const uint64_t solutionSeed = buildDailyRulesetSeed(context, hashContribution() ^ 0xf6c8e9a36a6cf1d5ULL);
+    const size_t solutionIndex = static_cast<size_t>(solutionSeed % static_cast<uint64_t>(compatibleSolutions.size()));
+    const std::vector<int>& pickedSolution = *compatibleSolutions[solutionIndex];
+
+    std::vector<int> solutionByRegionId(static_cast<size_t>(maxRegionId) + 1, -1);
+    if (pickedSolution.size() > static_cast<size_t>(maxRegionId)) {
+        for (int regionId : colorableRegionIds) {
+            solutionByRegionId[static_cast<size_t>(regionId)] = pickedSolution[static_cast<size_t>(regionId)];
+        }
+    } else if (pickedSolution.size() == colorableRegionIds.size()) {
+        for (size_t i = 0; i < colorableRegionIds.size(); ++i) {
+            solutionByRegionId[static_cast<size_t>(colorableRegionIds[i])] = pickedSolution[i];
+        }
+    } else {
+        return;
+    }
+
+    int targetColor = -1;
+    for (int regionId : colorableRegionIds) {
+        const int color = solutionByRegionId[static_cast<size_t>(regionId)];
+        if (color > targetColor) {
+            targetColor = color;
+        }
+    }
+
+    if (targetColor <= 0) {
+        return;
+    }
+
+    std::vector<int> initialCountByRegionId(solutionByRegionId.size(), -1);
+    const AdjacencyGraph& graph = mandala.getAdjacencyGraph();
+    for (const Region& region : mandala.getRegions()) {
+        if (!region.isColorable()) {
+            continue;
+        }
+
+        const int regionId = region.getId();
+        if (regionId < 0 || static_cast<size_t>(regionId) >= initialCountByRegionId.size()) {
+            continue;
+        }
+
+        int initialCount = 0;
+        const std::set<int>& adjacent = graph.getAdjacentRegions(regionId);
+        for (int adjacentId : adjacent) {
+            if (adjacentId < 0 || static_cast<size_t>(adjacentId) >= solutionByRegionId.size()) {
+                continue;
+            }
+            if (solutionByRegionId[static_cast<size_t>(adjacentId)] == targetColor) {
+                initialCount++;
+            }
+        }
+
+        initialCountByRegionId[static_cast<size_t>(regionId)] = initialCount;
+    }
+
+    mandala.setLastColorHintData(targetColor, solutionByRegionId, initialCountByRegionId);
 }

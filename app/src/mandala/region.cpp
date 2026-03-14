@@ -3,6 +3,31 @@
 #include <tesselator.h>
 #include <cmath>
 #include <algorithm>
+#include <cfloat>
+
+namespace {
+float pointSegmentDistanceSquared(Vector2 p, Vector2 a, Vector2 b) {
+    const float abx = b.x - a.x;
+    const float aby = b.y - a.y;
+    const float apx = p.x - a.x;
+    const float apy = p.y - a.y;
+    const float abLenSq = abx * abx + aby * aby;
+
+    if (abLenSq <= 1e-8f) {
+        const float dx = p.x - a.x;
+        const float dy = p.y - a.y;
+        return dx * dx + dy * dy;
+    }
+
+    float t = (apx * abx + apy * aby) / abLenSq;
+    t = std::max(0.0f, std::min(1.0f, t));
+    const float qx = a.x + t * abx;
+    const float qy = a.y + t * aby;
+    const float dx = p.x - qx;
+    const float dy = p.y - qy;
+    return dx * dx + dy * dy;
+}
+}
 
 Region::Region(int id, const std::vector<Vector2>& vertices)
         : id(id),
@@ -101,6 +126,72 @@ Vector2 Region::getCentroid() const {
 
     float scale = 1.0f / (3.0f * twiceArea);
     return {centroidX * scale, centroidY * scale};
+}
+
+Vector2 Region::getInteriorPoint() const {
+    if (vertices.empty()) {
+        return {0.0f, 0.0f};
+    }
+
+    const Vector2 centroid = getCentroid();
+    if (isPointInRegion(centroid)) {
+        return centroid;
+    }
+
+    float minX = FLT_MAX;
+    float minY = FLT_MAX;
+    float maxX = -FLT_MAX;
+    float maxY = -FLT_MAX;
+    for (const Vector2& v : vertices) {
+        minX = std::min(minX, v.x);
+        minY = std::min(minY, v.y);
+        maxX = std::max(maxX, v.x);
+        maxY = std::max(maxY, v.y);
+    }
+
+    const int gridSteps = 12;
+    const float spanX = std::max(1e-5f, maxX - minX);
+    const float spanY = std::max(1e-5f, maxY - minY);
+
+    bool found = false;
+    Vector2 best = centroid;
+    float bestEdgeDistSq = -1.0f;
+
+    for (int gy = 0; gy <= gridSteps; ++gy) {
+        const float y = minY + (spanY * static_cast<float>(gy) / static_cast<float>(gridSteps));
+        for (int gx = 0; gx <= gridSteps; ++gx) {
+            const float x = minX + (spanX * static_cast<float>(gx) / static_cast<float>(gridSteps));
+            const Vector2 candidate{x, y};
+            if (!isPointInRegion(candidate)) {
+                continue;
+            }
+
+            float minEdgeDistSq = FLT_MAX;
+            for (int i = 0; i < static_cast<int>(vertices.size()); ++i) {
+                const Vector2 a = vertices[i];
+                const Vector2 b = vertices[(i + 1) % vertices.size()];
+                minEdgeDistSq = std::min(minEdgeDistSq, pointSegmentDistanceSquared(candidate, a, b));
+            }
+
+            if (!found || minEdgeDistSq > bestEdgeDistSq) {
+                found = true;
+                best = candidate;
+                bestEdgeDistSq = minEdgeDistSq;
+            }
+        }
+    }
+
+    if (found) {
+        return best;
+    }
+
+    for (const Vector2& v : vertices) {
+        if (isPointInRegion(v)) {
+            return v;
+        }
+    }
+
+    return centroid;
 }
 
 bool Region::isPointInRegion(Vector2 point) const {

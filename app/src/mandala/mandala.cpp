@@ -14,7 +14,11 @@ Mandala::Mandala(int id, const std::string& name, const std::vector<Region>& reg
             regionsSourcePath(regionsSourcePath),
             adjacencySourcePath(adjacencySourcePath),
             hardMode(hardMode),
-            minimumColorCount(minimumColorCount) {}
+            minimumColorCount(minimumColorCount),
+            hasLastColorHint(false),
+            lastColorHintTargetColor(-1),
+            lastColorHintSolutionColorByRegionId(),
+            lastColorHintInitialCountByRegionId() {}
 
 int Mandala::getId() const {
     return id;
@@ -103,4 +107,59 @@ void Mandala::draw(const std::vector<Color>& colorPalette, bool ignoreColoring) 
     for (const auto& region : regions) {
         region.draw(colorPalette, ignoreColoring);
     }
+}
+
+void Mandala::setLastColorHintData(int targetColor,
+                                   const std::vector<int>& solutionColorByRegionId,
+                                   const std::vector<int>& initialCountByRegionId) {
+    if (targetColor <= 0 || solutionColorByRegionId.empty() || initialCountByRegionId.empty()
+        || solutionColorByRegionId.size() != initialCountByRegionId.size()) {
+        clearLastColorHintData();
+        return;
+    }
+
+    hasLastColorHint = true;
+    lastColorHintTargetColor = targetColor;
+    lastColorHintSolutionColorByRegionId = solutionColorByRegionId;
+    lastColorHintInitialCountByRegionId = initialCountByRegionId;
+}
+
+void Mandala::clearLastColorHintData() {
+    hasLastColorHint = false;
+    lastColorHintTargetColor = -1;
+    lastColorHintSolutionColorByRegionId.clear();
+    lastColorHintInitialCountByRegionId.clear();
+}
+
+bool Mandala::hasLastColorHintData() const {
+    return hasLastColorHint
+        && lastColorHintTargetColor > 0
+        && !lastColorHintSolutionColorByRegionId.empty()
+        && lastColorHintInitialCountByRegionId.size() == lastColorHintSolutionColorByRegionId.size();
+}
+
+int Mandala::getLastColorHintTargetColor() const {
+    return hasLastColorHint ? lastColorHintTargetColor : -1;
+}
+
+int Mandala::getLastColorHintSolutionColor(int regionId) const {
+    if (!hasLastColorHint || regionId < 0
+        || static_cast<size_t>(regionId) >= lastColorHintSolutionColorByRegionId.size()) {
+        return -1;
+    }
+
+    return lastColorHintSolutionColorByRegionId[static_cast<size_t>(regionId)];
+}
+
+int Mandala::getLastColorHintInitialCount(int regionId) const {
+    if (!hasLastColorHint || regionId < 0
+        || static_cast<size_t>(regionId) >= lastColorHintInitialCountByRegionId.size()) {
+        return -1;
+    }
+
+    return lastColorHintInitialCountByRegionId[static_cast<size_t>(regionId)];
+}
+
+bool Mandala::isLastColorHintTrackedRegion(int regionId) const {
+    return getLastColorHintInitialCount(regionId) >= 2;
 }

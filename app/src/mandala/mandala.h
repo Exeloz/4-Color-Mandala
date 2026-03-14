@@ -29,6 +29,16 @@ public:
     bool isValidColoring() const;
     void draw(const std::vector<Color>& colorPalette, bool ignoreColoring = false) const;
 
+    void setLastColorHintData(int targetColor,
+                              const std::vector<int>& solutionColorByRegionId,
+                              const std::vector<int>& initialCountByRegionId);
+    void clearLastColorHintData();
+    bool hasLastColorHintData() const;
+    int getLastColorHintTargetColor() const;
+    int getLastColorHintSolutionColor(int regionId) const;
+    int getLastColorHintInitialCount(int regionId) const;
+    bool isLastColorHintTrackedRegion(int regionId) const;
+
 private:
     int id;
     std::string name;
@@ -38,4 +48,8 @@ private:
     std::string adjacencySourcePath;
     bool hardMode;
     int minimumColorCount;
+    bool hasLastColorHint;
+    int lastColorHintTargetColor;
+    std::vector<int> lastColorHintSolutionColorByRegionId;
+    std::vector<int> lastColorHintInitialCountByRegionId;
 };

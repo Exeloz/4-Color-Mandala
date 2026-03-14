@@ -19,6 +19,7 @@ public:
     bool isColorable() const;
     const std::vector<Vector2>& getVertices() const;
     Vector2 getCentroid() const;
+    Vector2 getInteriorPoint() const;
     bool isPointInRegion(Vector2 point) const;
     void draw(const std::vector<Color>& colorPalette, bool ignoreColoring = false) const;
     void drawWithColor(Color fillColor, Color borderColor, float borderWidth,

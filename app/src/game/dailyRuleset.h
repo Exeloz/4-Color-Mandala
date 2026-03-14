@@ -58,6 +58,20 @@ public:
     int defaultFrozenRegionCount() const { return 50; }
 };
 
+// Last-color hint puzzle: shows a dynamic count in regions for how many adjacent
+// regions still need to be the solution's highest-index color.
+class LastColorHintDailyRuleset : public DailyRuleset {
+public:
+    int getId() const override { return 1; }
+    std::string getName() const override { return "Last Color Hints"; }
+    std::string getShortLabel() const override { return "LAST"; }
+    std::string getDescription() const override {
+        return "Numbers show nearby regions\nthat still need the last color.";
+    }
+    uint64_t hashContribution() const override { return 0x1c9b4dbe6a4f9283ULL; }
+    void applyToMandala(Mandala& mandala, const DailyRuleContext& context) const override;
+};
+
 // -----------------------------------------------------------------------
 
 // Returns every registered ruleset in a stable order.
