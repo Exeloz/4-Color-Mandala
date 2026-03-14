@@ -61,6 +61,12 @@ private:
     void transitionToState(GameScreenState newState);
     void updateCurrentState(float deltaTime);
     void drawCurrentState();
+    void handleStartState();
+    void handleArchiveState();
+    void handleSelectionState();
+    void handlePaletteState();
+    void handleColoringState();
+    void handleWinState();
     std::shared_ptr<SelectionScreen> createSelectionScreen() const;
     void syncHardModeSelectionState();
     void savePaletteProgress();
